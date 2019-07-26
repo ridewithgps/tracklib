@@ -4,4 +4,5 @@ lto = false # LTO broke the ruby module in my testing
 [workspace]
 members = [
         "tracklib",
+        "ruby_tracklib",
 ]

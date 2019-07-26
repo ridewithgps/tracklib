@@ -1,0 +1,7 @@
+[profile.release]
+lto = false # LTO broke the ruby module in my testing
+
+[workspace]
+members = [
+        "tracklib",
+]

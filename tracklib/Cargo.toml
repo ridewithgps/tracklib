@@ -1,0 +1,15 @@
+[package]
+name = "tracklib"
+version = "0.1.0"
+authors = ["Dan Larkin <dan@danlarkin.org>"]
+license = "Apache-2.0 OR MIT"
+edition = "2018"
+workspace = "../"
+
+[dependencies]
+leb128 = "0.2"
+snafu = "0.2"
+crc = "1.8"
+nom = "4.2"
+serde = "1.0"
+base64 = "0.10"

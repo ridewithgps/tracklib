@@ -4,14 +4,16 @@ version = "0.1.0"
 authors = ["Dan Larkin <dan@danlarkin.org>"]
 license = "Apache-2.0 OR MIT"
 edition = "2018"
-workspace = "../"
+
+[profile.release]
+lto = false # LTO broke the ruby module in my testing
 
 [lib]
 name = "ruby_tracklib"
 crate-type = ["cdylib"]
 
 [dependencies]
-tracklib = {path = "../tracklib"}
+tracklib = "*"
 rutie = "0.5"
 rutie-serde = "0.1"
 lazy_static = "1.3"

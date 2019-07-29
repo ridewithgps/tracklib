@@ -1,0 +1,3 @@
+ruby_tracklib*.gem
+target/
+.nix-gems/

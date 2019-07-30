@@ -1,9 +1,9 @@
-require "ruby_tracklib/version"
+require "tracklib/version"
 require "rutie"
 
-module RubyTracklib
+module Tracklib
   class Error < StandardError; end
-  Rutie.new(:ruby_tracklib, {lib_path: "../../target/release"}).init 'Init_Tracklib', __dir__
+  Rutie.new(:tracklib, {lib_path: "../../target/release"}).init 'Init_Tracklib', __dir__
 end
 
 class RWTFile

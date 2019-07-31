@@ -15,6 +15,7 @@ Gem::Specification.new do |spec|
 
   spec.files         = ["tracklib.gemspec",
                         "Rakefile",
+                        "Gemfile",
                         "lib/tracklib.rb",
                         "lib/tracklib/version.rb",
                         "Cargo.toml",

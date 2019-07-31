@@ -3,7 +3,7 @@ require "rutie"
 
 module Tracklib
   class Error < StandardError; end
-  Rutie.new(:tracklib, {lib_path: "../../target/release"}).init 'Init_Tracklib', __dir__
+  Rutie.new(:track, {lib_path: "../target/release"}).init 'Init_Tracklib', __dir__
 end
 
 class RWTFile

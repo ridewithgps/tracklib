@@ -9,7 +9,7 @@ edition = "2018"
 lto = false # LTO broke the ruby module in my testing
 
 [lib]
-name = "ruby_tracklib"
+name = "track"
 crate-type = ["cdylib"]
 
 [dependencies]

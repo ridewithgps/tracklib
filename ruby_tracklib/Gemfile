@@ -1,4 +1,4 @@
 source "https://rubygems.org"
 
-# Specify your gem's dependencies in ruby_tracklib.gemspec
+# Specify your gem's dependencies in tracklib.gemspec
 gemspec

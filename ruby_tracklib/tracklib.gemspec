@@ -23,10 +23,11 @@ Gem::Specification.new do |spec|
                         "src/lib.rs"]
 
   spec.require_paths = ["lib"]
-  spec.extensions    = "Rakefile"
+  spec.extensions    = ["ext/Rakefile"]
 
-  spec.add_development_dependency "rake", "~> 12.3"
   spec.add_development_dependency "minitest", "~> 5.11"
 
-  spec.add_dependency "rutie", "~> 0.0.4"
+  spec.add_runtime_dependency "rake", "~> 12.3"
+  spec.add_runtime_dependency 'thermite', '~> 0.13'
+  spec.add_runtime_dependency "rutie", "~> 0.0.4"
 end

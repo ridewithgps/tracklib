@@ -1,6 +1,9 @@
 require "rbconfig"
 require "bundler/gem_tasks"
 require "rake/testtask"
+require "thermite/tasks"
+
+thermite = Thermite::Tasks.new
 
 desc 'Build Rust extension'
 task :build_lib do

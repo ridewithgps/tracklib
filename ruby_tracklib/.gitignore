@@ -2,4 +2,5 @@ tracklib*.gem
 target/
 .nix-gems/
 pkg/
+lib/tracklib.so
 Gemfile.lock

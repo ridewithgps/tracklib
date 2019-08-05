@@ -4,7 +4,7 @@ use std::io::{BufWriter};
 use lazy_static::lazy_static;
 use rutie::{
     class, methods, wrappable_struct, AnyObject, Array, Boolean, Class, Encoding, Float, Hash, Integer,
-    Object, RString, VM,
+    Module, Object, RString, VM,
 };
 use rutie_serde::{ruby_class, rutie_serde_methods};
 use tracklib::{parse_rwtf, DataField, RWTFile, RWTFMetadata, TrackType};
@@ -253,10 +253,8 @@ methods!(
                         }
                     }
                 } else {
-                    VM::raise(
-                        Class::from_existing("Exception"),
-                        &format!("unknown track_points field: {}", k),
-                    );
+                    VM::raise(Module::from_existing("Tracklib").get_nested_class("UnknownFieldError"),
+                              &format!("unknown track_points field: {}", k));
                     unreachable!();
                 };
 
@@ -292,10 +290,8 @@ methods!(
                         }
                     }
                 } else {
-                    VM::raise(
-                        Class::from_existing("Exception"),
-                        &format!("unknown course_points field: {}", k),
-                    );
+                    VM::raise(Module::from_existing("Tracklib").get_nested_class("UnknownFieldError"),
+                              &format!("unknown course_points field: {}", k));
                     unreachable!();
                 };
 

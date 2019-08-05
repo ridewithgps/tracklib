@@ -2,7 +2,7 @@ require "tracklib/version"
 require "rutie"
 
 module Tracklib
-  class Error < StandardError; end
+  class UnknownFieldError < StandardError; end
   Rutie.new(:tracklib, {lib_path: "../lib", lib_prefix: ""}).init 'Init_Tracklib', __dir__
 end
 

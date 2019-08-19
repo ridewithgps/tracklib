@@ -1,29 +1,16 @@
+# coding: utf-8
 require "rbconfig"
 require "bundler/gem_tasks"
 require "rake/testtask"
 require "thermite/tasks"
+require 'rspec/core/rake_task'
 
 thermite = Thermite::Tasks.new
+RSpec::Core::RakeTask.new(:spec)
 
-desc 'Build Rust extension'
-task :build_lib do
-  case RbConfig::CONFIG['host_os']
-  when /darwin|mac os/
-    sh 'NO_LINK_RUTIE=y cargo rustc --release -- -C link-args=-Wl,-undefined,dynamic_lookup'
-  else
-    sh 'NO_LINK_RUTIE=y cargo build --release'
-  end
-end
+desc 'Run Rust & Ruby testsuites'
+task test: ['thermite:build', 'thermite:test', 'spec'] do
 
-desc 'bundle install'
-task :bundle_install do
-  sh 'bundle install'
-end
-
-Rake::TestTask.new(test: [:bundle_install, :build_lib]) do |t|
-  t.libs << "test"
-  t.libs << "lib"
-  t.test_files = FileList["test/**/*_test.rb"]
 end
 
 task :default => :test

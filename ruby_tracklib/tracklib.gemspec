@@ -25,7 +25,7 @@ Gem::Specification.new do |spec|
   spec.require_paths = ["lib"]
   spec.extensions    = ["ext/Rakefile"]
 
-  spec.add_development_dependency "minitest", "~> 5.11"
+  spec.add_development_dependency "rspec"
 
   spec.add_runtime_dependency "rake", "~> 12.3"
   spec.add_runtime_dependency 'thermite', '~> 0.13'

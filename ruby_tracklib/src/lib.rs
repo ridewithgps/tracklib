@@ -85,6 +85,30 @@ fn convert_config(config: Hash) -> HashMap<String, String> {
     hm
 }
 
+fn is_empty_string(v: &AnyObject) -> bool {
+    match v.try_convert_to::<RString>() {
+        Ok(s) => s.to_str().is_empty(),
+        Err(_) => false
+    }
+}
+
+fn is_empty_array(v: &AnyObject) -> bool {
+    match v.try_convert_to::<Array>() {
+        Ok(a) => a.length() == 0,
+        Err(_) => false
+    }
+}
+
+fn is_number_too_large(v: &AnyObject) -> bool {
+    match v.try_convert_to::<Integer>() {
+        Ok(i) => i.to_i64().abs() > 2i64.pow(48),
+        Err(_) => match v.try_convert_to::<Float>() {
+            Ok(f) => f.to_f64().abs() > 2f64.powi(48),
+            Err(_) => false
+        }
+    }
+}
+
 fn add_points(points: Array, mut callback: impl FnMut(usize, &str, AnyObject)) {
     for (i, maybe_point) in points.into_iter().enumerate() {
         let point = maybe_point
@@ -98,43 +122,13 @@ fn add_points(points: Array, mut callback: impl FnMut(usize, &str, AnyObject)) {
                 .map_err(|e| VM::raise_ex(e))
                 .unwrap();
             let name = field_name_obj.to_str();
-            let mut store_field = true;
 
-            if v.is_nil() {
-                store_field = false;
-            }
-
-            if name.is_empty() {
-                store_field = false;
-            }
-
-            match v.try_convert_to::<RString>() {
-                Ok(s) => if s.to_str().is_empty() {
-                    store_field = false;
-                }
-                Err(_) => {}
-            }
-
-            match v.try_convert_to::<Array>() {
-                Ok(a) => if a.length() == 0 {
-                    store_field = false;
-                }
-                Err(_) => {}
-            }
-
-            match v.try_convert_to::<Integer>() {
-                Ok(i) => if i.to_i64().abs() > 2i64.pow(48) {
-                    store_field = false;
-                }
-                Err(_) => match v.try_convert_to::<Float>() {
-                    Ok(f) => if f.to_f64().abs() > 2f64.powi(48) {
-                        store_field = false;
-                    }
-                    Err(_) => {}
-                }
-            }
-
-            if store_field {
+            if !v.is_nil()
+                && !name.is_empty()
+                && !is_empty_string(&v)
+                && !is_empty_array(&v)
+                && !is_number_too_large(&v)
+            {
                 callback(i, name, v);
             }
         });

@@ -59,7 +59,33 @@ fn any_to_ids(o: AnyObject) -> Vec<u64> {
         .collect()
 }
 
-fn convert_config(config: Hash) -> HashMap<String, String> {
+#[derive(Debug, Copy, Clone)]
+enum ColumnType {
+    Numbers,
+    LongFloat,
+    ShortFloat,
+    Base64,
+    String,
+    Bool,
+    IDs,
+}
+
+impl ColumnType {
+    fn from_str(name: &str) -> Option<Self> {
+        match name {
+            "Number"     => Some(ColumnType::Numbers),
+            "LongFloat"  => Some(ColumnType::LongFloat),
+            "ShortFloat" => Some(ColumnType::ShortFloat),
+            "Base64"     => Some(ColumnType::Base64),
+            "String"     => Some(ColumnType::String),
+            "Bool"       => Some(ColumnType::Bool),
+            "IDs"        => Some(ColumnType::IDs),
+            _ => None
+        }
+    }
+}
+
+fn convert_config(config: Hash) -> HashMap<String, ColumnType> {
     let mut hm = HashMap::new();
 
     config.each(|rwtf_type_name, array_of_field_names| {
@@ -67,18 +93,26 @@ fn convert_config(config: Hash) -> HashMap<String, String> {
             .try_convert_to::<RString>()
             .map_err(|e| VM::raise_ex(e))
             .unwrap();
-        let array_obj = array_of_field_names
-            .try_convert_to::<Array>()
-            .map_err(|e| VM::raise_ex(e))
-            .unwrap();
+        let type_name_str = type_name_obj.to_str();
 
-        for field_name in array_obj.into_iter() {
-            let field_name_obj = field_name
-                .try_convert_to::<RString>()
+        if let Some(column_type) = ColumnType::from_str(type_name_str) {
+            let array_obj = array_of_field_names
+                .try_convert_to::<Array>()
                 .map_err(|e| VM::raise_ex(e))
                 .unwrap();
 
-            hm.insert(field_name_obj.to_string(), type_name_obj.to_string());
+            for field_name in array_obj.into_iter() {
+                let field_name_obj = field_name
+                    .try_convert_to::<RString>()
+                    .map_err(|e| VM::raise_ex(e))
+                    .unwrap();
+
+                hm.insert(field_name_obj.to_string(), column_type);
+            }
+        } else {
+            VM::raise(Class::from_existing("Exception"),
+                      &format!("unknown rwtf_field_config type: {}", type_name_str));
+            unreachable!();
         }
     });
 
@@ -109,29 +143,54 @@ fn is_number_too_large(v: &AnyObject) -> bool {
     }
 }
 
-fn add_points(points: Array, mut callback: impl FnMut(usize, &str, AnyObject)) {
-    for (i, maybe_point) in points.into_iter().enumerate() {
-        let point = maybe_point
-            .try_convert_to::<Hash>()
-            .map_err(|e| VM::raise_ex(e))
-            .unwrap();
+fn add_points(source: &Hash,
+              section_points_config: &HashMap<String, ColumnType>,
+              section_type: &str,
+              mut callback: impl FnMut(usize, &str, DataField)) {
+    let maybe_section_points = source
+        .at(&RString::new_utf8(section_type))
+        .try_convert_to::<Array>();
 
-        point.each(|k, v| {
-            let field_name_obj = k
-                .try_convert_to::<RString>()
+    if let Ok(section_points) = maybe_section_points {
+        for (i, maybe_point) in section_points.into_iter().enumerate() {
+            let point = maybe_point
+                .try_convert_to::<Hash>()
                 .map_err(|e| VM::raise_ex(e))
                 .unwrap();
-            let name = field_name_obj.to_str();
 
-            if !v.is_nil()
-                && !name.is_empty()
-                && !is_empty_string(&v)
-                && !is_empty_array(&v)
-                && !is_number_too_large(&v)
-            {
-                callback(i, name, v);
-            }
-        });
+            point.each(|k: AnyObject, v: AnyObject| {
+                let field_name_obj = k
+                    .try_convert_to::<RString>()
+                    .map_err(|e| VM::raise_ex(e))
+                    .unwrap();
+                let name = field_name_obj.to_str();
+
+                if !v.is_nil()
+                    && !name.is_empty()
+                    && !is_empty_string(&v)
+                    && !is_empty_array(&v)
+                    && !is_number_too_large(&v)
+                {
+                    if let Some(field_type) = section_points_config.get(name) {
+                        let data = match field_type {
+                            ColumnType::LongFloat  => DataField::LongFloat(any_to_float(v)),
+                            ColumnType::ShortFloat => DataField::ShortFloat(any_to_float(v)),
+                            ColumnType::Numbers    => DataField::Number(any_to_int(v)),
+                            ColumnType::Base64     => DataField::Base64(any_to_str(v).replace("\n", "")),
+                            ColumnType::String     => DataField::String(any_to_str(v)),
+                            ColumnType::Bool       => DataField::Bool(any_to_bool(v)),
+                            ColumnType::IDs        => DataField::IDs(any_to_ids(v)),
+                        };
+
+                        callback(i, name, data);
+                    } else {
+                        VM::raise(Module::from_existing("Tracklib").get_nested_class("UnknownFieldError"),
+                                  &format!("unknown {} field: {}", section_type, name));
+                        unreachable!();
+                    };
+                }
+            });
+        }
     }
 }
 
@@ -223,79 +282,21 @@ methods!(
             RWTFile::new()
         };
 
-        let maybe_track_points = source
-            .at(&RString::new_utf8("track_points"))
-            .try_convert_to::<Array>();
+        add_points(&source, &track_points_config, "track_points",  |i, name, data| {
+            rwtf.add_track_point(i, name, data)
+                .map_err(|e| {
+                    VM::raise(Class::from_existing("Exception"), &format!("{}", e))
+                })
+                .unwrap();
+        });
 
-        if let Ok(track_points) = maybe_track_points {
-            add_points(track_points, |i, k, v| {
-                let data = if let Some(field_type) = track_points_config.get(k) {
-                    match field_type.as_str() {
-                        "LongFloat"  => DataField::LongFloat(any_to_float(v)),
-                        "ShortFloat" => DataField::ShortFloat(any_to_float(v)),
-                        "Number"     => DataField::Number(any_to_int(v)),
-                        "Base64"     => DataField::Base64(any_to_str(v).replace("\n", "")),
-                        "String"     => DataField::String(any_to_str(v)),
-                        "Bool"       => DataField::Bool(any_to_bool(v)),
-                        "IDs"        => DataField::IDs(any_to_ids(v)),
-                        _ => {
-                            VM::raise(
-                                Class::from_existing("Exception"),
-                                &format!("unknown track_points type: {}", field_type),
-                            );
-                            unreachable!();
-                        }
-                    }
-                } else {
-                    VM::raise(Module::from_existing("Tracklib").get_nested_class("UnknownFieldError"),
-                              &format!("unknown track_points field: {}", k));
-                    unreachable!();
-                };
-
-                rwtf.add_track_point(i, k, data)
-                    .map_err(|e| {
-                        VM::raise(Class::from_existing("Exception"), &format!("{}", e))
-                    })
-                    .unwrap();
-            });
-        }
-
-        let maybe_course_points = source
-            .at(&RString::new_utf8("course_points"))
-            .try_convert_to::<Array>();
-
-        if let Ok(course_points) = maybe_course_points {
-            add_points(course_points, |i, k, v| {
-                let data = if let Some(field_type) = course_points_config.get(k) {
-                    match field_type.as_str() {
-                        "LongFloat"  => DataField::LongFloat(any_to_float(v)),
-                        "ShortFloat" => DataField::ShortFloat(any_to_float(v)),
-                        "Number"     => DataField::Number(any_to_int(v)),
-                        "Base64"     => DataField::Base64(any_to_str(v).replace("\n", "")),
-                        "String"     => DataField::String(any_to_str(v)),
-                        "Bool"       => DataField::Bool(any_to_bool(v)),
-                        "IDs"        => DataField::IDs(any_to_ids(v)),
-                        _ => {
-                            VM::raise(
-                                Class::from_existing("Exception"),
-                                &format!("unknown course_points type: {}", field_type),
-                            );
-                            unreachable!();
-                        }
-                    }
-                } else {
-                    VM::raise(Module::from_existing("Tracklib").get_nested_class("UnknownFieldError"),
-                              &format!("unknown course_points field: {}", k));
-                    unreachable!();
-                };
-
-                rwtf.add_course_point(i, k, data)
-                    .map_err(|e| {
-                        VM::raise(Class::from_existing("Exception"), &format!("{}", e))
-                    })
-                    .unwrap();
-            });
-        }
+        add_points(&source, &course_points_config, "course_points",  |i, name, data| {
+            rwtf.add_course_point(i, name, data)
+                .map_err(|e| {
+                    VM::raise(Class::from_existing("Exception"), &format!("{}", e))
+                })
+                .unwrap();
+        });
 
         let inner = Inner { inner: rwtf };
         Class::from_existing("RWTFile").wrap_data(inner, &*INNER_WRAPPER)

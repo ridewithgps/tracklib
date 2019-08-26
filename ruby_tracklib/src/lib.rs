@@ -83,6 +83,23 @@ impl ColumnType {
             _ => None
         }
     }
+
+    fn exponent(&self) -> u8 {
+        match self {
+            ColumnType::Numbers => 48,
+            ColumnType::LongFloat => 24,
+            ColumnType::ShortFloat => 38,
+            _ => 0,
+        }
+    }
+
+    fn max_integer(&self) -> i64 {
+        2i64.pow(u32::from(self.exponent()))
+    }
+
+    fn max_float(&self) -> f64 {
+        2f64.powi(i32::from(self.exponent()))
+    }
 }
 
 fn convert_config(config: Hash) -> HashMap<String, ColumnType> {
@@ -133,12 +150,45 @@ fn is_empty_array(v: &AnyObject) -> bool {
     }
 }
 
-fn is_number_too_large(v: &AnyObject) -> bool {
-    match v.try_convert_to::<Integer>() {
-        Ok(i) => i.to_i64().abs() > 2i64.pow(48),
-        Err(_) => match v.try_convert_to::<Float>() {
-            Ok(f) => f.to_f64().abs() > 2f64.powi(48),
-            Err(_) => false
+fn is_number_and_too_large(v: &AnyObject, field_type: ColumnType) -> bool {
+    // First we have to try to cast `v` to a numeric type (Integer or Float)
+    // and then call to_i64/f64(). This will raise an exception if the number
+    // is too large to turn into a primitive.
+    let is_number_result = VM::protect(|| {
+        match v.try_convert_to::<Integer>() {
+            Ok(i) => {
+                let _ = i.to_i64(); // force a conversion
+                Boolean::new(true)
+            }
+            Err(_) => match v.try_convert_to::<Float>() {
+                Ok(f) => {
+                    let _ = f.to_f64(); // force a conversion
+                    Boolean::new(true)
+                }
+                Err(_) => Boolean::new(false)
+            }
+        }.to_any_object()
+    });
+
+    match is_number_result {
+        Ok(is_number) => {
+            // Here we know that no exception was raised during the attempted primitive conversion.
+            // We also know that `is_number` is a Boolean, so this unsafe cast is fine.
+            if unsafe { is_number.to::<Boolean>().to_bool() } {
+                match v.try_convert_to::<Integer>() {
+                    Ok(i) => i.to_i64().abs() > field_type.max_integer(),
+                    Err(_) => match v.try_convert_to::<Float>() {
+                        Ok(f) => f.to_f64().abs() > field_type.max_float(),
+                        Err(_) => false
+                    }
+                }
+            } else {
+                false
+            }
+        }
+        Err(_) => {
+            VM::clear_error_info(); // clear ruby VM error register
+            true // this IS a number and it IS too large
         }
     }
 }
@@ -165,29 +215,30 @@ fn add_points(source: &Hash,
                     .unwrap();
                 let name = field_name_obj.to_str();
 
-                if !v.is_nil()
-                    && !name.is_empty()
-                    && !is_empty_string(&v)
-                    && !is_empty_array(&v)
-                    && !is_number_too_large(&v)
-                {
+                if !name.is_empty() {
                     if let Some(field_type) = section_points_config.get(name) {
-                        let data = match field_type {
-                            ColumnType::LongFloat  => DataField::LongFloat(any_to_float(v)),
-                            ColumnType::ShortFloat => DataField::ShortFloat(any_to_float(v)),
-                            ColumnType::Numbers    => DataField::Number(any_to_int(v)),
-                            ColumnType::Base64     => DataField::Base64(any_to_str(v).replace("\n", "")),
-                            ColumnType::String     => DataField::String(any_to_str(v)),
-                            ColumnType::Bool       => DataField::Bool(any_to_bool(v)),
-                            ColumnType::IDs        => DataField::IDs(any_to_ids(v)),
-                        };
+                        if !v.is_nil()
+                            && !is_empty_string(&v)
+                            && !is_empty_array(&v)
+                            && !is_number_and_too_large(&v, *field_type)
+                        {
+                            let data = match field_type {
+                                ColumnType::LongFloat  => DataField::LongFloat(any_to_float(v)),
+                                ColumnType::ShortFloat => DataField::ShortFloat(any_to_float(v)),
+                                ColumnType::Numbers    => DataField::Number(any_to_int(v)),
+                                ColumnType::Base64     => DataField::Base64(any_to_str(v).replace("\n", "")),
+                                ColumnType::String     => DataField::String(any_to_str(v)),
+                                ColumnType::Bool       => DataField::Bool(any_to_bool(v)),
+                                ColumnType::IDs        => DataField::IDs(any_to_ids(v)),
+                            };
 
-                        callback(i, name, data);
+                            callback(i, name, data);
+                        }
                     } else {
                         VM::raise(Module::from_existing("Tracklib").get_nested_class("UnknownFieldError"),
                                   &format!("unknown {} field: {}", section_type, name));
                         unreachable!();
-                    };
+                    }
                 }
             });
         }

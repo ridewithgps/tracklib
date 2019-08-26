@@ -14,8 +14,8 @@ def roundtrip(data, field_config)
 end
 
 describe RWTFile do
-  context "round trips" do
-    it "and drops empty keys" do
+  context "round trips and" do
+    it "drops empty keys" do
       orig_data = {"track_points"=>[{""=>3,
                                      "t"=>4,
                                      "x"=>4.4,
@@ -26,7 +26,7 @@ describe RWTFile do
                                                                     "y"=>52.1,
                                                                     "e"=>-22.7}]})
     end
-    it "and doesn't drop a point" do
+    it "doesn't drop a point" do
       orig_data = {"track_points"=>[{"t"=>1,
                                      "e"=>40},
                                     {},
@@ -38,7 +38,7 @@ describe RWTFile do
                                                                    {},
                                                                    {"t"=>4}]})
     end
-    it "and drops numbers that are too large to turn into primitives" do
+    it "drops numbers that are too large to turn into primitives" do
       # integer
       orig_data = {"track_points"=>[{"x"=>10000000000000000000000000000000000, "y"=>7.2}]}
       expect(roundtrip(orig_data, CONFIG)).to eq({"track_points"=>[{"y"=>7.2}]})
@@ -47,7 +47,7 @@ describe RWTFile do
       orig_data = {"track_points"=>[{"x"=>10000000000000000000000000000000000.3, "y"=>7.2}]}
       expect(roundtrip(orig_data, CONFIG)).to eq({"track_points"=>[{"y"=>7.2}]})
     end
-    it "and drops numbers that are valid primitives but still too large for tracklib" do
+    it "drops numbers that are valid primitives but still too large for tracklib" do
       ## Numbers
       # drops 2**60
       orig_data = {"track_points"=>[{"t"=>2**60, "y"=>7.2}]}

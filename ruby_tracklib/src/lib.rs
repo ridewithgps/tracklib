@@ -89,7 +89,11 @@ impl ColumnType {
             ColumnType::Numbers => 48,
             ColumnType::LongFloat => 24,
             ColumnType::ShortFloat => 38,
-            _ => 0,
+            _ => {
+                VM::raise(Class::from_existing("Exception"),
+                          &format!("can't handle numeric value for non-numeric field"));
+                unreachable!();
+            }
         }
     }
 

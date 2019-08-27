@@ -22,10 +22,10 @@ fn any_to_float(o: AnyObject) -> f64 {
 
 fn any_to_int(o: AnyObject) -> i64 {
     match o.try_convert_to::<Integer>() {
-        Ok(f) => f.to_i64(),
-        Err(float_e) => o
+        Ok(i) => i.to_i64(),
+        Err(int_e) => o
             .try_convert_to::<Float>()
-            .map_err(|_| VM::raise_ex(float_e))
+            .map_err(|_| VM::raise_ex(int_e))
             .unwrap()
             .to_f64() as i64,
     }

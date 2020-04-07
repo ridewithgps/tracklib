@@ -7,5 +7,5 @@ mod flagscolumn;
 
 pub use rwtfile::{RWTFMAGIC, RWTFile, DataField};
 pub use metadata::{RWTFMetadata, TrackType};
-pub use section::{Column, SectionType};
+pub use section::{Column, SectionType, Section};
 pub use decode::{parse_rwtf};

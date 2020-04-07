@@ -161,6 +161,10 @@ impl Section {
         self.section_type.type_tag()
     }
 
+    pub fn columns(&self) -> &BTreeMap<String, Column> {
+        &self.columns
+    }
+
     fn write_types_table<W: Write>(&self, out: &mut W) -> Result<usize> {
         let mut buf = Vec::new();
 

@@ -542,6 +542,29 @@ mod tests {
     }
 
     #[test]
+    fn test_type_with_multibyte_character() {
+        let mut s = Section::new(SectionType::TrackPoints);
+        assert!(s.add_number(1, "I♥NY", 5).is_ok());
+
+        let mut buf = vec![];
+        let written = s.write_types_table(&mut buf);
+        assert!(written.is_ok());
+        let expected = &[0x01, // 1 entry in the table
+                         0x00, // column 1 type is Column::Numbers
+                         0x06, // column 1 name len is 6
+                         0x49, // "I"
+                         0xE2, // heart
+                         0x99,
+                         0xA5,
+                         0x4E, // "N"
+                         0x59, // "Y"
+                         0xA3, // CRC
+                         0xF5];
+        assert_eq!(buf, expected);
+        assert_eq!(written.unwrap(), expected.len());
+    }
+
+    #[test]
     fn test_write_header_empty() {
         let s = Section::new(SectionType::TrackPoints);
 

@@ -1,0 +1,16 @@
+[package]
+name = "java_tracklib"
+version = "0.1.0"
+authors = ["Dan Larkin <dan@danlarkin.org>"]
+license = "Apache-2.0 OR MIT"
+edition = "2018"
+
+[lib]
+name = "tracklib"
+crate-type = ["cdylib"]
+
+[dependencies]
+tracklib = "*"
+jni = "0.16"
+base64 = "0.10"
+nom = "4.2"

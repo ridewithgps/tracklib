@@ -364,6 +364,15 @@ methods!(
                                    rwtf.track_points.len(),
                                    rwtf.course_points.len()))
     }
+
+    fn rwtf_simplify() -> RString {
+        let rwtf = &itself.get_data(&*INNER_WRAPPER).inner;
+
+        let simplified = tracklib::simplification::simplify(&rwtf);
+        let polyline = polyline::encode_coordinates(simplified, 5).unwrap();
+
+        RString::new_utf8(&polyline)
+    }
 );
 
 rutie_serde_methods!(
@@ -390,5 +399,6 @@ pub extern "C" fn Init_Tracklib() {
         itself.def("to_h", rwtf_to_hash);
         itself.def("metadata", rwtf_metadata);
         itself.def("inspect", rwtf_inspect);
+        itself.def("simplify", rwtf_simplify);
     });
 }

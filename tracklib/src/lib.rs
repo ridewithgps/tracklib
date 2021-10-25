@@ -4,6 +4,7 @@ mod utils;
 mod decode;
 mod metadata;
 mod flagscolumn;
+pub mod simplification;
 
 pub use rwtfile::{RWTFMAGIC, RWTFile, DataField};
 pub use metadata::{RWTFMetadata, TrackType};

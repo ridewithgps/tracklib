@@ -365,11 +365,13 @@ methods!(
                                    rwtf.course_points.len()))
     }
 
-    fn rwtf_simplify() -> RString {
+    fn rwtf_simplify(tolerance: Float, precision: Integer) -> RString {
+        let t = tolerance.map_err(|e| VM::raise_ex(e)).unwrap();
+        let p = precision.map_err(|e| VM::raise_ex(e)).unwrap();
         let rwtf = &itself.get_data(&*INNER_WRAPPER).inner;
 
-        let simplified = tracklib::simplification::simplify(&rwtf);
-        let polyline = polyline::encode_coordinates(simplified, 5).unwrap();
+        let simplified = tracklib::simplification::simplify(&rwtf, t.to_f64());
+        let polyline = polyline::encode_coordinates(simplified, p.to_u64() as u32).unwrap();
 
         RString::new_utf8(&polyline)
     }

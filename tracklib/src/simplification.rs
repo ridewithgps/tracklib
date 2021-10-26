@@ -2,7 +2,7 @@ use crate::{RWTFile, Column};
 use std::collections::BTreeMap;
 use itertools::Itertools;
 
-pub fn simplify(rwtf: &RWTFile) -> geo::LineString<f64> {
+pub fn simplify(rwtf: &RWTFile, tolerance: f64) -> geo::LineString<f64> {
     let empty_longfloat_btree = BTreeMap::new();
     let empty_numbers_btree = BTreeMap::new();
     let empty_base64_btree = BTreeMap::new();
@@ -73,7 +73,7 @@ pub fn simplify(rwtf: &RWTFile) -> geo::LineString<f64> {
 
     use geo::algorithm::simplify::Simplify;
 
-    line.simplify(&0.00003)
+    line.simplify(&tolerance)
 }
 
 #[cfg(test)]
@@ -88,7 +88,7 @@ mod tests {
         let (_, rwtf) = parse_rwtf(&bytes).unwrap();
 
         println!("point count before simplification: {}", rwtf.track_points.len());
-        let simplified = simplify(&rwtf);
+        let simplified = simplify(&rwtf, 0.00003);
 
         use geo::algorithm::coords_iter::CoordsIter;
         println!("point count after simplification: {}", simplified.coords_count());

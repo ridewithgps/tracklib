@@ -9,7 +9,7 @@ pub enum TrackType {
     Segment(u32),
 }
 
-enum MetadataEntry {
+pub enum MetadataEntry {
     TrackType(TrackType),
     CreatedAt(SystemTime),
 }
@@ -45,7 +45,7 @@ impl MetadataEntry {
 }
 
 #[rustfmt::skip]
-fn write_metadata<W: Write>(out: &mut W, entries: Vec<MetadataEntry>) -> Result<usize> {
+pub(crate) fn write_metadata<W: Write>(out: &mut W, entries: Vec<MetadataEntry>) -> Result<usize> {
     let entry_count = u8::try_from(entries.len())?;
 
     let mut buf = Vec::new();

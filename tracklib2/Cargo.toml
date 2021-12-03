@@ -1,0 +1,18 @@
+[package]
+name = "tracklib2"
+version = "0.1.0"
+authors = ["Dan Larkin <dan@danlarkin.org>"]
+edition = "2018"
+
+[dependencies]
+crc = "1.8"
+leb128 = "0.2"
+nom = {version = "6.0", default_features = false, features = ["alloc"]}
+thiserror = "1.0"
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "parsing"
+harness = false

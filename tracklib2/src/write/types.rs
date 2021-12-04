@@ -1,8 +1,18 @@
 #[derive(Debug, Clone)]
 pub(crate) enum FieldType {
     I64,
-    Bool,
     String,
+    Bool,
+}
+
+impl FieldType {
+    pub(crate) fn type_tag(&self) -> u8 {
+        match self {
+            Self::I64 => 0x00,
+            Self::String => 0x04,
+            Self::Bool => 0x05,
+        }
+    }
 }
 
 #[derive(Clone, Debug)]

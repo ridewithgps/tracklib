@@ -12,7 +12,7 @@ pub const RWTFMAGIC: [u8; 8] = [0x89,  // non-ascii
                                 0x0A]; // newline
 
 #[rustfmt::skip]
-fn write_header<W: Write>(out: &mut W, file_version: u8, creator_version: u8, metadata_table_offset: u16, data_table_offset: u16) -> Result<usize> {
+pub(crate) fn write_header<W: Write>(out: &mut W, file_version: u8, creator_version: u8, metadata_table_offset: u16, data_table_offset: u16) -> Result<usize> {
     let mut buf = Vec::with_capacity(24);
 
     buf.write_all(&RWTFMAGIC)?;                                    // 8 bytes - Magic Number
@@ -24,7 +24,7 @@ fn write_header<W: Write>(out: &mut W, file_version: u8, creator_version: u8, me
     buf.write_all(&data_table_offset.to_le_bytes())?;              // 2 bytes - Offset to Data Table
     buf.write_all(&[0x00, 0x00])?;                                 // 2 bytes - E Reserve
     buf.write_all(&crc::crc16::checksum_usb(&buf).to_le_bytes())?; // 2 bytes - Header CRC
- 
+
     out.write_all(&buf)?;
     Ok(buf.len())
 }

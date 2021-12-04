@@ -2,7 +2,7 @@ use crate::error::Result;
 use std::convert::TryFrom;
 use std::io::Write;
 
-pub(crate) trait Encoder: Default {
+pub trait Encoder: Default {
     type T;
     fn encode(
         &mut self,
@@ -13,7 +13,7 @@ pub(crate) trait Encoder: Default {
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct I64Encoder {
+pub struct I64Encoder {
     prev: i64,
 }
 
@@ -44,7 +44,7 @@ impl Encoder for I64Encoder {
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct BoolEncoder;
+pub struct BoolEncoder;
 
 impl Encoder for BoolEncoder {
     type T = bool;
@@ -63,7 +63,7 @@ impl Encoder for BoolEncoder {
 }
 
 #[derive(Debug, Default)]
-pub(crate) struct StringEncoder;
+pub struct StringEncoder;
 
 impl Encoder for StringEncoder {
     type T = String;

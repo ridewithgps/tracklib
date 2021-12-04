@@ -40,7 +40,7 @@ impl Buffer {
     }
 }
 
-enum SectionType {
+pub enum SectionType {
     TrackPoints,
     CoursePoints,
 }
@@ -54,7 +54,7 @@ pub struct Section {
 
 impl Section {
     // TODO: provide a size_hint param to size buffer Vecs (at least presence)
-    fn new(section_type: SectionType, mapping: Vec<(String, FieldType)>) -> Self {
+    pub fn new(section_type: SectionType, mapping: Vec<(String, FieldType)>) -> Self {
         let mut fields = Vec::with_capacity(mapping.len());
         let mut column_data = Vec::with_capacity(mapping.len());
 
@@ -71,12 +71,12 @@ impl Section {
         }
     }
 
-    fn fields(&self) -> &[FieldDescription] {
+    pub fn fields(&self) -> &[FieldDescription] {
         &self.fields
     }
 
     /// mut borrow of self so only one row can be open at a time
-    fn open_row_builder(&mut self) -> RowBuilder {
+    pub fn open_row_builder(&mut self) -> RowBuilder {
         self.rows_written += 1; // TODO: bug when you open a row builder but never write data with it?
         RowBuilder::new(&self.fields, &mut self.column_data)
     }
@@ -148,7 +148,7 @@ impl Section {
     }
 }
 
-struct RowBuilder<'a> {
+pub struct RowBuilder<'a> {
     fields: &'a [FieldDescription],
     column_data: &'a mut Vec<Buffer>,
     field_index: usize,
@@ -164,7 +164,7 @@ impl<'a> RowBuilder<'a> {
     }
 
     /// mut borrow of self so only one column writer can be open at a time
-    fn next_column_writer(&mut self) -> Option<ColumnWriter> {
+    pub fn next_column_writer(&mut self) -> Option<ColumnWriter> {
         let field_index = self.field_index;
         self.field_index += 1;
 
@@ -186,7 +186,7 @@ impl<'a> RowBuilder<'a> {
     }
 }
 
-enum ColumnWriter<'a> {
+pub enum ColumnWriter<'a> {
     I64ColumnWriter(ColumnWriterImpl<'a, I64Encoder>),
     BoolColumnWriter(ColumnWriterImpl<'a, BoolEncoder>),
     StringColumnWriter(ColumnWriterImpl<'a, StringEncoder>),
@@ -194,7 +194,7 @@ enum ColumnWriter<'a> {
 
 // TODO: is this must_use correct?
 #[must_use]
-struct ColumnWriterImpl<'a, E: Encoder> {
+pub struct ColumnWriterImpl<'a, E: Encoder> {
     field_description: &'a FieldDescription,
     buf: &'a mut BufferImpl<E>,
 }
@@ -207,12 +207,12 @@ impl<'a, E: Encoder> ColumnWriterImpl<'a, E> {
         }
     }
 
-    fn field_description(&self) -> &FieldDescription {
+    pub fn field_description(&self) -> &FieldDescription {
         &self.field_description
     }
 
     /// Takes `self` so that only one value per column can be written
-    fn write(self, value: Option<&E::T>) -> Result<()> {
+    pub fn write(self, value: Option<&E::T>) -> Result<()> {
         let BufferImpl {
             ref mut encoder,
             ref mut buf,

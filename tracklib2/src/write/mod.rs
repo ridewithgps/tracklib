@@ -1,6 +1,6 @@
-mod encoders;
+pub mod encoders;
 mod header;
-mod metadata;
-mod section;
-mod track;
-mod types;
+pub mod metadata;
+pub mod section;
+pub mod track;
+pub mod types;

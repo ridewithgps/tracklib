@@ -6,7 +6,7 @@ use std::convert::TryFrom;
 use std::io::{self, Write};
 
 impl FieldType {
-    pub(crate) fn type_tag(&self) -> u8 {
+    fn type_tag(&self) -> u8 {
         match self {
             Self::I64 => 0x00,
             Self::String => 0x04,
@@ -54,6 +54,15 @@ impl Buffer {
 pub enum SectionType {
     TrackPoints,
     CoursePoints,
+}
+
+impl SectionType {
+    fn type_tag(&self) -> u8 {
+        match self {
+            Self::TrackPoints => 0x00,
+            Self::CoursePoints => 0x01,
+        }
+    }
 }
 
 pub struct Section {
@@ -155,6 +164,28 @@ impl Section {
             leb128::write::unsigned(&mut buf, u64::try_from(data_column_size)?)?; // ? bytes - leb128 column data size
         }
 
+        out.write_all(&buf)?;
+        Ok(buf.len())
+    }
+
+    #[rustfmt::skip]
+    pub(crate) fn write<W: Write>(&self, out: &mut W) -> Result<usize> {
+        let mut buf = Vec::new();
+
+        buf.write_all(&self.section_type.type_tag().to_le_bytes())?;              // 1 byte  - section type
+        buf.write_all(&u32::try_from(self.rows_written)?.to_le_bytes())?;         // 4 bytes - number of points in this section
+        self.write_types_table(&mut buf)?;                                        // ? bytes - types table
+        self.write_presence_column(&mut buf)?;                                    // ? bytes - presence column
+
+        for buffer in self.column_data.iter() {
+            match buffer {
+                Buffer::I64(buffer_impl) => buffer_impl.write_data(&mut buf)?,    // \
+                Buffer::Bool(buffer_impl) => buffer_impl.write_data(&mut buf)?,   //  \
+                Buffer::String(buffer_impl) => buffer_impl.write_data(&mut buf)?, //   > ? bytes - data column
+            };
+        }
+
+        buf.write_all(&CRC32.checksum(&buf).to_le_bytes())?;                      // 4 bytes - crc
 
         out.write_all(&buf)?;
         Ok(buf.len())
@@ -199,12 +230,14 @@ impl<'a> RowBuilder<'a> {
     }
 }
 
+#[derive(Debug)]
 pub enum ColumnWriter<'a> {
     I64ColumnWriter(ColumnWriterImpl<'a, I64Encoder>),
     BoolColumnWriter(ColumnWriterImpl<'a, BoolEncoder>),
     StringColumnWriter(ColumnWriterImpl<'a, StringEncoder>),
 }
 
+#[derive(Debug)]
 // TODO: is this must_use correct?
 #[must_use]
 pub struct ColumnWriterImpl<'a, E: Encoder> {
@@ -239,6 +272,8 @@ impl<'a, E: Encoder> ColumnWriterImpl<'a, E> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use assert_matches::assert_matches;
+    use std::collections::HashMap;
 
     #[test]
     fn test_write_presence_column() {
@@ -293,7 +328,51 @@ mod tests {
     }
 
     #[test]
-    fn test_multibyte_presence_column() {}
+    fn test_multibyte_presence_column() {
+        let mut section = Section::new(
+            SectionType::TrackPoints,
+            vec![
+                ("1".to_string(), FieldType::Bool),
+                ("2".to_string(), FieldType::Bool),
+                ("3".to_string(), FieldType::Bool),
+                ("4".to_string(), FieldType::Bool),
+                ("5".to_string(), FieldType::Bool),
+                ("6".to_string(), FieldType::Bool),
+                ("7".to_string(), FieldType::Bool),
+                ("8".to_string(), FieldType::Bool),
+                ("9".to_string(), FieldType::Bool),
+                ("10".to_string(), FieldType::Bool),
+                ("11".to_string(), FieldType::Bool),
+                ("12".to_string(), FieldType::Bool),
+                ("13".to_string(), FieldType::Bool),
+                ("14".to_string(), FieldType::Bool),
+                ("15".to_string(), FieldType::Bool),
+                ("16".to_string(), FieldType::Bool),
+                ("17".to_string(), FieldType::Bool),
+                ("18".to_string(), FieldType::Bool),
+                ("19".to_string(), FieldType::Bool),
+                ("20".to_string(), FieldType::Bool),
+            ],
+        );
+
+        for i in 0..2 {
+            let mut rowbuilder = section.open_row_builder();
+            while let Some(cw) = rowbuilder.next_column_writer() {
+                match cw {
+                    ColumnWriter::BoolColumnWriter(cwi) => assert!(cwi.write(Some(&true)).is_ok()),
+                    _ => assert!(false, "unexpected column writer type here"),
+                }
+            }
+        }
+
+        let mut buf = Vec::new();
+        let bytes_written = section.write_presence_column(&mut buf);
+        assert!(bytes_written.is_ok());
+        assert_eq!(bytes_written.unwrap(), buf.len());
+        #[rustfmt::skip]
+        assert_eq!(buf, &[0b11111111, 0b11111111, 0b00001111,
+                          0b11111111, 0b11111111, 0b00001111]);
+    }
 
     #[test]
     fn test_types_table() {
@@ -353,5 +432,148 @@ mod tests {
                           0x01, // name len = 1
                           b'i', // name = "i"
                           0x02]); // data size = 2
+    }
+
+    #[test]
+    fn test_writing_a_section() {
+        enum V {
+            I64(i64),
+            Bool(bool),
+            String(String),
+        }
+
+        let mut v = Vec::new();
+        let mut h = HashMap::new();
+        h.insert("a", V::I64(1));
+        h.insert("b", V::Bool(false));
+        h.insert("c", V::String("Ride".to_string()));
+        v.push(h);
+        let mut h = HashMap::new();
+        h.insert("a", V::I64(2));
+        h.insert("c", V::String("with".to_string()));
+        v.push(h);
+        let mut h = HashMap::new();
+        h.insert("a", V::I64(4));
+        h.insert("b", V::Bool(true));
+        h.insert("c", V::String("GPS".to_string()));
+        v.push(h);
+
+        let mut section = Section::new(
+            SectionType::TrackPoints,
+            vec![
+                ("a".to_string(), FieldType::I64),
+                ("b".to_string(), FieldType::Bool),
+                ("c".to_string(), FieldType::String),
+            ],
+        );
+
+        let mapping = section.fields().to_vec();
+
+        for entry in v {
+            let mut rowbuilder = section.open_row_builder();
+
+            for field_desc in mapping.iter() {
+                assert_matches!(rowbuilder.next_column_writer(), Some(cw) => {
+                    match cw {
+                        ColumnWriter::I64ColumnWriter(cwi) => {
+                            assert!(cwi.write(
+                                entry
+                                    .get(field_desc.name())
+                                    .map(|v| match v {
+                                        V::I64(v) => Some(v),
+                                        _ => None,
+                                    })
+                                    .flatten(),
+                            ).is_ok());
+                        }
+                        ColumnWriter::BoolColumnWriter(cwi) => {
+                            assert!(cwi.write(
+                                entry
+                                    .get(field_desc.name())
+                                    .map(|v| match v {
+                                        V::Bool(v) => Some(v),
+                                        _ => None,
+                                    })
+                                    .flatten(),
+                            ).is_ok());
+                        }
+                        ColumnWriter::StringColumnWriter(cwi) => {
+                            assert!(cwi.write(
+                                entry
+                                    .get(field_desc.name())
+                                    .map(|v| match v {
+                                        V::String(v) => Some(v),
+                                        _ => None,
+                                    })
+                                    .flatten(),
+                            ).is_ok());
+                        }
+                    }
+                });
+            }
+        }
+
+        let mut buf = Vec::new();
+        let bytes_written = section.write(&mut buf);
+        assert!(bytes_written.is_ok());
+        assert_eq!(bytes_written.unwrap(), buf.len());
+        #[rustfmt::skip]
+        assert_eq!(buf, &[0x00, // section type = track points
+                          0x03, // point count
+                          0x00,
+                          0x00,
+                          0x00,
+
+                          // Types Table
+                          0x03, // field count
+                          0x00, // first field type = I64
+                          0x01, // name length
+                          b'a', // name
+                          0x03, // leb128 data size
+                          0x05, // second field type = Bool
+                          0x01, // name length
+                          b'b', // name
+                          0x03, // leb128 data size
+                          0x04, // third field type = String
+                          0x01, // name length
+                          b'c', // name
+                          0x0E, // leb128 data size
+
+                          // Presence Column
+                          0b00000111,
+                          0b00000101,
+                          0b00000111,
+
+                          // Data Column 1 = I64
+                          0x01, // 1
+                          0x01, // 2
+                          0x02, // 4
+
+                          // Data Column 2 = Bool
+                          0x00, // false
+                          0x00, // missing
+                          0x01, // true
+
+                          // Data Column 3 = String
+                          0x04, // length 4
+                          b'R',
+                          b'i',
+                          b'd',
+                          b'e',
+                          0x04, // length 4
+                          b'w',
+                          b'i',
+                          b't',
+                          b'h',
+                          0x03, // length 3
+                          b'G',
+                          b'P',
+                          b'S',
+
+                          // CRC
+                          0xAF,
+                          0xEC,
+                          0x7D,
+                          0x70]);
     }
 }

@@ -1,15 +1,6 @@
+use crate::consts::RWTFMAGIC;
 use crate::error::Result;
 use std::io::Write;
-
-#[rustfmt::skip]
-pub const RWTFMAGIC: [u8; 8] = [0x89,  // non-ascii
-                                0x52,  // R
-                                0x57,  // W
-                                0x54,  // T
-                                0x46,  // F
-                                0x0A,  // newline
-                                0x1A,  // ctrl-z
-                                0x0A]; // newline
 
 #[rustfmt::skip]
 pub(crate) fn write_header<W: Write>(out: &mut W, file_version: u8, creator_version: u8, metadata_table_offset: u16, data_table_offset: u16) -> Result<usize> {

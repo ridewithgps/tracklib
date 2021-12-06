@@ -10,3 +10,6 @@ pub(crate) const RWTFMAGIC: [u8; 8] = [0x89,  // non-ascii
                                        0x0A,  // newline
                                        0x1A,  // ctrl-z
                                        0x0A]; // newline
+
+pub(crate) const RWTF_FILE_VERSION: u8 = 0x01;
+pub(crate) const RWTF_CREATOR_VERSION: u8 = 0x00;

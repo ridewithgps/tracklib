@@ -132,19 +132,22 @@ impl Section {
         Ok(bytes_written)
     }
 
+    #[rustfmt::skip]
     fn write_types_table<W: Write>(&self, out: &mut W) -> Result<usize> {
         let mut buf = Vec::new();
 
         buf.write_all(&u8::try_from(self.fields.len())?.to_le_bytes())?;          // 1 byte  - number of entries
 
         for (i, field) in self.fields.iter().enumerate() {
-            let data_column_size = self.column_data.get(i).map(|buffer| {
-                match buffer {
+            let data_column_size = self
+                .column_data
+                .get(i)
+                .map(|buffer| match buffer {
                     Buffer::I64(buffer_impl) => buffer_impl.data_size(),
                     Buffer::Bool(buffer_impl) => buffer_impl.data_size(),
                     Buffer::String(buffer_impl) => buffer_impl.data_size(),
-                }
-            }).unwrap_or(0);
+                })
+                .unwrap_or(0);
 
             buf.write_all(&field.fieldtype().type_tag().to_le_bytes())?;          // 1 byte  - field type tag
             buf.write_all(&u8::try_from(field.name().len())?.to_le_bytes())?;     // 1 byte  - field name length
@@ -152,7 +155,6 @@ impl Section {
             leb128::write::unsigned(&mut buf, u64::try_from(data_column_size)?)?; // ? bytes - leb128 column data size
         }
 
-        buf.write_all(&CRC16.checksum(&buf).to_le_bytes())?;                      // 2 bytes - crc
 
         out.write_all(&buf)?;
         Ok(buf.len())
@@ -350,8 +352,6 @@ mod tests {
                           0x00, // fourth entry type: i64 = 0
                           0x01, // name len = 1
                           b'i', // name = "i"
-                          0x02, // data size = 2
-                          0x47, // crc
-                          0x13]);
+                          0x02]); // data size = 2
     }
 }

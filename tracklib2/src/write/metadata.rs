@@ -30,7 +30,7 @@ impl MetadataEntry {
 }
 
 #[rustfmt::skip]
-pub(crate) fn write_metadata<W: Write>(out: &mut W, entries: Vec<MetadataEntry>) -> Result<usize> {
+pub(crate) fn write_metadata<W: Write>(out: &mut W, entries: &[MetadataEntry]) -> Result<usize> {
     let entry_count = u8::try_from(entries.len())?;
 
     let mut buf = Vec::new();
@@ -60,7 +60,7 @@ mod tests {
     #[test]
     fn test_write_empty_metadata() {
         let mut buf = vec![];
-        let written = write_metadata(&mut buf, vec![]);
+        let written = write_metadata(&mut buf, &[]);
         assert!(written.is_ok());
         #[rustfmt::skip]
         let expected = &[0x00, // zero metadata entries
@@ -73,10 +73,7 @@ mod tests {
     #[test]
     fn test_only_track_type_trip() {
         let mut buf = vec![];
-        let written = write_metadata(
-            &mut buf,
-            vec![MetadataEntry::TrackType(TrackType::Trip(400))],
-        );
+        let written = write_metadata(&mut buf, &[MetadataEntry::TrackType(TrackType::Trip(400))]);
         assert!(written.is_ok());
         #[rustfmt::skip]
         let expected = &[0x01, // one metadata entry
@@ -97,10 +94,7 @@ mod tests {
     #[test]
     fn test_only_track_type_route() {
         let mut buf = vec![];
-        let written = write_metadata(
-            &mut buf,
-            vec![MetadataEntry::TrackType(TrackType::Route(64))],
-        );
+        let written = write_metadata(&mut buf, &[MetadataEntry::TrackType(TrackType::Route(64))]);
         assert!(written.is_ok());
         #[rustfmt::skip]
         let expected = &[0x01, // one metadata entry
@@ -123,7 +117,7 @@ mod tests {
         let mut buf = vec![];
         let written = write_metadata(
             &mut buf,
-            vec![MetadataEntry::TrackType(TrackType::Segment(u32::MAX))],
+            &[MetadataEntry::TrackType(TrackType::Segment(u32::MAX))],
         );
         assert!(written.is_ok());
         #[rustfmt::skip]
@@ -145,7 +139,7 @@ mod tests {
     #[test]
     fn test_only_created_at_epoch() {
         let mut buf = vec![];
-        let written = write_metadata(&mut buf, vec![MetadataEntry::CreatedAt(UNIX_EPOCH)]);
+        let written = write_metadata(&mut buf, &[MetadataEntry::CreatedAt(0)]);
         assert!(written.is_ok());
         #[rustfmt::skip]
         let expected = &[0x01, // one metadata entry
@@ -170,7 +164,7 @@ mod tests {
     fn test_only_created_at_future() {
         let mut buf = vec![];
         let the_future = Duration::from_millis(u64::MAX).as_secs();
-        let written = write_metadata(&mut buf, vec![MetadataEntry::CreatedAt(the_future)]);
+        let written = write_metadata(&mut buf, &[MetadataEntry::CreatedAt(the_future)]);
         assert!(written.is_ok());
         #[rustfmt::skip]
         let expected = &[0x01, // one metadata entry
@@ -196,7 +190,7 @@ mod tests {
         let mut buf = vec![];
         let written = write_metadata(
             &mut buf,
-            vec![
+            &[
                 MetadataEntry::TrackType(TrackType::Trip(20)),
                 MetadataEntry::CreatedAt(0),
             ],
@@ -234,7 +228,7 @@ mod tests {
         let mut buf = vec![];
         let written = write_metadata(
             &mut buf,
-            vec![
+            &[
                 MetadataEntry::TrackType(TrackType::Trip(20)),
                 MetadataEntry::TrackType(TrackType::Trip(21)),
                 MetadataEntry::TrackType(TrackType::Route(22)),

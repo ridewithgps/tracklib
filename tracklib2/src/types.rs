@@ -5,16 +5,6 @@ pub enum FieldType {
     Bool,
 }
 
-impl FieldType {
-    pub(crate) fn type_tag(&self) -> u8 {
-        match self {
-            Self::I64 => 0x00,
-            Self::String => 0x04,
-            Self::Bool => 0x05,
-        }
-    }
-}
-
 #[derive(Clone, Debug)]
 pub struct FieldDescription {
     name: String,
@@ -33,4 +23,17 @@ impl FieldDescription {
     pub fn fieldtype(&self) -> &FieldType {
         &self.fieldtype
     }
+}
+
+#[derive(Debug, PartialEq)]
+pub enum TrackType {
+    Trip(u32),
+    Route(u32),
+    Segment(u32),
+}
+
+#[derive(Debug, PartialEq)]
+pub enum MetadataEntry {
+    TrackType(TrackType),
+    CreatedAt(u64),
 }

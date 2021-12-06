@@ -1,22 +1,11 @@
 use crate::consts::CRC16;
 use crate::error::{Result, TracklibError};
+use crate::types::{MetadataEntry, TrackType};
 use std::convert::TryFrom;
 use std::io::Write;
-use std::time::{SystemTime, UNIX_EPOCH};
-
-pub enum TrackType {
-    Trip(u32),
-    Route(u32),
-    Segment(u32),
-}
-
-pub enum MetadataEntry {
-    TrackType(TrackType),
-    CreatedAt(SystemTime),
-}
 
 impl MetadataEntry {
-    fn foo(&self) -> Result<(u8, Vec<u8>)> {
+    fn write(&self) -> Result<(u8, Vec<u8>)> {
         match self {
             Self::TrackType(track_type) => {
                 // TrackType metadata is 5 bytes
@@ -32,14 +21,9 @@ impl MetadataEntry {
                 buf.write_all(&id.to_le_bytes())?;
                 Ok((0x00, buf))
             }
-            Self::CreatedAt(system_time) => {
+            Self::CreatedAt(seconds_since_epoch) => {
                 // CreatedAt metadata is 8 bytes: seconds since epoch
-                let buf = system_time
-                    .duration_since(UNIX_EPOCH)?
-                    .as_secs()
-                    .to_le_bytes()
-                    .to_vec();
-                Ok((0x01, buf))
+                Ok((0x01, seconds_since_epoch.to_le_bytes().to_vec()))
             }
         }
     }
@@ -54,7 +38,7 @@ pub(crate) fn write_metadata<W: Write>(out: &mut W, entries: Vec<MetadataEntry>)
     buf.write_all(&entry_count.to_le_bytes())?;                    // 1 byte  - entry count
 
     for entry in entries {
-        let (entry_type, entry_bytes) = entry.foo()?;
+        let (entry_type, entry_bytes) = entry.write()?;
         let entry_size = u16::try_from(entry_bytes.len())?;
 
         buf.write_all(&entry_type.to_le_bytes())?;                 // 1 byte  - entry type
@@ -185,7 +169,7 @@ mod tests {
     #[test]
     fn test_only_created_at_future() {
         let mut buf = vec![];
-        let the_future = UNIX_EPOCH + Duration::from_millis(u64::MAX);
+        let the_future = Duration::from_millis(u64::MAX).as_secs();
         let written = write_metadata(&mut buf, vec![MetadataEntry::CreatedAt(the_future)]);
         assert!(written.is_ok());
         #[rustfmt::skip]
@@ -214,7 +198,7 @@ mod tests {
             &mut buf,
             vec![
                 MetadataEntry::TrackType(TrackType::Trip(20)),
-                MetadataEntry::CreatedAt(UNIX_EPOCH),
+                MetadataEntry::CreatedAt(0),
             ],
         );
         assert!(written.is_ok());

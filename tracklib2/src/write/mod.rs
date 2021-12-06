@@ -3,4 +3,3 @@ mod header;
 pub mod metadata;
 pub mod section;
 pub mod track;
-pub mod types;

@@ -1,9 +1,19 @@
 use super::encoders::{BoolEncoder, Encoder, I64Encoder, StringEncoder};
-use super::types::{FieldDescription, FieldType};
 use crate::consts::{CRC16, CRC32};
 use crate::error::Result;
+use crate::types::{FieldDescription, FieldType};
 use std::convert::TryFrom;
 use std::io::{self, Write};
+
+impl FieldType {
+    pub(crate) fn type_tag(&self) -> u8 {
+        match self {
+            Self::I64 => 0x00,
+            Self::String => 0x04,
+            Self::Bool => 0x05,
+        }
+    }
+}
 
 #[derive(Default, Debug)]
 struct BufferImpl<E: Encoder> {

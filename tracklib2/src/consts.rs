@@ -1,3 +1,6 @@
+pub(crate) const CRC16: crc::Crc<u16> = crc::Crc::<u16>::new(&crc::CRC_16_USB);
+pub(crate) const CRC32: crc::Crc<u32> = crc::Crc::<u32>::new(&crc::CRC_32_BZIP2);
+
 #[rustfmt::skip]
 pub(crate) const RWTFMAGIC: [u8; 8] = [0x89,  // non-ascii
                                        0x52,  // R

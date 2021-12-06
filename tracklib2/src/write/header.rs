@@ -1,4 +1,4 @@
-use crate::consts::RWTFMAGIC;
+use crate::consts::{CRC16, RWTFMAGIC};
 use crate::error::Result;
 use std::io::Write;
 
@@ -14,7 +14,7 @@ pub(crate) fn write_header<W: Write>(out: &mut W, file_version: u8, creator_vers
     buf.write_all(&metadata_table_offset.to_le_bytes())?;          // 2 bytes - Offset to Metadata Table
     buf.write_all(&data_table_offset.to_le_bytes())?;              // 2 bytes - Offset to Data Table
     buf.write_all(&[0x00, 0x00])?;                                 // 2 bytes - E Reserve
-    buf.write_all(&crc::crc16::checksum_usb(&buf).to_le_bytes())?; // 2 bytes - Header CRC
+    buf.write_all(&CRC16.checksum(&buf).to_le_bytes())?;           // 2 bytes - Header CRC
 
     out.write_all(&buf)?;
     Ok(buf.len())

@@ -1,3 +1,4 @@
+use crate::consts::CRC16;
 use crate::error::{Result, TracklibError};
 use std::convert::TryFrom;
 use std::io::Write;
@@ -61,7 +62,7 @@ pub(crate) fn write_metadata<W: Write>(out: &mut W, entries: Vec<MetadataEntry>)
         buf.write_all(&entry_bytes)?;                              // ? bytes - entry value
     }
 
-    buf.write_all(&crc::crc16::checksum_usb(&buf).to_le_bytes())?; // 2 bytes - crc
+    buf.write_all(&CRC16.checksum(&buf).to_le_bytes())?;           // 2 bytes - crc
 
     out.write_all(&buf)?;
     Ok(buf.len())

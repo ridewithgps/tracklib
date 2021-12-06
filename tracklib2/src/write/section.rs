@@ -1,5 +1,6 @@
 use super::encoders::{BoolEncoder, Encoder, I64Encoder, StringEncoder};
 use super::types::{FieldDescription, FieldType};
+use crate::consts::{CRC16, CRC32};
 use crate::error::Result;
 use std::convert::TryFrom;
 use std::io::{self, Write};
@@ -141,7 +142,7 @@ impl Section {
             leb128::write::unsigned(&mut buf, u64::try_from(data_column_size)?)?; // ? bytes - leb128 column data size
         }
 
-        buf.write_all(&crc::crc16::checksum_usb(&buf).to_le_bytes())?;            // 2 bytes - crc
+        buf.write_all(&CRC16.checksum(&buf).to_le_bytes())?;                      // 2 bytes - crc
 
         out.write_all(&buf)?;
         Ok(buf.len())

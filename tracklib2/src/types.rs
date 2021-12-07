@@ -1,4 +1,5 @@
 #[derive(Debug, Clone)]
+#[cfg_attr(test, derive(PartialEq))]
 pub enum FieldType {
     I64,
     String,
@@ -25,14 +26,16 @@ impl FieldDescription {
     }
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub enum TrackType {
     Trip(u32),
     Route(u32),
     Segment(u32),
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub enum MetadataEntry {
     TrackType(TrackType),
     CreatedAt(u64),

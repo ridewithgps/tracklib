@@ -7,7 +7,8 @@ use nom::{
     IResult,
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct Header {
     pub(crate) file_version: u8,
     pub(crate) creator_version: u8,

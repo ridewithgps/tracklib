@@ -13,12 +13,6 @@ pub enum TracklibError {
         #[from]
         source: std::io::Error,
     },
-
-    #[error("Time Error?!")]
-    TimeError {
-        #[from]
-        source: std::time::SystemTimeError,
-    },
 }
 
 pub type Result<T, E = TracklibError> = std::result::Result<T, E>;

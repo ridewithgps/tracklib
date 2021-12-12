@@ -1,3 +1,4 @@
+mod crcwriter;
 pub mod encoders;
 mod header;
 pub mod metadata;

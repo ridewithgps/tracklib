@@ -1,4 +1,5 @@
 mod crcwriter;
+mod data_table;
 pub mod encoders;
 mod header;
 pub mod metadata;

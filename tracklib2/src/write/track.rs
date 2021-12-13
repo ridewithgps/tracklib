@@ -1,3 +1,4 @@
+use super::data_table::write_data_table;
 use super::metadata::write_metadata;
 use super::section::Section;
 use crate::consts::{CRC16, RWTF_HEADER_SIZE};
@@ -6,127 +7,86 @@ use crate::types::MetadataEntry;
 use std::convert::TryFrom;
 use std::io::{self, Write};
 
-#[rustfmt::skip]
-fn write_data_table<W: Write>(out: &mut W, section_bufs: &[Vec<u8>]) -> Result<usize> {
-    let mut buf = Vec::new();
-
-    buf.write_all(&u8::try_from(section_bufs.len())?.to_le_bytes())?;      // 1 byte  - number of sections
-
-    for section in section_bufs.iter() {
-        leb128::write::unsigned(&mut buf, u64::try_from(section.len())?)?; // ? bytes - leb128 section size
-    }
-
-    buf.write_all(&CRC16.checksum(&buf).to_le_bytes())?;                   // 2 bytes - crc
-
-    out.write_all(&buf)?;
-    Ok(buf.len())
-}
-
 pub fn write_track<W: Write>(
     out: &mut W,
     metadata_entries: &[MetadataEntry],
     sections: &[Section],
-) -> Result<usize> {
-    let mut bytes_written = 0;
-
+) -> Result<()> {
     // write metadata to a buffer so we can measure its size to use in the file header
     let mut metadata_buf = Vec::new();
     write_metadata(&mut metadata_buf, metadata_entries)?;
 
     // write header
-    bytes_written += super::header::write_header(
+    super::header::write_header(
         out,
         RWTF_HEADER_SIZE,
         RWTF_HEADER_SIZE + u16::try_from(metadata_buf.len())?,
     )?;
 
     // copy metadata buffer to out
-    bytes_written += usize::try_from(io::copy(&mut io::Cursor::new(metadata_buf), out)?)?;
-
-    // create bufs for all sections
-    let section_bufs: Vec<Vec<u8>> = sections
-        .iter()
-        .map(|section| {
-            let mut buf = Vec::new();
-            section.write(&mut buf)?;
-            Ok(buf)
-        })
-        .collect::<Result<_>>()?;
+    io::copy(&mut io::Cursor::new(metadata_buf), out)?;
 
     // write the data table
-    bytes_written += write_data_table(out, &section_bufs)?;
+    write_data_table(out, &sections)?;
 
     // now write out all the data sections
-    for section in section_bufs {
-        bytes_written += usize::try_from(io::copy(&mut io::Cursor::new(section), out)?)?;
+    for section in sections {
+        section.write(out)?;
     }
 
-    Ok(bytes_written)
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::FieldType;
+    use crate::types::{FieldType, TrackType};
     use crate::write::section::{ColumnWriter, SectionType};
     use assert_matches::assert_matches;
     use std::collections::HashMap;
 
     #[test]
-    fn test_write_empty_data_table() {
-        let mut buf = Vec::new();
-        let bytes_written = write_data_table(&mut buf, &[]);
-        assert!(bytes_written.is_ok());
-        assert_eq!(bytes_written.unwrap(), buf.len());
-        #[rustfmt::skip]
-        assert_eq!(buf, &[0x00, // zero entries
-                          0x40, // crc
-                          0xBF]);
-    }
-
-    #[test]
     fn test_empty_track() {
         let mut buf = Vec::new();
-        let bytes_written = write_track(&mut buf, &[], &[]);
-        assert!(bytes_written.is_ok());
-        assert_eq!(bytes_written.unwrap(), buf.len());
-        #[rustfmt::skip]
-        assert_eq!(buf, &[
-            // Header
-            0x89, // rwtfmagic
-            0x52,
-            0x57,
-            0x54,
-            0x46,
-            0x0A,
-            0x1A,
-            0x0A,
-            0x01, // file version
-            0x00, // fv reserve
-            0x00,
-            0x00,
-            0x00, // creator version
-            0x00, // cv reserve
-            0x00,
-            0x00,
-            0x18, // metadata table offset
-            0x00,
-            0x1B, // data offset
-            0x00,
-            0x00, // e reserve
-            0x00,
-            0x84, // header crc
-            0xF8,
+        assert_matches!(write_track(&mut buf, &[], &[]), Ok(()) => {
+            #[rustfmt::skip]
+            assert_eq!(buf, &[
+                // Header
+                0x89, // rwtfmagic
+                0x52,
+                0x57,
+                0x54,
+                0x46,
+                0x0A,
+                0x1A,
+                0x0A,
+                0x01, // file version
+                0x00, // fv reserve
+                0x00,
+                0x00,
+                0x00, // creator version
+                0x00, // cv reserve
+                0x00,
+                0x00,
+                0x18, // metadata table offset
+                0x00,
+                0x1B, // data offset
+                0x00,
+                0x00, // e reserve
+                0x00,
+                0x84, // header crc
+                0xF8,
 
-            // Metadata Table
-            0x00, // zero metadata entries
-            0x40, // crc
-            0xBF,
+                // Metadata Table
+                0x00, // zero metadata entries
+                0x40, // crc
+                0xBF,
 
-            // Data Table
-            0x00, // zero sections
-            0x40, // crc
-            0xBF]);
+                // Data Table
+                0x00, // zero sections
+                0x40, // crc
+                0xBF]);
+        });
     }
 
     #[test]
@@ -236,179 +196,206 @@ mod tests {
         }
 
         let mut buf = Vec::new();
-        let bytes_written = write_track(&mut buf, &[], &[section1, section2]);
-        assert!(bytes_written.is_ok());
-        assert_eq!(bytes_written.unwrap(), buf.len());
-        #[rustfmt::skip]
-        assert_eq!(buf, &[
-            // Header
-            0x89, // rwtfmagic
-            0x52,
-            0x57,
-            0x54,
-            0x46,
-            0x0A,
-            0x1A,
-            0x0A,
-            0x01, // file version
-            0x00, // fv reserve
-            0x00,
-            0x00,
-            0x00, // creator version
-            0x00, // cv reserve
-            0x00,
-            0x00,
-            0x18, // metadata table offset
-            0x00,
-            0x1B, // data offset
-            0x00,
-            0x00, // e reserve
-            0x00,
-            0x84, // header crc
-            0xF8,
+        assert_matches!(write_track(&mut buf,
+                                    &[MetadataEntry::TrackType(TrackType::Segment(5))],
+                                    &[section1, section2]), Ok(()) => {
+            #[rustfmt::skip]
+            assert_eq!(buf, &[
+                // Header
+                0x89, // rwtfmagic
+                0x52,
+                0x57,
+                0x54,
+                0x46,
+                0x0A,
+                0x1A,
+                0x0A,
+                0x01, // file version
+                0x00, // fv reserve
+                0x00,
+                0x00,
+                0x00, // creator version
+                0x00, // cv reserve
+                0x00,
+                0x00,
+                0x18, // metadata table offset
+                0x00,
+                0x23, // data offset
+                0x00,
+                0x00, // e reserve
+                0x00,
+                0x89, // header crc
+                0x98,
 
-            // Metadata Table
-            0x00, // zero entries
-            0x40, // crc
-            0xBF,
+                // Metadata Table
+                0x01, // one entry
+                0x00, // entry type: track_type = 0x00
+                0x05, // two byte entry size = 5
+                0x00,
+                0x02, // track type: segment = 0x02
+                0x05, // four byte segment ID
+                0x00,
+                0x00,
+                0x00,
+                0xD4, // crc
+                0x93,
 
-            // Data Table
-            0x02, // two entries
-            0x39, // size of first entry
-            0x2D, // size of second entry
-            0xFD, // crc
-            0xB2,
+                // Data Table
+                0x02, // two sections
 
+                // Data Table Section 1
+                0x01, // type of section = course points
+                0x05, // leb128 point count
+                0x23, // leb128 data size
 
-            // Section 1
-            0x01, // section type = course points
-            0x05, // point count
-            0x00,
-            0x00,
-            0x00,
+                // Types Table for Section 1
+                0x03, // field count
+                0x00, // first field type = I64
+                0x01, // name len
+                b'm', // name
+                0x05, // leb128 data size
+                0x05, // second field type = Bool
+                0x01, // name len
+                b'k', // name
+                0x05, // leb128 data size
+                0x04, // third field type = String
+                0x01, // name len
+                b'j', // name
+                0x14, // leb128 data size
 
-            // Types Table
-            0x03, // field count
-            0x00, // first field type = I64
-            0x01, // name len
-            b'm', // name
-            0x05, // leb128 data size
-            0x05, // second field type = Bool
-            0x01, // name len
-            b'k', // name
-            0x05, // leb128 data size
-            0x04, // third field type = String
-            0x01, // name len
-            b'j', // name
-            0x14, // leb128 data size
+                // Data Table Section 2
+                0x00, // type of section = track points
+                0x03, // leb128 point count
+                0x17, // leb128 data size
 
-            // Presence Column
-            0b00000111,
-            0b00000111,
-            0b00000111,
-            0b00000111,
-            0b00000111,
+                // Types Table for Section 2
+                0x03, // field count
+                0x00, // first field type = I64
+                0x01, // name length
+                b'a', // name
+                0x03, // leb128 data size
+                0x05, // second field type = Bool
+                0x01, // name length
+                b'b', // name
+                0x03, // leb128 data size
+                0x04, // third field type = String
+                0x01, // name length
+                b'c', // name
+                0x0E, // leb128 data size
 
-            // Data Column 1 = I64
-            0x2A, // 42
-            0x00, // no change
-            0x00, // no change
-            0x00, // no change
-            0x00, // no change
+                // Data Table CRC
+                0x6C,
+                0xB4,
 
-            // Data Column 2 = Bool
-            0x01, // true
-            0x01, // true
-            0x01, // true
-            0x01, // true
-            0x01, // true
+                // Data Section 1
 
-            // Data Column 3 = String
-            0x03, // length 3
-            b'h',
-            b'e',
-            b'y',
-            0x03, // length 3
-            b'h',
-            b'e',
-            b'y',
-            0x03, // length 3
-            b'h',
-            b'e',
-            b'y',
-            0x03, // length 3
-            b'h',
-            b'e',
-            b'y',
-            0x03, // length 3
-            b'h',
-            b'e',
-            b'y',
+                // Presence Column
+                0b00000111,
+                0b00000111,
+                0b00000111,
+                0b00000111,
+                0b00000111,
+                0xF6, // crc
+                0xF8,
+                0x0D,
+                0x73,
 
-            // CRC
-            0x5B,
-            0xC3,
-            0x0F,
-            0x6E,
+                // Data Column 1 = I64
+                0x2A, // 42
+                0x00, // no change
+                0x00, // no change
+                0x00, // no change
+                0x00, // no change
+                0xD0, // crc
+                0x8D,
+                0x79,
+                0x68,
 
+                // Data Column 2 = Bool
+                0x01, // true
+                0x01, // true
+                0x01, // true
+                0x01, // true
+                0x01, // true
+                0xB5, // crc
+                0xC9,
+                0x8F,
+                0xFA,
 
-            // Section 2
-            0x00, // section type = track points
-            0x03, // point count
-            0x00,
-            0x00,
-            0x00,
+                // Data Column 3 = String
+                0x03, // length 3
+                b'h',
+                b'e',
+                b'y',
+                0x03, // length 3
+                b'h',
+                b'e',
+                b'y',
+                0x03, // length 3
+                b'h',
+                b'e',
+                b'y',
+                0x03, // length 3
+                b'h',
+                b'e',
+                b'y',
+                0x03, // length 3
+                b'h',
+                b'e',
+                b'y',
+                0x36, // crc
+                0x71,
+                0x24,
+                0x0B,
 
-            // Types Table
-            0x03, // field count
-            0x00, // first field type = I64
-            0x01, // name length
-            b'a', // name
-            0x03, // leb128 data size
-            0x05, // second field type = Bool
-            0x01, // name length
-            b'b', // name
-            0x03, // leb128 data size
-            0x04, // third field type = String
-            0x01, // name length
-            b'c', // name
-            0x0E, // leb128 data size
+                // Data Section 2
 
-            // Presence Column
-            0b00000111,
-            0b00000101,
-            0b00000111,
+                // Presence Column
+                0b00000111,
+                0b00000101,
+                0b00000111,
+                0x1A, // crc
+                0x75,
+                0xEA,
+                0xC4,
 
-            // Data Column 1 = I64
-            0x01, // 1
-            0x01, // 2
-            0x02, // 4
+                // Data Column 1 = I64
+                0x01, // 1
+                0x01, // 2
+                0x02, // 4
+                0xCA, // crc
+                0xD4,
+                0xD8,
+                0x92,
 
-            // Data Column 2 = Bool
-            0x00, // false
-            0x00, // missing
-            0x01, // true
+                // Data Column 2 = Bool
+                0x00, // false
+                0x00, // missing
+                0x01, // true
+                0x48, // crc
+                0x9F,
+                0x5A,
+                0x4C,
 
-            // Data Column 3 = String
-            0x04, // length 4
-            b'R',
-            b'i',
-            b'd',
-            b'e',
-            0x04, // length 4
-            b'w',
-            b'i',
-            b't',
-            b'h',
-            0x03, // length 3
-            b'G',
-            b'P',
-            b'S',
-
-            // CRC
-            0xAF,
-            0xEC,
-            0x7D,
-            0x70]);
+                // Data Column 3 = String
+                0x04, // length 4
+                b'R',
+                b'i',
+                b'd',
+                b'e',
+                0x04, // length 4
+                b'w',
+                b'i',
+                b't',
+                b'h',
+                0x03, // length 3
+                b'G',
+                b'P',
+                b'S',
+                0xA3, // crc
+                0x02,
+                0xEC,
+                0x48]);
+        });
     }
 }

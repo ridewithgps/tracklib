@@ -1,3 +1,4 @@
+use super::crcwriter::CrcWriter;
 use super::encoders::{BoolEncoder, Encoder, I64Encoder, StringEncoder};
 use crate::consts::{CRC16, CRC32};
 use crate::error::Result;
@@ -23,10 +24,11 @@ struct BufferImpl<E: Encoder> {
 }
 
 impl<E: Encoder> BufferImpl<E> {
-    fn write_data<W: Write>(&self, out: &mut W) -> Result<usize> {
-        let written = io::copy(&mut io::Cursor::new(&self.buf), out)?;
-        // io::copy (annoyingly) returns u64 so coerce it to a usize to return
-        Ok(usize::try_from(written).unwrap())
+    fn write_data<W: Write>(&self, out: &mut W) -> Result<()> {
+        let mut crcwriter = CrcWriter::new32(out);
+        io::copy(&mut io::Cursor::new(&self.buf), &mut crcwriter)?;
+        crcwriter.append_crc()?;
+        Ok(())
     }
 
     fn data_size(&self) -> usize {
@@ -47,6 +49,14 @@ impl Buffer {
             &FieldType::I64 => Buffer::I64(BufferImpl::default()),
             &FieldType::Bool => Buffer::Bool(BufferImpl::default()),
             &FieldType::String => Buffer::String(BufferImpl::default()),
+        }
+    }
+
+    fn len(&self) -> usize {
+        match self {
+            Self::I64(buffer_impl) => buffer_impl.buf.len(),
+            Self::Bool(buffer_impl) => buffer_impl.buf.len(),
+            Self::String(buffer_impl) => buffer_impl.buf.len(),
         }
     }
 }
@@ -101,8 +111,23 @@ impl Section {
         RowBuilder::new(&self.fields, &mut self.column_data)
     }
 
-    fn write_presence_column<W: Write>(&self, out: &mut W) -> Result<usize> {
-        let mut bytes_written = 0;
+    pub(crate) fn type_tag(&self) -> u8 {
+        self.section_type.type_tag()
+    }
+
+    pub(crate) fn rows(&self) -> usize {
+        self.rows_written
+    }
+
+    pub(crate) fn data_size(&self) -> usize {
+        let presence_bytes_required = (self.fields.len() + 7) / 8;
+        let presence_bytes = presence_bytes_required * self.rows_written;
+        let data_bytes: usize = self.column_data.iter().map(|buffer| buffer.len()).sum();
+        data_bytes + presence_bytes
+    }
+
+    fn write_presence_column<W: Write>(&self, out: &mut W) -> Result<()> {
+        let mut crcwriter = CrcWriter::new32(out);
         let bytes_required = (self.fields.len() + 7) / 8;
 
         for row_i in 0..self.rows_written {
@@ -134,18 +159,16 @@ impl Section {
                 entry |= bit << field_i;
             }
 
-            out.write_all(&entry.to_le_bytes()[..bytes_required])?;
-            bytes_written += bytes_required;
+            crcwriter.write_all(&entry.to_le_bytes()[..bytes_required])?;
         }
+        crcwriter.append_crc()?;
 
-        Ok(bytes_written)
+        Ok(())
     }
 
     #[rustfmt::skip]
-    fn write_types_table<W: Write>(&self, out: &mut W) -> Result<usize> {
-        let mut buf = Vec::new();
-
-        buf.write_all(&u8::try_from(self.fields.len())?.to_le_bytes())?;          // 1 byte  - number of entries
+    pub(crate) fn write_types_table<W: Write>(&self, out: &mut W) -> Result<()> {
+        out.write_all(&u8::try_from(self.fields.len())?.to_le_bytes())?;          // 1 byte  - number of entries
 
         for (i, field) in self.fields.iter().enumerate() {
             let data_column_size = self
@@ -158,37 +181,27 @@ impl Section {
                 })
                 .unwrap_or(0);
 
-            buf.write_all(&field.fieldtype().type_tag().to_le_bytes())?;          // 1 byte  - field type tag
-            buf.write_all(&u8::try_from(field.name().len())?.to_le_bytes())?;     // 1 byte  - field name length
-            buf.write_all(field.name().as_bytes())?;                              // ? bytes - the name of this field
-            leb128::write::unsigned(&mut buf, u64::try_from(data_column_size)?)?; // ? bytes - leb128 column data size
+            out.write_all(&field.fieldtype().type_tag().to_le_bytes())?;          // 1 byte  - field type tag
+            out.write_all(&u8::try_from(field.name().len())?.to_le_bytes())?;     // 1 byte  - field name length
+            out.write_all(field.name().as_bytes())?;                              // ? bytes - the name of this field
+            leb128::write::unsigned(out, u64::try_from(data_column_size)?)?;      // ? bytes - leb128 column data size
         }
 
-        out.write_all(&buf)?;
-        Ok(buf.len())
+        Ok(())
     }
 
     #[rustfmt::skip]
-    pub(crate) fn write<W: Write>(&self, out: &mut W) -> Result<usize> {
-        let mut buf = Vec::new();
-
-        buf.write_all(&self.section_type.type_tag().to_le_bytes())?;              // 1 byte  - section type
-        buf.write_all(&u32::try_from(self.rows_written)?.to_le_bytes())?;         // 4 bytes - number of points in this section
-        self.write_types_table(&mut buf)?;                                        // ? bytes - types table
-        self.write_presence_column(&mut buf)?;                                    // ? bytes - presence column
-
+    pub(crate) fn write<W: Write>(&self, out: &mut W) -> Result<()> {
+        self.write_presence_column(out)?;                                         // ? bytes - presence column with crc
         for buffer in self.column_data.iter() {
             match buffer {
-                Buffer::I64(buffer_impl) => buffer_impl.write_data(&mut buf)?,    // \
-                Buffer::Bool(buffer_impl) => buffer_impl.write_data(&mut buf)?,   //  \
-                Buffer::String(buffer_impl) => buffer_impl.write_data(&mut buf)?, //   > ? bytes - data column
+                Buffer::I64(buffer_impl) => buffer_impl.write_data(out)?,         // \
+                Buffer::Bool(buffer_impl) => buffer_impl.write_data(out)?,        //  \
+                Buffer::String(buffer_impl) => buffer_impl.write_data(out)?,      //   > ? bytes - data column with crc
             };
         }
 
-        buf.write_all(&CRC32.checksum(&buf).to_le_bytes())?;                      // 4 bytes - crc
-
-        out.write_all(&buf)?;
-        Ok(buf.len())
+        Ok(())
     }
 }
 
@@ -286,10 +299,13 @@ mod tests {
             ],
         );
         let mut buf = Vec::new();
-        let bytes_written = section.write_presence_column(&mut buf);
-        assert!(bytes_written.is_ok());
-        assert_eq!(bytes_written.unwrap(), 0);
-        assert_eq!(buf.len(), 0);
+        assert_matches!(section.write_presence_column(&mut buf), Ok(()) => {
+            assert_eq!(buf,
+                       &[0x00, // crc
+                         0x00,
+                         0x00,
+                         0x00]);
+        });
 
         let m_vals = vec![Some(&42), Some(&0), None, Some(&-20)];
         let k_vals = vec![Some(&true), None, Some(&false), Some(&false)];
@@ -317,14 +333,19 @@ mod tests {
             }
         }
 
-        let bytes_written = section.write_presence_column(&mut buf);
-        assert!(bytes_written.is_ok());
-        assert_eq!(bytes_written.unwrap(), buf.len());
-        #[rustfmt::skip]
-        assert_eq!(buf, &[0b00000011,
-                          0b00000101,
-                          0b00000110,
-                          0b00000111]);
+        let mut buf = Vec::new();
+        assert_matches!(section.write_presence_column(&mut buf), Ok(()) => {
+            #[rustfmt::skip]
+            assert_eq!(buf,
+                       &[0b00000011,
+                         0b00000101,
+                         0b00000110,
+                         0b00000111,
+                         0xD2, // crc
+                         0x61,
+                         0xA7,
+                         0xA5]);
+        });
     }
 
     #[test]
@@ -366,12 +387,16 @@ mod tests {
         }
 
         let mut buf = Vec::new();
-        let bytes_written = section.write_presence_column(&mut buf);
-        assert!(bytes_written.is_ok());
-        assert_eq!(bytes_written.unwrap(), buf.len());
-        #[rustfmt::skip]
-        assert_eq!(buf, &[0b11111111, 0b11111111, 0b00001111,
-                          0b11111111, 0b11111111, 0b00001111]);
+        assert_matches!(section.write_presence_column(&mut buf), Ok(()) => {
+            #[rustfmt::skip]
+            assert_eq!(buf,
+                       &[0b11111111, 0b11111111, 0b00001111,
+                         0b11111111, 0b11111111, 0b00001111,
+                         0x91, // crc
+                         0xA0,
+                         0x07,
+                         0xE3]);
+        });
     }
 
     #[test]
@@ -402,36 +427,36 @@ mod tests {
         }
 
         let mut buf = Vec::new();
-        let bytes_written = section.write_types_table(&mut buf);
-        assert!(bytes_written.is_ok());
-        assert_eq!(bytes_written.unwrap(), buf.len());
-        #[rustfmt::skip]
-        assert_eq!(buf, &[0x04, // entry count = 4
-                          0x00, // first entry type: i64 = 0
-                          0x01, // name len = 1
-                          b'm', // name = "m"
-                          0x02, // data size = 2
-                          0x05, // second entry type: bool = 5
-                          0x01, // name len = 1
-                          b'k', // name = "k"
-                          0x01, // data size = 1
-                          0x04, // third entry type: string = 4
-                          0x0A, // name len = 10
-                          b'l', // name = "long name!"
-                          b'o',
-                          b'n',
-                          b'g',
-                          b' ',
-                          b'n',
-                          b'a',
-                          b'm',
-                          b'e',
-                          b'!',
-                          0x07, // data size = 7 ("Hello!" + leb128 length prefix)
-                          0x00, // fourth entry type: i64 = 0
-                          0x01, // name len = 1
-                          b'i', // name = "i"
-                          0x02]); // data size = 2
+        assert_matches!(section.write_types_table(&mut buf), Ok(()) => {
+            #[rustfmt::skip]
+            assert_eq!(buf,
+                       &[0x04, // entry count = 4
+                         0x00, // first entry type: i64 = 0
+                         0x01, // name len = 1
+                         b'm', // name = "m"
+                         0x02, // data size = 2
+                         0x05, // second entry type: bool = 5
+                         0x01, // name len = 1
+                         b'k', // name = "k"
+                         0x01, // data size = 1
+                         0x04, // third entry type: string = 4
+                         0x0A, // name len = 10
+                         b'l', // name = "long name!"
+                         b'o',
+                         b'n',
+                         b'g',
+                         b' ',
+                         b'n',
+                         b'a',
+                         b'm',
+                         b'e',
+                         b'!',
+                         0x07, // data size = 7 ("Hello!" + leb128 length prefix)
+                         0x00, // fourth entry type: i64 = 0
+                         0x01, // name len = 1
+                         b'i', // name = "i"
+                         0x02]); // data size = 2
+        });
     }
 
     #[test]
@@ -514,66 +539,55 @@ mod tests {
         }
 
         let mut buf = Vec::new();
-        let bytes_written = section.write(&mut buf);
-        assert!(bytes_written.is_ok());
-        assert_eq!(bytes_written.unwrap(), buf.len());
-        #[rustfmt::skip]
-        assert_eq!(buf, &[0x00, // section type = track points
-                          0x03, // point count
-                          0x00,
-                          0x00,
-                          0x00,
+        assert_matches!(section.write(&mut buf), Ok(()) => {
+            #[rustfmt::skip]
+            assert_eq!(buf, &[
+                // Presence Column
+                0b00000111,
+                0b00000101,
+                0b00000111,
+                0x1A, // crc
+                0x75,
+                0xEA,
+                0xC4,
 
-                          // Types Table
-                          0x03, // field count
-                          0x00, // first field type = I64
-                          0x01, // name length
-                          b'a', // name
-                          0x03, // leb128 data size
-                          0x05, // second field type = Bool
-                          0x01, // name length
-                          b'b', // name
-                          0x03, // leb128 data size
-                          0x04, // third field type = String
-                          0x01, // name length
-                          b'c', // name
-                          0x0E, // leb128 data size
+                // Data Column 1 = I64
+                0x01, // 1
+                0x01, // 2
+                0x02, // 4
+                0xCA, // crc
+                0xD4,
+                0xD8,
+                0x92,
 
-                          // Presence Column
-                          0b00000111,
-                          0b00000101,
-                          0b00000111,
+                // Data Column 2 = Bool
+                0x00, // false
+                0x00, // missing
+                0x01, // true
+                0x48, // crc
+                0x9F,
+                0x5A,
+                0x4C,
 
-                          // Data Column 1 = I64
-                          0x01, // 1
-                          0x01, // 2
-                          0x02, // 4
-
-                          // Data Column 2 = Bool
-                          0x00, // false
-                          0x00, // missing
-                          0x01, // true
-
-                          // Data Column 3 = String
-                          0x04, // length 4
-                          b'R',
-                          b'i',
-                          b'd',
-                          b'e',
-                          0x04, // length 4
-                          b'w',
-                          b'i',
-                          b't',
-                          b'h',
-                          0x03, // length 3
-                          b'G',
-                          b'P',
-                          b'S',
-
-                          // CRC
-                          0xAF,
-                          0xEC,
-                          0x7D,
-                          0x70]);
+                // Data Column 3 = String
+                0x04, // length 4
+                b'R',
+                b'i',
+                b'd',
+                b'e',
+                0x04, // length 4
+                b'w',
+                b'i',
+                b't',
+                b'h',
+                0x03, // length 3
+                b'G',
+                b'P',
+                b'S',
+                0xA3, // crc
+                0x02,
+                0xEC,
+                0x48]);
+        });
     }
 }

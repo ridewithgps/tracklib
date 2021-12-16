@@ -302,9 +302,9 @@ mod tests {
                          0x00]);
         });
 
-        let m_vals = vec![Some(&42), Some(&0), None, Some(&-20)];
-        let k_vals = vec![Some(&true), None, Some(&false), Some(&false)];
-        let j_vals = vec![
+        let a_vals = vec![Some(&42), Some(&0), None, Some(&-20)];
+        let b_vals = vec![Some(&true), None, Some(&false), Some(&false)];
+        let c_vals = vec![
             None,
             Some("hi".to_string()),
             Some("tracklib".to_string()),
@@ -316,13 +316,13 @@ mod tests {
             while let Some(cw) = rowbuilder.next_column_writer() {
                 match cw {
                     ColumnWriter::I64ColumnWriter(cwi) => {
-                        assert!(cwi.write(m_vals[i]).is_ok());
+                        assert!(cwi.write(a_vals[i]).is_ok());
                     }
                     ColumnWriter::BoolColumnWriter(cwi) => {
-                        assert!(cwi.write(k_vals[i]).is_ok());
+                        assert!(cwi.write(b_vals[i]).is_ok());
                     }
                     ColumnWriter::StringColumnWriter(cwi) => {
-                        assert!(cwi.write(j_vals[i].as_ref()).is_ok());
+                        assert!(cwi.write(c_vals[i].as_ref()).is_ok());
                     }
                 }
             }

@@ -5,6 +5,9 @@ pub enum TracklibError {
     #[error("Parse Error")]
     ParseError { error_kind: nom::error::ErrorKind },
 
+    #[error("Parse Incomplete")]
+    ParseIncompleteError { needed: nom::Needed },
+
     #[error("CRC Error")]
     CRC16Error { expected: u16, computed: u16 },
 
@@ -34,3 +37,13 @@ impl<I: Sized> nom::error::ParseError<I> for TracklibError {
 }
 
 impl<I: Sized> nom::error::ContextError<I> for TracklibError {}
+
+impl From<nom::Err<TracklibError>> for TracklibError {
+    fn from(error: nom::Err<TracklibError>) -> Self {
+        match error {
+            nom::Err::Incomplete(needed) => Self::ParseIncompleteError { needed },
+            nom::Err::Error(e) => e,
+            nom::Err::Failure(e) => e,
+        }
+    }
+}

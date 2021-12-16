@@ -23,8 +23,7 @@ pub(crate) fn write_data_table<W: Write>(out: &mut W, sections: &[Section]) -> R
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::FieldType;
-    use crate::write::section::SectionType;
+    use crate::types::{FieldType, SectionType};
     use assert_matches::assert_matches;
 
     #[test]
@@ -114,7 +113,7 @@ mod tests {
 
 
                          0x4E, // crc
-                         0x88], "{:#04X?}", buf);
+                         0x88]);
         });
     }
 }

@@ -2,7 +2,7 @@ use super::crcwriter::CrcWriter;
 use super::encoders::{BoolEncoder, Encoder, I64Encoder, StringEncoder};
 use crate::consts::{CRC16, CRC32};
 use crate::error::Result;
-use crate::types::{FieldDescription, FieldType};
+use crate::types::{FieldDescription, FieldType, SectionType};
 use std::convert::TryFrom;
 use std::io::{self, Write};
 
@@ -12,6 +12,15 @@ impl FieldType {
             Self::I64 => 0x00,
             Self::String => 0x04,
             Self::Bool => 0x05,
+        }
+    }
+}
+
+impl SectionType {
+    fn type_tag(&self) -> u8 {
+        match self {
+            Self::TrackPoints => 0x00,
+            Self::CoursePoints => 0x01,
         }
     }
 }
@@ -57,20 +66,6 @@ impl Buffer {
             Self::I64(buffer_impl) => buffer_impl.buf.len(),
             Self::Bool(buffer_impl) => buffer_impl.buf.len(),
             Self::String(buffer_impl) => buffer_impl.buf.len(),
-        }
-    }
-}
-
-pub enum SectionType {
-    TrackPoints,
-    CoursePoints,
-}
-
-impl SectionType {
-    fn type_tag(&self) -> u8 {
-        match self {
-            Self::TrackPoints => 0x00,
-            Self::CoursePoints => 0x01,
         }
     }
 }

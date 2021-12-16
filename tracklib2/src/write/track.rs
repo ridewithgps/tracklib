@@ -40,8 +40,8 @@ pub fn write_track<W: Write>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{FieldType, TrackType};
-    use crate::write::section::{ColumnWriter, SectionType};
+    use crate::types::{FieldType, SectionType, TrackType};
+    use crate::write::section::ColumnWriter;
     use assert_matches::assert_matches;
     use std::collections::HashMap;
 

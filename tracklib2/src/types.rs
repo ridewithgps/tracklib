@@ -40,3 +40,10 @@ pub enum MetadataEntry {
     TrackType(TrackType),
     CreatedAt(u64),
 }
+
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub enum SectionType {
+    TrackPoints,
+    CoursePoints,
+}

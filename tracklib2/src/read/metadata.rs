@@ -57,7 +57,7 @@ fn parse_metadata_entry(input: &[u8]) -> IResult<&[u8], Option<MetadataEntry>, T
 }
 
 pub(crate) fn parse_metadata(input: &[u8]) -> IResult<&[u8], Vec<MetadataEntry>, TracklibError> {
-    let metadata_start = input;
+    let input_start = input;
     let (mut input, entry_count) = le_u8(input)?;
 
     let mut entries = Vec::with_capacity(usize::from(entry_count));
@@ -69,7 +69,7 @@ pub(crate) fn parse_metadata(input: &[u8]) -> IResult<&[u8], Vec<MetadataEntry>,
         }
     }
 
-    let (input, checksum) = CRC::<u16>::parser(metadata_start)(input)?;
+    let (input, checksum) = CRC::<u16>::parser(input_start)(input)?;
 
     match checksum {
         CRC::Valid(_) => Ok((input, entries)),
@@ -92,7 +92,7 @@ mod tests {
                     0x40, // crc
                     0xBF];
         assert_matches!(parse_metadata(buf), Ok((&[], entries)) => {
-            assert_eq!(entries, vec![])
+            assert_eq!(entries, vec![]);
         });
     }
 
@@ -123,7 +123,7 @@ mod tests {
                     0xD2];
         assert_matches!(parse_metadata(buf), Ok((&[], entries)) => {
             assert_eq!(entries, vec![MetadataEntry::TrackType(TrackType::Trip(20)),
-                                     MetadataEntry::CreatedAt(0)])
+                                     MetadataEntry::CreatedAt(0)]);
         });
     }
 
@@ -177,7 +177,7 @@ mod tests {
                     0x85];
         assert_matches!(parse_metadata(buf), Ok((&[], entries)) => {
             assert_eq!(entries, vec![MetadataEntry::TrackType(TrackType::Trip(20)),
-                                     MetadataEntry::CreatedAt(0)])
+                                     MetadataEntry::CreatedAt(0)]);
         });
     }
 

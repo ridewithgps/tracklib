@@ -17,7 +17,7 @@ pub struct Header {
 }
 
 pub(crate) fn parse_header(input: &[u8]) -> IResult<&[u8], Header, TracklibError> {
-    let header_start = input;
+    let input_start = input;
     let (input, _magic) = tag(RWTFMAGIC)(input)?;
     let (input, file_version) = le_u8(input)?;
     let (input, _fv_reserve) = take(3_usize)(input)?;
@@ -26,7 +26,7 @@ pub(crate) fn parse_header(input: &[u8]) -> IResult<&[u8], Header, TracklibError
     let (input, metadata_offset) = le_u16(input)?;
     let (input, data_offset) = le_u16(input)?;
     let (input, _e_reserve) = take(2_usize)(input)?;
-    let (input, checksum) = CRC::<u16>::parser(header_start)(input)?;
+    let (input, checksum) = CRC::<u16>::parser(input_start)(input)?;
 
     match checksum {
         CRC::Valid(_) => Ok((

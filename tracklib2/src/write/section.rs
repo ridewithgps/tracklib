@@ -126,35 +126,26 @@ impl Section {
         let bytes_required = (self.fields.len() + 7) / 8;
 
         for row_i in 0..self.rows_written {
-            let mut entry: u64 = 0;
-            for (field_i, buffer) in self.column_data.iter().enumerate() {
-                let bit = match buffer {
-                    Buffer::I64(buffer_impl) => {
-                        if let Some(true) = buffer_impl.presence.get(row_i) {
-                            1
-                        } else {
-                            0
-                        }
-                    }
-                    Buffer::Bool(buffer_impl) => {
-                        if let Some(true) = buffer_impl.presence.get(row_i) {
-                            1
-                        } else {
-                            0
-                        }
-                    }
-                    Buffer::String(buffer_impl) => {
-                        if let Some(true) = buffer_impl.presence.get(row_i) {
-                            1
-                        } else {
-                            0
-                        }
-                    }
+            let mut row = vec![0; bytes_required];
+            let mut mask: u8 = 1;
+            let mut bit_index = (self.fields.len() + 7) & !7; // next multiple of 8
+            for buffer in self.column_data.iter() {
+                let is_present = match buffer {
+                    Buffer::I64(buffer_impl) => buffer_impl.presence.get(row_i),
+                    Buffer::Bool(buffer_impl) => buffer_impl.presence.get(row_i),
+                    Buffer::String(buffer_impl) => buffer_impl.presence.get(row_i),
                 };
-                entry |= bit << field_i;
+
+                if let Some(true) = is_present {
+                    let byte_index = ((bit_index + 7) / 8) - 1;
+                    row[byte_index] |= mask;
+                }
+                mask = mask.rotate_left(1);
+
+                bit_index -= 1;
             }
 
-            crcwriter.write_all(&entry.to_le_bytes()[..bytes_required])?;
+            crcwriter.write_all(&row)?;
         }
         crcwriter.append_crc()?;
 
@@ -385,12 +376,64 @@ mod tests {
         assert_matches!(section.write_presence_column(&mut buf), Ok(()) => {
             #[rustfmt::skip]
             assert_eq!(buf,
-                       &[0b11111111, 0b11111111, 0b00001111,
-                         0b11111111, 0b11111111, 0b00001111,
-                         0x91, // crc
-                         0xA0,
-                         0x07,
-                         0xE3]);
+                       &[0b00001111, 0b11111111, 0b11111111,
+                         0b00001111, 0b11111111, 0b11111111,
+                         0xDD, // crc
+                         0xCB,
+                         0x18,
+                         0x17]);
+        });
+    }
+
+    #[test]
+    fn test_write_huge_presence_column() {
+        let mut section = Section::new(
+            SectionType::TrackPoints,
+            (0..80).map(|i| (i.to_string(), FieldType::Bool)).collect(),
+        );
+
+        #[rustfmt::skip]
+        let vals = &[
+            Some(&true), Some(&true), Some(&true), Some(&true), Some(&true), Some(&true), Some(&true), Some(&true), // 1
+            Some(&true), Some(&true), Some(&true), Some(&true), Some(&true), Some(&true), Some(&true), Some(&true), // 2
+            None,        None,        Some(&true), Some(&true), Some(&true), Some(&true), Some(&true), Some(&true), // 3
+            Some(&true), Some(&true), Some(&true), Some(&true), Some(&true), None,        None,        None,        // 4
+            Some(&true), Some(&true), Some(&true), Some(&true), Some(&true), Some(&true), Some(&true), Some(&true), // 5
+            None,        Some(&true), Some(&true), Some(&true), Some(&true), Some(&true), Some(&true), Some(&true), // 6
+            Some(&true), Some(&true), Some(&true), Some(&true), None,        None,        Some(&true), Some(&true), // 7
+            None,        None,        None,        None,        None,        None,        None,        None,        // 8
+            Some(&true), Some(&true), Some(&true), Some(&true), None,        Some(&true), None,        None,        // 9
+            None,        None,        None,        Some(&true), Some(&true), Some(&true), Some(&true), Some(&true), // 10
+        ];
+
+        let mut rowbuilder = section.open_row_builder();
+        let mut i = 0;
+        while let Some(cw) = rowbuilder.next_column_writer() {
+            match cw {
+                ColumnWriter::BoolColumnWriter(cwi) => assert!(cwi.write(vals[i]).is_ok()),
+                _ => assert!(false, "unexpected column writer type here"),
+            }
+            i += 1;
+        }
+
+        let mut buf = Vec::new();
+        assert_matches!(section.write_presence_column(&mut buf), Ok(()) => {
+            #[rustfmt::skip]
+            assert_eq!(buf,
+                       &[0b11111000, // 10
+                         0b00101111, // 9
+                         0b00000000, // 8
+                         0b11001111, // 7
+                         0b11111110, // 6
+                         0b11111111, // 5
+                         0b00011111, // 4
+                         0b11111100, // 3
+                         0b11111111, // 2
+                         0b11111111, // 1
+                         0x92, // crc
+                         0x0E,
+                         0x6F,
+                         0xC2]);
         });
     }
 

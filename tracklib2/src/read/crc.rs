@@ -1,5 +1,8 @@
 use crate::error::TracklibError;
-use nom::{number::complete::le_u16, IResult, Offset};
+use nom::{
+    number::complete::{le_u16, le_u32},
+    IResult, Offset,
+};
 
 pub(crate) trait CRCImpl: Sized {
     fn crc_bytes(bytes: &[u8]) -> Self;
@@ -13,6 +16,16 @@ impl CRCImpl for u16 {
 
     fn read_bytes(input: &[u8]) -> IResult<&[u8], Self, TracklibError> {
         le_u16(input)
+    }
+}
+
+impl CRCImpl for u32 {
+    fn crc_bytes(bytes: &[u8]) -> Self {
+        crate::consts::CRC32.checksum(bytes)
+    }
+
+    fn read_bytes(input: &[u8]) -> IResult<&[u8], Self, TracklibError> {
+        le_u32(input)
     }
 }
 
@@ -49,14 +62,6 @@ impl<T: CRCImpl + PartialEq> CRC<T> {
 mod tests {
     use super::*;
     use assert_matches::assert_matches;
-
-    // #[test]
-    // fn test_crc_full_thing() {
-    //     let bytes = &[0x00, 0xBF, 0x40,];
-    //     println!("crc of &[0x00]: {:X?}", u16::crc_bytes(&[0x00]).to_le_bytes());
-    //     println!("crc of &{:X?}:  {:X?}", bytes, u16::crc_bytes(bytes).to_le_bytes());
-    //     assert_eq!(u16::crc_bytes(bytes), u16::from_le_bytes([0xFF, 0xFF]));
-    // }
 
     #[test]
     fn test_emtpy_crc() {

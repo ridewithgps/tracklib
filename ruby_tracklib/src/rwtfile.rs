@@ -8,6 +8,8 @@ use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::io::BufWriter;
 use tracklib::{parse_rwtf, DataField, RWTFMetadata, RWTFile, TrackType};
+use super::polyline;
+use super::surface;
 
 fn any_to_float(o: AnyObject) -> f64 {
     match o.try_convert_to::<Float>() {
@@ -386,6 +388,19 @@ methods!(
 
         let inner = Inner { inner: rwtf };
         Class::from_existing("RWTFile").wrap_data(inner, &*INNER_WRAPPER)
+    }
+
+    fn rwtf_simplify_track_points(surface_mapping: surface::RubySurfaceMapping,
+                                  tolerance: Float,
+                                  encode_options: polyline::RubyFieldEncodeOptionsVec) -> RString {
+        let track_points = &itself.get_data(&*INNER_WRAPPER).inner.track_points;
+        let surface_mapping_container = surface_mapping.map_err(|e| VM::raise_ex(e)).unwrap();
+        let mapping = surface_mapping_container.inner();
+        let tol = tolerance.map_err(|e| VM::raise_ex(e)).unwrap().to_f64();
+        let encode_options_container = encode_options.map_err(|e| VM::raise_ex(e)).unwrap();
+        let enc_opts = encode_options_container.inner();
+
+        RString::new_utf8(&track_points.simplify_and_encode(mapping, tol, enc_opts))
     }
 
     fn rwtf_inspect() -> RString {

@@ -1,4 +1,4 @@
-use crate::simplification::Point;
+use crate::simplify::Point;
 use std::collections::HashMap;
 use std::fmt;
 

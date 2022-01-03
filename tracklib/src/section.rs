@@ -7,6 +7,9 @@ use serde::ser::{Serialize, Serializer, SerializeSeq, SerializeMap};
 use crate::rwtfile::{DataField};
 use crate::flagscolumn::{self, FlagsColumn};
 use crate::utils::{write};
+use crate::polyline::FieldEncodeOptions;
+use crate::simplify::simplify_and_encode;
+use crate::surface::SurfaceMapping;
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -163,6 +166,10 @@ impl Section {
 
     pub fn columns(&self) -> &BTreeMap<String, Column> {
         &self.columns
+    }
+
+    pub fn simplify_and_encode(&self, mapping: &SurfaceMapping, tolerance: f64, fields: &[FieldEncodeOptions]) -> String {
+        simplify_and_encode(self, mapping, tolerance, fields)
     }
 
     fn write_types_table<W: Write>(&self, out: &mut W) -> Result<usize> {
@@ -411,6 +418,7 @@ impl Serialize for Section {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::polyline::PointField;
 
     #[test]
     fn test_max() {
@@ -780,5 +788,33 @@ mod tests {
                          0xBE];
         assert_eq!(buf, expected);
         assert_eq!(written.unwrap(), expected.len());
+    }
+
+    #[test]
+    fn test_simplify_empty_section() {
+        let s = Section::new(SectionType::TrackPoints);
+        let mapping = SurfaceMapping::new(95);
+        let fields = vec![
+            FieldEncodeOptions::new(PointField::Y, 5),
+            FieldEncodeOptions::new(PointField::X, 5),
+        ];
+        assert_eq!(s.simplify_and_encode(&mapping, 0.0, &fields), "");
+    }
+
+    #[test]
+    fn test_simplify_basic_section() {
+        let mut s = Section::new(SectionType::TrackPoints);
+        assert!(s.add_long_float(0, "x", 1.0).is_ok());
+        assert!(s.add_long_float(0, "y", 1.0).is_ok());
+        assert!(s.add_long_float(0, "e", 1.0).is_ok());
+        assert!(s.add_long_float(1, "x", -122.07012).is_ok());
+        assert!(s.add_long_float(1, "y", 44.000002).is_ok());
+        assert!(s.add_long_float(1, "e", 1.0).is_ok());
+        let mapping = SurfaceMapping::new(95);
+        let fields = vec![
+            FieldEncodeOptions::new(PointField::Y, 5),
+            FieldEncodeOptions::new(PointField::X, 5),
+        ];
+        assert_eq!(s.simplify_and_encode(&mapping, 0.0, &fields), "_ibE_ibE_mmeGfcdnV");
     }
 }

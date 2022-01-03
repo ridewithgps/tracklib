@@ -1,4 +1,4 @@
-use crate::simplification::Point;
+use crate::simplify::Point;
 use crate::surface::{RoadClassId, SurfaceTypeId};
 use std::convert::TryFrom;
 

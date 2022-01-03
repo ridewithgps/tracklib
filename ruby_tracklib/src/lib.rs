@@ -13,7 +13,9 @@ pub extern "C" fn Init_Tracklib() {
         itself.def("to_bytes", rwtfile::rwtf_to_bytes);
         itself.def("to_h", rwtfile::rwtf_to_hash);
         itself.def("metadata", rwtfile::rwtf_metadata);
+        itself.def("simplify_track_points", rwtfile::rwtf_simplify_track_points);
         itself.def("inspect", rwtfile::rwtf_inspect);
+        itself.def("to_s", rwtfile::rwtf_inspect);
     });
 
     Class::new("RoadClassMapping", Some(&Class::from_existing("Object"))).define(|itself| {

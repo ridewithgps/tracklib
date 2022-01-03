@@ -1,3 +1,4 @@
+mod polyline;
 mod rwtfile;
 mod surface;
 
@@ -26,5 +27,15 @@ pub extern "C" fn Init_Tracklib() {
         itself.def("add_surface", surface::surface_mapping_add_surface);
         itself.def("add_road_class_mapping", surface::surface_mapping_add_road_class_mapping);
         itself.def("to_s", surface::surface_mapping_to_s);
+    });
+
+    Class::new("FieldEncodeOptionsVec", Some(&Class::from_existing("Object"))).define(|itself| {
+        itself.def_self("new", polyline::field_encode_options_vec_new);
+        itself.def("add_y", polyline::field_encode_options_vec_add_field_y);
+        itself.def("add_x", polyline::field_encode_options_vec_add_field_x);
+        itself.def("add_d", polyline::field_encode_options_vec_add_field_d);
+        itself.def("add_e", polyline::field_encode_options_vec_add_field_e);
+        itself.def("add_s", polyline::field_encode_options_vec_add_field_s);
+        itself.def("to_s", polyline::field_encode_options_vec_to_s);
     });
 }

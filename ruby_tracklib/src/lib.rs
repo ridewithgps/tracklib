@@ -1,4 +1,5 @@
 mod rwtfile;
+mod surface;
 
 use rutie::{Class, Object};
 
@@ -12,5 +13,18 @@ pub extern "C" fn Init_Tracklib() {
         itself.def("to_h", rwtfile::rwtf_to_hash);
         itself.def("metadata", rwtfile::rwtf_metadata);
         itself.def("inspect", rwtfile::rwtf_inspect);
+    });
+
+    Class::new("RoadClassMapping", Some(&Class::from_existing("Object"))).define(|itself| {
+        itself.def_self("new", surface::road_class_mapping_new);
+        itself.def("add_road_class", surface::road_class_mapping_add_road_class);
+        itself.def("to_s", surface::road_class_mapping_to_s);
+    });
+
+    Class::new("SurfaceMapping", Some(&Class::from_existing("Object"))).define(|itself| {
+        itself.def_self("new", surface::surface_mapping_new);
+        itself.def("add_surface", surface::surface_mapping_add_surface);
+        itself.def("add_road_class_mapping", surface::surface_mapping_add_road_class_mapping);
+        itself.def("to_s", surface::surface_mapping_to_s);
     });
 }

@@ -317,7 +317,7 @@ pub(crate) fn simplify_and_encode(
         .map(|index| points[index].clone())
         .collect::<Vec<_>>();
 
-    polyline_encode(&simplified_points, fields).unwrap()
+    polyline_encode(&simplified_points, fields)
 }
 
 #[cfg(test)]

@@ -67,7 +67,7 @@ impl SurfaceMapping {
         self.road_class_mappings.push(road_class_mapping);
     }
 
-    pub fn get_surface_group(&self, point: &Point) -> Option<&String> {
+    pub(crate) fn get_surface_group(&self, point: &Point) -> Option<&String> {
         if let Some(point_surface) = point.s {
             if point_surface == self.unknown_surface_id {
                 self.road_class_mappings

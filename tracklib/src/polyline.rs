@@ -53,7 +53,7 @@ fn encode(current: f64, previous: f64, factor: f64) -> Result<String, ()> {
     Ok(output)
 }
 
-pub fn polyline_encode(points: &[Point], fields: &[FieldEncodeOptions]) -> Result<String, ()> {
+pub(crate) fn polyline_encode(points: &[Point], fields: &[FieldEncodeOptions]) -> Result<String, ()> {
     let mut output = String::new();
     let mut prev = &Point::default();
 
@@ -62,7 +62,7 @@ pub fn polyline_encode(points: &[Point], fields: &[FieldEncodeOptions]) -> Resul
             match field.field {
                 PointField::Y => output.push_str(&encode(point.y, prev.y, field.factor)?),
                 PointField::X => output.push_str(&encode(point.x, prev.x, field.factor)?),
-                PointField::D => {} //output.push_str(&encode(point.d, prev.d, field.factor)?),
+                PointField::D => output.push_str(&encode(point.d, prev.d, field.factor)?),
                 PointField::E => output.push_str(&encode(point.e, prev.e, field.factor)?),
                 PointField::S {
                     default_surface_id,

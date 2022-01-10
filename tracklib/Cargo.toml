@@ -14,3 +14,6 @@ nom = "4.2"
 serde = "1.0"
 base64 = "0.10"
 itertools = "0.10"
+
+[dev-dependencies]
+assert_matches = "1.5"

@@ -4,6 +4,19 @@ use crate::{Column, Section};
 use itertools::Itertools;
 use std::collections::{BTreeMap, HashSet};
 
+fn haversine_distance(prev: &Point, x: f64, y: f64) -> f64 {
+    // lifted wholesale from https://github.com/georust/geo/blob/2cf153d59072d18054baf4da8bcaf3e0c088a7d8/geo/src/algorithm/haversine_distance.rs
+    const MEAN_EARTH_RADIUS: f64 = 6_371_000.0;
+
+    let theta1 = prev.y.to_radians();
+    let theta2 = y.to_radians();
+    let delta_theta = (y - prev.y).to_radians();
+    let delta_lambda = (x - prev.x).to_radians();
+    let a = (delta_theta / 2.0).sin().powi(2) + theta1.cos() * theta2.cos() * (delta_lambda / 2.0).sin().powi(2);
+    let c = 2.0 * a.sqrt().asin();
+    MEAN_EARTH_RADIUS * c
+}
+
 trait FarthestPoint {
     fn farthest_point(&self) -> (usize, f64);
 }
@@ -31,13 +44,14 @@ impl FarthestPoint for &[Point] {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct Point {
-    pub index: usize,
-    pub x: f64,
-    pub y: f64,
-    pub e: f64,
-    pub s: Option<SurfaceTypeId>,
-    pub r: Option<RoadClassId>,
+pub(crate) struct Point {
+    pub(crate) index: usize,
+    pub(crate) x: f64,
+    pub(crate) y: f64,
+    pub(crate) d: f64,
+    pub(crate) e: f64,
+    pub(crate) s: Option<SurfaceTypeId>,
+    pub(crate) r: Option<RoadClassId>,
 }
 
 impl Default for Point {
@@ -46,6 +60,7 @@ impl Default for Point {
             index: 0,
             x: 0.0,
             y: 0.0,
+            d: 0.0,
             e: 0.0,
             s: None,
             r: None,
@@ -266,10 +281,17 @@ fn section_to_points(section: &Section) -> Vec<Point> {
         let r = r_map.get(index);
 
         if let (Some(x), Some(y), Some(e), None) = (x, y, e, ep) {
+            let d = if let Some(prev) = points.last() {
+                prev.d + haversine_distance(prev, *x, *y)
+            } else {
+                0.0
+            };
+
             points.push(Point {
                 index: point_index,
                 x: *x,
                 y: *y,
+                d,
                 e: *e,
                 s: s.cloned(),
                 r: r.cloned(),
@@ -300,7 +322,9 @@ pub(crate) fn simplify_and_encode(
 
 #[cfg(test)]
 mod tests {
+    use assert_matches::assert_matches;
     use std::iter::FromIterator;
+    use crate::{Section, SectionType};
 
     use super::*;
 
@@ -488,5 +512,50 @@ mod tests {
             ),
             HashSet::from_iter([0, 1, 2])
         );
+    }
+
+    #[test]
+    fn test_section_to_points_compute_distance() {
+        let mut s = Section::new(SectionType::TrackPoints);
+        assert!(s.add_long_float(0, "x", -122.63074546051908).is_ok());
+        assert!(s.add_long_float(0, "y", 45.503551007119015).is_ok());
+        assert!(s.add_long_float(0, "e", 1.0).is_ok());
+
+        assert!(s.add_long_float(1, "x", -122.62891022329185).is_ok());
+        assert!(s.add_long_float(1, "y", 45.50346836958737).is_ok());
+        assert!(s.add_long_float(1, "e", 2.0).is_ok());
+
+        assert!(s.add_long_float(2, "x", -122.62740666028297).is_ok());
+        assert!(s.add_long_float(2, "y", 45.503370210451294).is_ok());
+        assert!(s.add_long_float(2, "e", 3.0).is_ok());
+        assert!(s.add_short_float(2, "d", 3.0).is_ok());
+
+        assert!(s.add_long_float(3, "x", -122.62586624166765).is_ok());
+        assert!(s.add_long_float(3, "y", 45.503370178115716).is_ok());
+        assert!(s.add_long_float(3, "e", 4.0).is_ok());
+
+        let points = section_to_points(&s);
+
+        assert_eq!(points.len(), 4);
+        assert_matches!(points[0], Point{x, y, d, ..} => {
+            assert_eq!(x, -122.63074546051908);
+            assert_eq!(y, 45.503551007119015);
+            assert_eq!(d, 0.0);
+        });
+        assert_matches!(points[1], Point{x, y, d, ..} => {
+            assert_eq!(x, -122.62891022329185);
+            assert_eq!(y, 45.50346836958737);
+            assert!((143.0 - d).abs() < 1.0);
+        });
+        assert_matches!(points[2], Point{x, y, d, ..} => {
+            assert_eq!(x, -122.62740666028297);
+            assert_eq!(y, 45.503370210451294);
+            assert!((261.0 - d).abs() < 1.0);
+        });
+        assert_matches!(points[3], Point{x, y, d, ..} => {
+            assert_eq!(x, -122.62586624166765);
+            assert_eq!(y, 45.503370178115716);
+            assert!((381.0 - d).abs() < 1.0);
+        });
     }
 }

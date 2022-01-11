@@ -48,7 +48,7 @@ methods!(
             inner: tracklib::RoadClassMapping::new(bbox),
         };
 
-        Class::from_existing("RoadClassMapping").wrap_data(inner, &*ROAD_CLASS_INNER_WRAPPER)
+        Class::from_existing("TracklibRoadClassMapping").wrap_data(inner, &*ROAD_CLASS_INNER_WRAPPER)
     }
 
     fn road_class_mapping_add_road_class(road_class_id: Integer, surface_id: Integer) -> NilClass {
@@ -69,7 +69,7 @@ methods!(
 
 impl VerifiedObject for RubyRoadClassMapping {
     fn is_correct_type<T: Object>(object: &T) -> bool {
-        Class::from_existing("RoadClassMapping").case_equals(object)
+        Class::from_existing("TracklibRoadClassMapping").case_equals(object)
     }
 
     fn error_message() -> &'static str {
@@ -98,7 +98,7 @@ methods!(
             inner: tracklib::SurfaceMapping::new(id),
         };
 
-        Class::from_existing("SurfaceMapping").wrap_data(inner, &*SURFACE_INNER_WRAPPER)
+        Class::from_existing("TracklibSurfaceMapping").wrap_data(inner, &*SURFACE_INNER_WRAPPER)
     }
 
     fn surface_mapping_add_surface(surface_id: Integer, group: RString) -> NilClass {
@@ -134,7 +134,7 @@ impl RubySurfaceMapping {
 
 impl VerifiedObject for RubySurfaceMapping {
     fn is_correct_type<T: Object>(object: &T) -> bool {
-        Class::from_existing("SurfaceMapping").case_equals(object)
+        Class::from_existing("TracklibSurfaceMapping").case_equals(object)
     }
 
     fn error_message() -> &'static str {

@@ -30,7 +30,7 @@ methods!(
             inner: Vec::new()
         };
 
-        Class::from_existing("FieldEncodeOptionsVec").wrap_data(inner, &*FIELD_ENCODE_OPTIONS_VEC_INNER_WRAPPER)
+        Class::from_existing("TracklibFieldEncodeOptionsVec").wrap_data(inner, &*FIELD_ENCODE_OPTIONS_VEC_INNER_WRAPPER)
     }
 
     fn field_encode_options_vec_add_field_y(precision: Integer) -> NilClass {
@@ -80,7 +80,7 @@ impl RubyFieldEncodeOptionsVec {
 
 impl VerifiedObject for RubyFieldEncodeOptionsVec {
     fn is_correct_type<T: Object>(object: &T) -> bool {
-        Class::from_existing("FieldEncodeOptionsVec").case_equals(object)
+        Class::from_existing("TracklibFieldEncodeOptionsVec").case_equals(object)
     }
 
     fn error_message() -> &'static str {

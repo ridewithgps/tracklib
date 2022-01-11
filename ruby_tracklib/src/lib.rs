@@ -18,20 +18,20 @@ pub extern "C" fn Init_Tracklib() {
         itself.def("to_s", rwtfile::rwtf_inspect);
     });
 
-    Class::new("RoadClassMapping", Some(&Class::from_existing("Object"))).define(|itself| {
+    Class::new("TracklibRoadClassMapping", Some(&Class::from_existing("Object"))).define(|itself| {
         itself.def_self("new", surface::road_class_mapping_new);
         itself.def("add_road_class", surface::road_class_mapping_add_road_class);
         itself.def("to_s", surface::road_class_mapping_to_s);
     });
 
-    Class::new("SurfaceMapping", Some(&Class::from_existing("Object"))).define(|itself| {
+    Class::new("TracklibSurfaceMapping", Some(&Class::from_existing("Object"))).define(|itself| {
         itself.def_self("new", surface::surface_mapping_new);
         itself.def("add_surface", surface::surface_mapping_add_surface);
         itself.def("add_road_class_mapping", surface::surface_mapping_add_road_class_mapping);
         itself.def("to_s", surface::surface_mapping_to_s);
     });
 
-    Class::new("FieldEncodeOptionsVec", Some(&Class::from_existing("Object"))).define(|itself| {
+    Class::new("TracklibFieldEncodeOptionsVec", Some(&Class::from_existing("Object"))).define(|itself| {
         itself.def_self("new", polyline::field_encode_options_vec_new);
         itself.def("add_y", polyline::field_encode_options_vec_add_field_y);
         itself.def("add_x", polyline::field_encode_options_vec_add_field_x);

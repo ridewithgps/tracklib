@@ -54,6 +54,7 @@ pub(crate) struct Point {
     pub(crate) r: Option<RoadClassId>,
 }
 
+#[cfg(test)]
 impl Default for Point {
     fn default() -> Self {
         Self {

@@ -55,7 +55,13 @@ fn encode(current: f64, previous: f64, factor: f64) -> String {
 
 pub(crate) fn polyline_encode(points: &[Point], fields: &[FieldEncodeOptions]) -> String {
     let mut output = String::new();
-    let mut prev = &Point::default();
+    let mut prev = &Point{index: 0,
+                          x: 0.0,
+                          y: 0.0,
+                          d: 0.0,
+                          e: 0.0,
+                          s: Some(0),
+                          r: Some(0)};
 
     for point in points {
         for field in fields {

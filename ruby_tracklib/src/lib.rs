@@ -38,6 +38,7 @@ pub extern "C" fn Init_Tracklib() {
         itself.def("add_d", polyline::field_encode_options_vec_add_field_d);
         itself.def("add_e", polyline::field_encode_options_vec_add_field_e);
         itself.def("add_s", polyline::field_encode_options_vec_add_field_s);
+        itself.def("add_r", polyline::field_encode_options_vec_add_field_r);
         itself.def("to_s", polyline::field_encode_options_vec_to_s);
     });
 }

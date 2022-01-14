@@ -8,10 +8,8 @@ pub enum PointField {
     X,
     D,
     E,
-    S {
-        default_surface_id: SurfaceTypeId,
-        default_road_class_id: RoadClassId,
-    },
+    S(SurfaceTypeId),
+    R(RoadClassId),
 }
 
 #[derive(Debug)]
@@ -70,27 +68,12 @@ pub(crate) fn polyline_encode(points: &[Point], fields: &[FieldEncodeOptions]) -
                 PointField::X => output.push_str(&encode(point.x, prev.x, field.factor)),
                 PointField::D => output.push_str(&encode(point.d, prev.d, field.factor)),
                 PointField::E => output.push_str(&encode(point.e, prev.e, field.factor)),
-                PointField::S {
-                    default_surface_id,
-                    default_road_class_id,
-                } => {
-                    output.push_str(&encode(
-                        f64::from(
-                            i32::try_from(point.s.unwrap_or(default_surface_id)).unwrap_or(0),
-                        ),
-                        f64::from(i32::try_from(prev.s.unwrap_or(default_surface_id)).unwrap_or(0)),
-                        field.factor,
-                    ));
-                    output.push_str(&encode(
-                        f64::from(
-                            i32::try_from(point.r.unwrap_or(default_road_class_id)).unwrap_or(0),
-                        ),
-                        f64::from(
-                            i32::try_from(prev.r.unwrap_or(default_road_class_id)).unwrap_or(0),
-                        ),
-                        field.factor,
-                    ));
-                }
+                PointField::S(default_surface_id) => output.push_str(&encode(f64::from(i32::try_from(point.s.unwrap_or(default_surface_id)).unwrap_or(0)),
+                                                                             f64::from(i32::try_from(prev.s.unwrap_or(default_surface_id)).unwrap_or(0)),
+                                                                             field.factor)),
+                PointField::R(default_road_class_id) => output.push_str(&encode(f64::from(i32::try_from(point.r.unwrap_or(default_road_class_id)).unwrap_or(0)),
+                                                                                f64::from(i32::try_from(prev.r.unwrap_or(default_road_class_id)).unwrap_or(0)),
+                                                                                field.factor)),
             }
         }
 
@@ -132,6 +115,32 @@ mod tests {
                 &fields
             ),
             "_p~iF~ps|U_ulLnnqC_mqNvxq`@".to_string()
+        );
+    }
+
+    #[test]
+    fn test_surface_encoding() {
+        let fields = vec![
+            FieldEncodeOptions::new(PointField::S(99), 5),
+            FieldEncodeOptions::new(PointField::R(10), 5),
+        ];
+        assert_eq!(
+            polyline_encode(
+                &vec![
+                    Point {
+                        s: None,
+                        r: Some(50),
+                        ..Default::default()
+                    },
+                    Point {
+                        s: Some(4),
+                        r: None,
+                        ..Default::default()
+                    },
+                ],
+                &fields
+            ),
+            "_}f{Q_sdpH~tybQ~ncsF".to_string()
         );
     }
 }

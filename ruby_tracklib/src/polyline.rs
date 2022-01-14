@@ -57,11 +57,17 @@ methods!(
         NilClass::new()
     }
 
-    fn field_encode_options_vec_add_field_s(default_surface: Integer, default_road_class: Integer, precision: Integer) -> NilClass {
+    fn field_encode_options_vec_add_field_s(default_surface: Integer, precision: Integer) -> NilClass {
         let default_surface_id = default_surface.map_err(|e| VM::raise_ex(e)).unwrap().to_i64();
+        let inner = &mut itself.get_data_mut(&*FIELD_ENCODE_OPTIONS_VEC_INNER_WRAPPER).inner;
+        add_field_helper(inner, PointField::S(default_surface_id), precision);
+        NilClass::new()
+    }
+
+    fn field_encode_options_vec_add_field_r(default_road_class: Integer, precision: Integer) -> NilClass {
         let default_road_class_id = default_road_class.map_err(|e| VM::raise_ex(e)).unwrap().to_i64();
         let inner = &mut itself.get_data_mut(&*FIELD_ENCODE_OPTIONS_VEC_INNER_WRAPPER).inner;
-        add_field_helper(inner, PointField::S{default_surface_id, default_road_class_id}, precision);
+        add_field_helper(inner, PointField::R(default_road_class_id), precision);
         NilClass::new()
     }
 

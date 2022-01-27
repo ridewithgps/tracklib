@@ -14,7 +14,7 @@ pub enum Error {
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum TrackType {
     Trip(u32),
     Route(u32),
@@ -22,6 +22,14 @@ pub enum TrackType {
 }
 
 impl TrackType {
+    pub fn id(&self) -> u32 {
+        match self {
+            TrackType::Trip(id)    => *id,
+            TrackType::Route(id)   => *id,
+            TrackType::Segment(id) => *id,
+        }
+    }
+
     fn type_tag(&self) -> u8 {
         match self {
             TrackType::Trip(_)    => 0x00,
@@ -72,6 +80,14 @@ impl RWTFMetadata {
     pub(crate) fn new(created_at: Option<SystemTime>, track_type: Option<TrackType>) -> Self {
         RWTFMetadata{created_at: created_at,
                      track_type: track_type}
+    }
+
+    pub fn created_at(&self) -> Option<SystemTime> {
+        self.created_at
+    }
+
+    pub fn track_type(&self) -> Option<TrackType> {
+        self.track_type
     }
 
     fn write_created_at<W: Write>(&self, out: &mut W) -> Result<usize> {
@@ -253,5 +269,16 @@ mod tests {
                               0xff,
                               0xff];
         test_buf(&buf, expected_head, expected_tail);
+    }
+
+    #[test]
+    fn test_roundtrip_metadata() {
+        let created_at = Some(SystemTime::now());
+        let tt = Some(TrackType::Trip(42));
+        let m = RWTFMetadata::new(created_at, tt);
+
+        assert_eq!(m.created_at(), created_at);
+        assert_eq!(m.track_type(), tt);
+        assert_eq!(m.track_type().map(|tt| tt.id()), Some(42));
     }
 }

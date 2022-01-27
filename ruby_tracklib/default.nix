@@ -3,7 +3,7 @@ stdenv.mkDerivation rec {
   name = "tracklib";
   env = buildEnv { name = name; paths = buildInputs; };
   buildInputs = [
-    ruby_2_4
+    ruby_2_7
   ];
   shellHook = ''
     mkdir -p .nix-gems

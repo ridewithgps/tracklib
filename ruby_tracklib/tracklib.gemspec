@@ -20,7 +20,10 @@ Gem::Specification.new do |spec|
                         "lib/tracklib/version.rb",
                         "Cargo.toml",
                         "Cargo.lock",
-                        "src/lib.rs"]
+                        "src/lib.rs",
+                        "src/polyline.rs",
+                        "src/rwtfile.rs",
+                        "src/surface.rs"]
 
   spec.require_paths = ["lib"]
   spec.extensions    = ["ext/Rakefile"]

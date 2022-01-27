@@ -10,7 +10,7 @@ name = "tracklib"
 crate-type = ["cdylib"]
 
 [dependencies]
-tracklib = {path="../tracklib"}
+tracklib = "0.3.0"
 rutie = {git="https://github.com/danlarkin/rutie", features=["no-link"]}
 rutie-serde = {git="https://github.com/danlarkin/rutie-serde"}
 lazy_static = "1.3"

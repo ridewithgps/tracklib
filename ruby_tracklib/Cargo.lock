@@ -248,7 +248,9 @@ dependencies = [
 
 [[package]]
 name = "tracklib"
-version = "0.2.0"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "55fa6025741e969d2ea5048d9db488f6a1c8d029993653041b70c95f7c8b6222"
 dependencies = [
  "base64",
  "crc",

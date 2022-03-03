@@ -41,7 +41,8 @@ impl<E: Encoder> BufferImpl<E> {
     }
 
     fn data_size(&self) -> usize {
-        self.buf.len()
+        const CRC_BYTES: usize = 4;
+        self.buf.len() + CRC_BYTES
     }
 }
 
@@ -115,9 +116,14 @@ impl Section {
     }
 
     pub(crate) fn data_size(&self) -> usize {
+        const CRC_BYTES: usize = 4;
         let presence_bytes_required = (self.fields.len() + 7) / 8;
-        let presence_bytes = presence_bytes_required * self.rows_written;
-        let data_bytes: usize = self.column_data.iter().map(|buffer| buffer.len()).sum();
+        let presence_bytes = (presence_bytes_required * self.rows_written) + CRC_BYTES;
+        let data_bytes: usize = self
+            .column_data
+            .iter()
+            .map(|buffer| buffer.len() + CRC_BYTES)
+            .sum();
         data_bytes + presence_bytes
     }
 
@@ -472,11 +478,11 @@ mod tests {
                          0x00, // first entry type: i64 = 0
                          0x01, // name len = 1
                          b'm', // name = "m"
-                         0x02, // data size = 2
+                         0x06, // data size = 6
                          0x05, // second entry type: bool = 5
                          0x01, // name len = 1
                          b'k', // name = "k"
-                         0x01, // data size = 1
+                         0x05, // data size = 5
                          0x04, // third entry type: string = 4
                          0x0A, // name len = 10
                          b'l', // name = "long name!"
@@ -489,11 +495,11 @@ mod tests {
                          b'm',
                          b'e',
                          b'!',
-                         0x07, // data size = 7 ("Hello!" + leb128 length prefix)
+                         0x0B, // data size = 11
                          0x00, // fourth entry type: i64 = 0
                          0x01, // name len = 1
                          b'i', // name = "i"
-                         0x02]); // data size = 2
+                         0x06]); // data size = 6
         });
     }
 
@@ -600,12 +606,12 @@ mod tests {
 
                 // Data Column 2 = Bool
                 0x00, // false
-                0x00, // missing
+                // None
                 0x01, // true
-                0x48, // crc
-                0x9F,
-                0x5A,
-                0x4C,
+                0x35, // crc
+                0x86,
+                0x89,
+                0xFB,
 
                 // Data Column 3 = String
                 0x04, // length 4

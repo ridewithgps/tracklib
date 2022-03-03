@@ -246,46 +246,46 @@ mod tests {
                 // Data Table Section 1
                 0x01, // type of section = course points
                 0x05, // leb128 point count
-                0x23, // leb128 data size
+                0x33, // leb128 data size
 
                 // Types Table for Section 1
                 0x03, // field count
                 0x00, // first field type = I64
                 0x01, // name len
                 b'm', // name
-                0x05, // leb128 data size
+                0x09, // leb128 data size
                 0x05, // second field type = Bool
                 0x01, // name len
                 b'k', // name
-                0x05, // leb128 data size
+                0x09, // leb128 data size
                 0x04, // third field type = String
                 0x01, // name len
                 b'j', // name
-                0x14, // leb128 data size
+                0x18, // leb128 data size
 
                 // Data Table Section 2
                 0x00, // type of section = track points
                 0x03, // leb128 point count
-                0x17, // leb128 data size
+                0x26, // leb128 data size
 
                 // Types Table for Section 2
                 0x03, // field count
                 0x00, // first field type = I64
                 0x01, // name length
                 b'a', // name
-                0x03, // leb128 data size
+                0x07, // leb128 data size
                 0x05, // second field type = Bool
                 0x01, // name length
                 b'b', // name
-                0x03, // leb128 data size
+                0x06, // leb128 data size
                 0x04, // third field type = String
                 0x01, // name length
                 b'c', // name
-                0x0E, // leb128 data size
+                0x12, // leb128 data size
 
                 // Data Table CRC
-                0x6C,
-                0xB4,
+                0x49,
+                0xEC,
 
                 // Data Section 1
 
@@ -370,12 +370,12 @@ mod tests {
 
                 // Data Column 2 = Bool
                 0x00, // false
-                0x00, // missing
+                // None
                 0x01, // true
-                0x48, // crc
-                0x9F,
-                0x5A,
-                0x4C,
+                0x35, // crc
+                0x86,
+                0x89,
+                0xFB,
 
                 // Data Column 3 = String
                 0x04, // length 4

@@ -27,18 +27,13 @@ impl Encoder for I64Encoder {
         presence: &mut Vec<bool>,
     ) -> Result<()> {
         presence.push(value.is_some());
-        let delta = match value {
-            Some(v) => {
-                let value = *v;
-                let delta = value - self.prev;
-                self.prev = value;
-                delta
-            }
-            None => 0,
-        };
+        if let Some(v) = value {
+            let value = *v;
+            let delta = value - self.prev;
+            self.prev = value;
+            leb128::write::signed(buf, delta)?;
+        }
 
-        // Write the signed delta from the previous value
-        leb128::write::signed(buf, delta)?;
         Ok(())
     }
 }
@@ -56,8 +51,10 @@ impl Encoder for BoolEncoder {
         presence: &mut Vec<bool>,
     ) -> Result<()> {
         presence.push(value.is_some());
-        let v = *(value.unwrap_or(&false)) as u8;
-        buf.write_all(&v.to_le_bytes())?;
+        if let Some(v) = value {
+            let v = *(value.unwrap_or(&false)) as u8;
+            buf.write_all(&v.to_le_bytes())?;
+        }
         Ok(())
     }
 }
@@ -80,9 +77,6 @@ impl Encoder for StringEncoder {
             leb128::write::unsigned(buf, u64::try_from(string.len()).unwrap())?;
             // Write the string itself
             buf.write_all(string.as_bytes())?;
-        } else {
-            // Write a zero length and nothing else
-            buf.write_all(&vec![0])?;
         }
 
         Ok(())
@@ -130,8 +124,8 @@ mod tests {
                                0x01, // +1 from 2
                                0x99, // -103 from 3
                                0x7F,
-                               0x00, // None
-                               0x00, // None
+                               // None
+                               // None
                                0x00, // staying at -100
                                0xC8, // +200 from -100
                                0x01]);
@@ -176,13 +170,13 @@ mod tests {
             .is_ok());
 
         #[rustfmt::skip]
-        assert_eq!(data_buf, &[0x01,
-                               0x01,
-                               0x00,
-                               0x00,
-                               0x00,
-                               0x00,
-                               0x01]);
+        assert_eq!(data_buf, &[0x01,   // true
+                               0x01,   // true
+                               0x00,   // false
+                               // None
+                               // None
+                               0x00,   // false
+                               0x01]); // true
 
         #[rustfmt::skip]
         assert_eq!(presence_buf, &[true,
@@ -232,13 +226,13 @@ mod tests {
         #[rustfmt::skip]
         assert_eq!(data_buf, &[0x01, // length
                                b'A', // A
-                               0x00, // None
+                               // None
                                0x01, // length
                                b'B', // B
-                               0x00, // None
+                               // None
                                0x01, // length
                                b'C', // C
-                               0x00, // None
+                               // None
                                0x0D, // length
                                b'H',
                                b'e',
@@ -252,8 +246,9 @@ mod tests {
                                b'r',
                                b'l',
                                b'd',
-                               b'!',
-                               0x00]); // None
+                               b'!'
+                               // None
+        ]);
 
         #[rustfmt::skip]
         assert_eq!(presence_buf, &[true,

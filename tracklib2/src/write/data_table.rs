@@ -66,27 +66,27 @@ mod tests {
                          // Section 1
                          0x00, // section type = track points
                          0x00, // leb128 section point count
-                         0x00, // leb128 section data size
+                         0x10, // leb128 section data size
                          // Types Table
                          0x03, // field count
                          0x00, // first field type = I64
                          0x01, // name length
                          b'a', // name
-                         0x00, // leb128 data size
+                         0x04, // leb128 data size
                          0x05, // second field type = Bool
                          0x01, // name length
                          b'b', // name
-                         0x00, // leb128 data size
+                         0x04, // leb128 data size
                          0x04, // third field type = String
                          0x01, // name length
                          b'c', // name
-                         0x00, // leb128 data size
+                         0x04, // leb128 data size
 
 
                          // Section 2
                          0x01, // section type = course points
                          0x00, // leb128 section point count
-                         0x00, // leb128 section data size
+                         0x10, // leb128 section data size
 
                          // Types Table
                          0x03, // field count
@@ -96,24 +96,24 @@ mod tests {
                          b'i', // name
                          b'd', // name
                          b'e', // name
-                         0x00, // leb128 data size
+                         0x04, // leb128 data size
                          0x05, // second field type = Bool
                          0x04, // name length
                          b'w', // name
                          b'i', // name
                          b't', // name
                          b'h', // name
-                         0x00, // leb128 data size
+                         0x04, // leb128 data size
                          0x04, // third field type = String
                          0x03, // name length
                          b'G', // name
                          b'P', // name
                          b'S', // name
-                         0x00, // leb128 data size
+                         0x04, // leb128 data size
 
 
-                         0x4E, // crc
-                         0x88]);
+                         0xFB, // crc
+                         0xF8]);
         });
     }
 }

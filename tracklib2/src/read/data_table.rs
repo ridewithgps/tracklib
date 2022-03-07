@@ -7,15 +7,15 @@ use nom_leb128::leb128_u64;
 use std::convert::TryFrom;
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
-pub struct DataTableEntry<'a> {
+pub struct DataTableEntry {
     section_type: SectionType,
     offset: usize,
     size: usize,
     rows: usize,
-    types: Vec<TypesTableEntry<'a>>,
+    types: Vec<TypesTableEntry>,
 }
 
-impl<'a> DataTableEntry<'a> {
+impl DataTableEntry {
     pub fn section_type(&self) -> &SectionType {
         &self.section_type
     }
@@ -32,7 +32,7 @@ impl<'a> DataTableEntry<'a> {
         self.rows
     }
 
-    pub fn types(&self) -> &[TypesTableEntry<'a>] {
+    pub fn types(&self) -> &[TypesTableEntry] {
         self.types.as_slice()
     }
 }

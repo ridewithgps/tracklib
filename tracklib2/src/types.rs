@@ -7,6 +7,7 @@ pub enum FieldType {
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct FieldDescription {
     name: String,
     fieldtype: FieldType,
@@ -24,6 +25,14 @@ impl FieldDescription {
     pub fn fieldtype(&self) -> &FieldType {
         &self.fieldtype
     }
+}
+
+#[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
+pub enum FieldValue {
+    I64(i64),
+    Bool(bool),
+    String(String),
 }
 
 #[derive(Debug)]

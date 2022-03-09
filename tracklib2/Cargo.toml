@@ -2,7 +2,7 @@
 name = "tracklib2"
 version = "0.1.0"
 authors = ["Dan Larkin <dan@danlarkin.org>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 crc = "2.1"

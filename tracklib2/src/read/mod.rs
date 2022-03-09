@@ -1,4 +1,3 @@
-mod columns;
 mod crc;
 mod data_table;
 mod decoders;

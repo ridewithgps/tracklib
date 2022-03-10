@@ -11,7 +11,6 @@ pub(crate) trait Decoder {
 }
 
 fn validate_column(data: &[u8]) -> Result<&[u8]> {
-    println!("validate_column(data len={})", data.len());
     const CRC_BYTES: usize = 4;
     let (column_data, crc_bytes) = data.split_at(data.len() - CRC_BYTES);
     let (_, checksum) = CRC::<u32>::parser(column_data)(crc_bytes)?;

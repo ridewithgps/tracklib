@@ -1,0 +1,10 @@
+[package]
+name = "rwtfinspect"
+description = "Inspect RWTF Files"
+version = "0.1.0"
+authors = ["Dan Larkin <dan@danlarkin.org>"]
+license = "Apache-2.0 OR MIT"
+edition = "2021"
+
+[dependencies]
+tracklib2 = {path = "../tracklib2", features=["inspect"]}

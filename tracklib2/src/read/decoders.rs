@@ -168,24 +168,24 @@ mod tests {
                              0x65,
                              0x57,
                              0xFB];
-        assert_matches!(parse_presence_column(1, 5)(presence_buf), Ok((&[], presence_column)) => {
-            let presence_column_view = presence_column.view(0);
-            #[rustfmt::skip]
-            let buf = &[0x20,
-                        0x42,
-                        0x00,
-                        0x1,
-                        0x0C, // crc
-                        0x01,
-                        0x49,
-                        0xA3];
-            assert_matches!(I64Decoder::new(buf, presence_column_view), Ok(mut decoder) => {
-                assert_matches!(decoder.decode(), Ok(Some(32)));
-                assert_matches!(decoder.decode(), Ok(Some(-30)));
-                assert_matches!(decoder.decode(), Ok(None));
-                assert_matches!(decoder.decode(), Ok(Some(-30)));
-                assert_matches!(decoder.decode(), Ok(Some(-29)));
-            });
+        let presence_column =
+            assert_matches!(parse_presence_column(1, 5)(presence_buf), Ok((&[], pc)) => pc);
+        let presence_column_view = assert_matches!(presence_column.view(0), Some(v) => v);
+        #[rustfmt::skip]
+        let buf = &[0x20,
+                    0x42,
+                    0x00,
+                    0x1,
+                    0x0C, // crc
+                    0x01,
+                    0x49,
+                    0xA3];
+        assert_matches!(I64Decoder::new(buf, presence_column_view), Ok(mut decoder) => {
+            assert_matches!(decoder.decode(), Ok(Some(32)));
+            assert_matches!(decoder.decode(), Ok(Some(-30)));
+            assert_matches!(decoder.decode(), Ok(None));
+            assert_matches!(decoder.decode(), Ok(Some(-30)));
+            assert_matches!(decoder.decode(), Ok(Some(-29)));
         });
     }
 
@@ -199,20 +199,20 @@ mod tests {
                              0x5E,
                              0x43,
                              0x9E];
-        assert_matches!(parse_presence_column(1, 3)(presence_buf), Ok((&[], presence_column)) => {
-            let presence_column_view = presence_column.view(0);
-            #[rustfmt::skip]
-            let buf = &[0x01,
-                        0x00,
-                        0x5E, // crc
-                        0x5A,
-                        0x51,
-                        0x2D];
-            assert_matches!(BoolDecoder::new(buf, presence_column_view), Ok(mut decoder) => {
-                assert_matches!(decoder.decode(), Ok(None));
-                assert_matches!(decoder.decode(), Ok(Some(true)));
-                assert_matches!(decoder.decode(), Ok(Some(false)));
-            });
+        let presence_column =
+            assert_matches!(parse_presence_column(1, 3)(presence_buf), Ok((&[], pc)) => pc);
+        let presence_column_view = assert_matches!(presence_column.view(0), Some(v) => v);
+        #[rustfmt::skip]
+        let buf = &[0x01,
+                    0x00,
+                    0x5E, // crc
+                    0x5A,
+                    0x51,
+                    0x2D];
+        assert_matches!(BoolDecoder::new(buf, presence_column_view), Ok(mut decoder) => {
+            assert_matches!(decoder.decode(), Ok(None));
+            assert_matches!(decoder.decode(), Ok(Some(true)));
+            assert_matches!(decoder.decode(), Ok(Some(false)));
         });
     }
 
@@ -226,27 +226,27 @@ mod tests {
                              0x5E,
                              0x43,
                              0x9E];
-        assert_matches!(parse_presence_column(1, 3)(presence_buf), Ok((&[], presence_column)) => {
-            let presence_column_view = presence_column.view(0);
-            #[rustfmt::skip]
-            let buf = &[0x01,
-                        b'R',
-                        0x03,
-                        b'i',
-                        b'd',
-                        b'e',
-                        0x73, // crc
-                        0x91,
-                        0x5A,
-                        0x74];
-            assert_matches!(StringDecoder::new(buf, presence_column_view), Ok(mut decoder) => {
-                assert_matches!(decoder.decode(), Ok(None));
-                assert_matches!(decoder.decode(), Ok(Some(s)) => {
-                    assert_eq!(s, "R");
-                });
-                assert_matches!(decoder.decode(), Ok(Some(s)) => {
-                    assert_eq!(s, "ide");
-                });
+        let presence_column =
+            assert_matches!(parse_presence_column(1, 3)(presence_buf), Ok((&[], pc)) => pc);
+        let presence_column_view = assert_matches!(presence_column.view(0), Some(v) => v);
+        #[rustfmt::skip]
+        let buf = &[0x01,
+                    b'R',
+                    0x03,
+                    b'i',
+                    b'd',
+                    b'e',
+                    0x73, // crc
+                    0x91,
+                    0x5A,
+                    0x74];
+        assert_matches!(StringDecoder::new(buf, presence_column_view), Ok(mut decoder) => {
+            assert_matches!(decoder.decode(), Ok(None));
+            assert_matches!(decoder.decode(), Ok(Some(s)) => {
+                assert_eq!(s, "R");
+            });
+            assert_matches!(decoder.decode(), Ok(Some(s)) => {
+                assert_eq!(s, "ide");
             });
         });
     }
@@ -261,19 +261,23 @@ mod tests {
                              0x5E,
                              0x43,
                              0x9E];
-        assert_matches!(parse_presence_column(1, 3)(presence_buf), Ok((&[], presence_column)) => {
-            let presence_column_view = presence_column.view(0);
-            #[rustfmt::skip]
-            let buf = &[0x00,
-                        0x01,
-                        0x02,
-                        0x00, // invalid crc
-                        0x00,
-                        0x00,
-                        0x00];
-            assert_matches!(StringDecoder::new(buf, presence_column_view),
-                            Err(crate::error::TracklibError::CRC32Error{expected: 0x00,
-                                                                        computed: 0x9300784D}));
-        });
+        let presence_column =
+            assert_matches!(parse_presence_column(1, 3)(presence_buf), Ok((&[], pc)) => pc);
+        let presence_column_view = assert_matches!(presence_column.view(0), Some(v) => v);
+        #[rustfmt::skip]
+        let buf = &[0x00,
+                    0x01,
+                    0x02,
+                    0x00, // invalid crc
+                    0x00,
+                    0x00,
+                    0x00];
+        assert_matches!(
+            StringDecoder::new(buf, presence_column_view),
+            Err(crate::error::TracklibError::CRC32Error {
+                expected: 0x00000000,
+                computed: 0x9300784D
+            })
+        );
     }
 }

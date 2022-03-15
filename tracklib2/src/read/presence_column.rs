@@ -10,21 +10,24 @@ pub(crate) struct PresenceColumn<'a> {
 }
 
 impl<'a> PresenceColumn<'a> {
-    // TODO: should this return a Result?
     /// View into a particular field in the presence column.
-    pub(crate) fn view(&self, index: usize) -> PresenceColumnView<'a> {
-        let bit_index = 1 << (index % 8);
-        let presence_bytes_required = (self.fields + 7) / 8;
-        let x = (presence_bytes_required * 8 - index + 7) & !7; // next multiple of 8
-        let byte_index = (x / 8) - 1;
+    pub(crate) fn view(&self, index: usize) -> Option<PresenceColumnView<'a>> {
+        if index < self.fields {
+            let bit_index = 1 << (index % 8);
+            let presence_bytes_required = (self.fields + 7) / 8;
+            let x = (presence_bytes_required * 8 - index + 7) & !7; // next multiple of 8
+            let byte_index = (x / 8) - 1;
 
-        PresenceColumnView::new(
-            &self.data,
-            bit_index,
-            byte_index,
-            presence_bytes_required,
-            self.rows,
-        )
+            Some(PresenceColumnView::new(
+                &self.data,
+                bit_index,
+                byte_index,
+                presence_bytes_required,
+                self.rows,
+            ))
+        } else {
+            None
+        }
     }
 }
 
@@ -112,7 +115,7 @@ mod tests {
                     0xC2];
         assert_matches!(parse_presence_column(80, 1)(buf), Ok((&[], presence_column)) => {
             let vals = (0..80)
-                .map(|i| presence_column.view(i))
+                .map(|i| presence_column.view(i).unwrap())
                 .flat_map(|view| view.collect::<Vec<bool>>())
                 .collect::<Vec<bool>>();
 
@@ -144,19 +147,18 @@ mod tests {
                     0xA7,
                     0xA5];
         assert_matches!(parse_presence_column(3, 4)(buf), Ok((&[], presence_column)) => {
-            let view = presence_column.view(0);
+            let view = presence_column.view(0).unwrap();
             assert_eq!(view.collect::<Vec<bool>>(), &[true, true, false, true]);
 
-            let view = presence_column.view(1);
+            let view = presence_column.view(1).unwrap();
             assert_eq!(view.collect::<Vec<bool>>(), &[true, false, true, true]);
 
-            let view = presence_column.view(2);
+            let view = presence_column.view(2).unwrap();
             assert_eq!(view.collect::<Vec<bool>>(), &[false, true, true, true]);
         });
     }
 
     #[test]
-    #[should_panic]
     fn test_presence_column_view_overflowing_column_index() {
         #[rustfmt::skip]
         let buf = &[0b00000011,
@@ -168,7 +170,7 @@ mod tests {
                     0xA7,
                     0xA5];
         assert_matches!(parse_presence_column(3, 4)(buf), Ok((&[], presence_column)) => {
-            presence_column.view(10);
+            assert!(presence_column.view(10).is_none());
         });
     }
 
@@ -182,13 +184,13 @@ mod tests {
                     0x91,
                     0xF5];
         assert_matches!(parse_presence_column(20, 2)(buf), Ok((&[], presence_column)) => {
-            assert_eq!(presence_column.view(0).collect::<Vec<bool>>(), &[false, true]);
-            assert_eq!(presence_column.view(1).collect::<Vec<bool>>(), &[true, true]);
+            assert_eq!(presence_column.view(0).unwrap().collect::<Vec<bool>>(), &[false, true]);
+            assert_eq!(presence_column.view(1).unwrap().collect::<Vec<bool>>(), &[true, true]);
 
-            assert_eq!(presence_column.view(9).collect::<Vec<bool>>(), &[false, true]);
-            assert_eq!(presence_column.view(10).collect::<Vec<bool>>(), &[true, true]);
-            assert_eq!(presence_column.view(11).collect::<Vec<bool>>(), &[false, false]);
-            assert_eq!(presence_column.view(12).collect::<Vec<bool>>(), &[true, false]);
+            assert_eq!(presence_column.view(9).unwrap().collect::<Vec<bool>>(), &[false, true]);
+            assert_eq!(presence_column.view(10).unwrap().collect::<Vec<bool>>(), &[true, true]);
+            assert_eq!(presence_column.view(11).unwrap().collect::<Vec<bool>>(), &[false, false]);
+            assert_eq!(presence_column.view(12).unwrap().collect::<Vec<bool>>(), &[true, false]);
         });
     }
 }

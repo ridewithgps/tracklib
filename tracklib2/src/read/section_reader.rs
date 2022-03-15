@@ -1,7 +1,7 @@
 use super::data_table::DataTableEntry;
 use super::decoders::{BoolDecoder, Decoder, I64Decoder, StringDecoder};
 use super::presence_column::parse_presence_column;
-use crate::error::Result;
+use crate::error::{Result, TracklibError};
 use crate::types::{FieldDescription, FieldType, FieldValue};
 
 #[cfg_attr(test, derive(Debug))]
@@ -38,7 +38,12 @@ impl<'a> SectionReader<'a> {
             .enumerate()
             .map(|(i, field)| {
                 let column_data = &column_data[field.offset()..field.offset() + field.size()];
-                let presence_column_view = presence_column.view(i);
+                let presence_column_view =
+                    presence_column
+                        .view(i)
+                        .ok_or_else(|| TracklibError::ParseIncompleteError {
+                            needed: nom::Needed::Unknown,
+                        })?;
                 let field_description = field.field_description();
                 let decoder = match field_description.fieldtype() {
                     FieldType::I64 => ColumnDecoder::I64 {

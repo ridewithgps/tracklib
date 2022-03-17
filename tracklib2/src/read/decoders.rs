@@ -69,6 +69,51 @@ impl<'a> Decoder for I64Decoder<'a> {
 }
 
 #[cfg_attr(test, derive(Debug))]
+pub(crate) struct F64Decoder<'a> {
+    data: &'a [u8],
+    presence_column_view: PresenceColumnView<'a>,
+    prev: i64,
+}
+
+impl<'a> F64Decoder<'a> {
+    pub(crate) fn new(
+        data: &'a [u8],
+        presence_column_view: PresenceColumnView<'a>,
+    ) -> Result<Self> {
+        let column_data = validate_column(data)?;
+
+        Ok(Self {
+            data: column_data,
+            presence_column_view,
+            prev: 0,
+        })
+    }
+}
+
+impl<'a> Decoder for F64Decoder<'a> {
+    type T = f64;
+
+    fn decode(&mut self) -> Result<Option<Self::T>> {
+        if let Some(is_present) = self.presence_column_view.next() {
+            if is_present {
+                let (rest, value) = leb128_i64(self.data)?;
+                let new = self.prev + value;
+                self.prev = new;
+                self.data = rest;
+                Ok(Some((new as f64) / 10e6))
+            } else {
+                Ok(None)
+            }
+        } else {
+            // ran out of rows, this is an error
+            return Err(TracklibError::ParseIncompleteError {
+                needed: nom::Needed::Unknown,
+            });
+        }
+    }
+}
+
+#[cfg_attr(test, derive(Debug))]
 pub(crate) struct BoolDecoder<'a> {
     data: &'a [u8],
     presence_column_view: PresenceColumnView<'a>,
@@ -155,6 +200,7 @@ mod tests {
     use super::*;
     use crate::read::presence_column::parse_presence_column;
     use assert_matches::assert_matches;
+    use float_cmp::assert_approx_eq;
 
     #[test]
     fn test_decode_i64() {
@@ -186,6 +232,72 @@ mod tests {
             assert_matches!(decoder.decode(), Ok(None));
             assert_matches!(decoder.decode(), Ok(Some(-30)));
             assert_matches!(decoder.decode(), Ok(Some(-29)));
+        });
+    }
+
+    #[test]
+    fn test_decode_f64() {
+        #[rustfmt::skip]
+        let presence_buf = &[0b00000001,
+                             0b00000001,
+                             0b00000000,
+                             0b00000001,
+                             0b00000001,
+                             0b00000001,
+                             0x94, // crc
+                             0x59,
+                             0xA0,
+                             0x40];
+        let presence_column =
+            assert_matches!(parse_presence_column(1, 6)(presence_buf), Ok((&[], pc)) => pc);
+        let presence_column_view = assert_matches!(presence_column.view(0), Some(v) => v);
+        #[rustfmt::skip]
+        let buf = &[0x00, // first storing a 0
+
+                    0x80, // leb128-encoded difference between prev (0.0) and 1.0 * 10e6
+                    0xAD,
+                    0xE2,
+                    0x04,
+
+                    // None
+
+                    0xC0, // leb128-encoded delta between prev and 2.5 * 10e6
+                    0xC3,
+                    0x93,
+                    0x07,
+
+                    0xA4, // leb128-encoded delta between prev and 3.00001 * 10e6
+                    0x97,
+                    0xB1,
+                    0x02,
+
+                    0xDC, // leb128-encoded delta between prev and -100.26 * 10e6
+                    0x8B,
+                    0xCF,
+                    0x93,
+                    0x7C,
+
+                    0x52, // crc
+                    0xD3,
+                    0xE9,
+                    0x35];
+        assert_matches!(F64Decoder::new(buf, presence_column_view), Ok(mut decoder) => {
+            assert_matches!(decoder.decode(), Ok(Some(v)) => {
+                assert_approx_eq!(f64, v, 0.0);
+            });
+            assert_matches!(decoder.decode(), Ok(Some(v)) => {
+                assert_approx_eq!(f64, v, 1.0);
+            });
+            assert_matches!(decoder.decode(), Ok(None));
+            assert_matches!(decoder.decode(), Ok(Some(v)) => {
+                assert_approx_eq!(f64, v, 2.5);
+            });
+            assert_matches!(decoder.decode(), Ok(Some(v)) => {
+                assert_approx_eq!(f64, v, 3.00001);
+            });
+            assert_matches!(decoder.decode(), Ok(Some(v)) => {
+                assert_approx_eq!(f64, v, -100.26);
+            });
         });
     }
 

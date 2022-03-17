@@ -2,6 +2,7 @@
 #[cfg_attr(test, derive(PartialEq))]
 pub enum FieldType {
     I64,
+    F64,
     String,
     Bool,
 }
@@ -31,6 +32,7 @@ impl FieldDescription {
 #[cfg_attr(test, derive(PartialEq))]
 pub enum FieldValue {
     I64(i64),
+    F64(f64),
     Bool(bool),
     String(String),
 }

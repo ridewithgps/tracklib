@@ -1,6 +1,5 @@
 use super::crcwriter::CrcWriter;
-use super::encoders::{BoolEncoder, Encoder, I64Encoder, StringEncoder};
-use crate::consts::{CRC16, CRC32};
+use super::encoders::*;
 use crate::error::Result;
 use crate::types::{FieldDescription, FieldType, SectionType};
 use std::convert::TryFrom;
@@ -10,6 +9,7 @@ impl FieldType {
     fn type_tag(&self) -> u8 {
         match self {
             Self::I64 => 0x00,
+            Self::F64 => 0x01,
             Self::String => 0x04,
             Self::Bool => 0x05,
         }
@@ -49,6 +49,7 @@ impl<E: Encoder> BufferImpl<E> {
 #[derive(Debug)]
 enum Buffer {
     I64(BufferImpl<I64Encoder>),
+    F64(BufferImpl<F64Encoder>),
     Bool(BufferImpl<BoolEncoder>),
     String(BufferImpl<StringEncoder>),
 }
@@ -57,6 +58,7 @@ impl Buffer {
     fn new(field_type: &FieldType) -> Self {
         match field_type {
             &FieldType::I64 => Buffer::I64(BufferImpl::default()),
+            &FieldType::F64 => Buffer::F64(BufferImpl::default()),
             &FieldType::Bool => Buffer::Bool(BufferImpl::default()),
             &FieldType::String => Buffer::String(BufferImpl::default()),
         }
@@ -65,6 +67,7 @@ impl Buffer {
     fn len(&self) -> usize {
         match self {
             Self::I64(buffer_impl) => buffer_impl.buf.len(),
+            Self::F64(buffer_impl) => buffer_impl.buf.len(),
             Self::Bool(buffer_impl) => buffer_impl.buf.len(),
             Self::String(buffer_impl) => buffer_impl.buf.len(),
         }
@@ -138,6 +141,7 @@ impl Section {
             for buffer in self.column_data.iter() {
                 let is_present = match buffer {
                     Buffer::I64(buffer_impl) => buffer_impl.presence.get(row_i),
+                    Buffer::F64(buffer_impl) => buffer_impl.presence.get(row_i),
                     Buffer::Bool(buffer_impl) => buffer_impl.presence.get(row_i),
                     Buffer::String(buffer_impl) => buffer_impl.presence.get(row_i),
                 };
@@ -168,6 +172,7 @@ impl Section {
                 .get(i)
                 .map(|buffer| match buffer {
                     Buffer::I64(buffer_impl) => buffer_impl.data_size(),
+                    Buffer::F64(buffer_impl) => buffer_impl.data_size(),
                     Buffer::Bool(buffer_impl) => buffer_impl.data_size(),
                     Buffer::String(buffer_impl) => buffer_impl.data_size(),
                 })
@@ -187,9 +192,10 @@ impl Section {
         self.write_presence_column(out)?;                                         // ? bytes - presence column with crc
         for buffer in self.column_data.iter() {
             match buffer {
-                Buffer::I64(buffer_impl) => buffer_impl.write_data(out)?,         // \
-                Buffer::Bool(buffer_impl) => buffer_impl.write_data(out)?,        //  \
-                Buffer::String(buffer_impl) => buffer_impl.write_data(out)?,      //   > ? bytes - data column with crc
+                Buffer::I64(buffer_impl) => buffer_impl.write_data(out)?,         // |
+                Buffer::F64(buffer_impl) => buffer_impl.write_data(out)?,         // |
+                Buffer::Bool(buffer_impl) => buffer_impl.write_data(out)?,        // |
+                Buffer::String(buffer_impl) => buffer_impl.write_data(out)?,      //  - > ? bytes - data column with crc
             };
         }
 
@@ -224,6 +230,9 @@ impl<'a> RowBuilder<'a> {
             (Some(field_desc), Some(Buffer::I64(ref mut buffer_impl))) => Some(
                 ColumnWriter::I64ColumnWriter(ColumnWriterImpl::new(&field_desc, buffer_impl)),
             ),
+            (Some(field_desc), Some(Buffer::F64(ref mut buffer_impl))) => Some(
+                ColumnWriter::F64ColumnWriter(ColumnWriterImpl::new(&field_desc, buffer_impl)),
+            ),
             (Some(field_desc), Some(Buffer::Bool(ref mut buffer_impl))) => Some(
                 ColumnWriter::BoolColumnWriter(ColumnWriterImpl::new(&field_desc, buffer_impl)),
             ),
@@ -238,6 +247,7 @@ impl<'a> RowBuilder<'a> {
 #[derive(Debug)]
 pub enum ColumnWriter<'a> {
     I64ColumnWriter(ColumnWriterImpl<'a, I64Encoder>),
+    F64ColumnWriter(ColumnWriterImpl<'a, F64Encoder>),
     BoolColumnWriter(ColumnWriterImpl<'a, BoolEncoder>),
     StringColumnWriter(ColumnWriterImpl<'a, StringEncoder>),
 }
@@ -321,6 +331,7 @@ mod tests {
                     ColumnWriter::StringColumnWriter(cwi) => {
                         assert!(cwi.write(c_vals[i].as_ref()).is_ok());
                     }
+                    ColumnWriter::F64ColumnWriter(_) => {}
                 }
             }
         }
@@ -452,6 +463,7 @@ mod tests {
                 ("k".to_string(), FieldType::Bool),
                 ("long name!".to_string(), FieldType::String),
                 ("i".to_string(), FieldType::I64),
+                ("f".to_string(), FieldType::F64),
             ],
         );
 
@@ -467,6 +479,9 @@ mod tests {
                 ColumnWriter::StringColumnWriter(cwi) => {
                     assert!(cwi.write(Some(&"Hello!".to_string())).is_ok());
                 }
+                ColumnWriter::F64ColumnWriter(cwi) => {
+                    assert!(cwi.write(Some(&0.0042)).is_ok());
+                }
             }
         }
 
@@ -474,7 +489,7 @@ mod tests {
         assert_matches!(section.write_types_table(&mut buf), Ok(()) => {
             #[rustfmt::skip]
             assert_eq!(buf,
-                       &[0x04, // entry count = 4
+                       &[0x05, // entry count = 5
                          0x00, // first entry type: i64 = 0
                          0x01, // name len = 1
                          b'm', // name = "m"
@@ -499,7 +514,12 @@ mod tests {
                          0x00, // fourth entry type: i64 = 0
                          0x01, // name len = 1
                          b'i', // name = "i"
-                         0x06]); // data size = 6
+                         0x06, // data size = 6
+                         0x01, // fifth entry type: f64 = 1
+                         0x01, // name len = 1
+                         b'f', // name = "f"
+                         0x07, // data size = 7
+                       ]);
         });
     }
 
@@ -507,6 +527,7 @@ mod tests {
     fn test_writing_a_section() {
         enum V {
             I64(i64),
+            F64(f64),
             Bool(bool),
             String(String),
         }
@@ -516,6 +537,7 @@ mod tests {
         h.insert("a", V::I64(1));
         h.insert("b", V::Bool(false));
         h.insert("c", V::String("Ride".to_string()));
+        h.insert("d", V::F64(0.0));
         v.push(h);
         let mut h = HashMap::new();
         h.insert("a", V::I64(2));
@@ -525,6 +547,7 @@ mod tests {
         h.insert("a", V::I64(4));
         h.insert("b", V::Bool(true));
         h.insert("c", V::String("GPS".to_string()));
+        h.insert("d", V::F64(2112.90125));
         v.push(h);
 
         let mut section = Section::new(
@@ -533,6 +556,7 @@ mod tests {
                 ("a".to_string(), FieldType::I64),
                 ("b".to_string(), FieldType::Bool),
                 ("c".to_string(), FieldType::String),
+                ("d".to_string(), FieldType::F64),
             ],
         );
 
@@ -577,6 +601,17 @@ mod tests {
                                     .flatten(),
                             ).is_ok());
                         }
+                        ColumnWriter::F64ColumnWriter(cwi) => {
+                            assert!(cwi.write(
+                                entry
+                                    .get(field_desc.name())
+                                    .map(|v| match v {
+                                        V::F64(v) => Some(v),
+                                        _ => None,
+                                    })
+                                    .flatten(),
+                            ).is_ok());
+                        }
                     }
                 });
             }
@@ -587,13 +622,13 @@ mod tests {
             #[rustfmt::skip]
             assert_eq!(buf, &[
                 // Presence Column
-                0b00000111,
+                0b00001111,
                 0b00000101,
-                0b00000111,
-                0x1A, // crc
-                0x75,
-                0xEA,
-                0xC4,
+                0b00001111,
+                0x9A, // crc
+                0xFC,
+                0x27,
+                0xEC,
 
                 // Data Column 1 = I64
                 0x01, // 1
@@ -631,7 +666,21 @@ mod tests {
                 0xA3, // crc
                 0x02,
                 0xEC,
-                0x48]);
+                0x48,
+
+                // Data Column 4 = F64
+                0x0, // 0.0
+                // None
+                0x94, // 2112.90125
+                0xCA,
+                0x8C,
+                0xDB,
+                0xCE,
+                0x00,
+                0xF0, // crc
+                0xA4,
+                0x8A,
+                0xDD]);
         });
     }
 }

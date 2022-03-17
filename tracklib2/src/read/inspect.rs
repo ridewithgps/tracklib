@@ -247,6 +247,7 @@ fn format_val(value: Option<FieldValue>) -> String {
     if let Some(val) = value {
         match val {
             FieldValue::I64(v) => format!("{v}"),
+            FieldValue::F64(v) => format!("{v}"),
             FieldValue::Bool(v) => format!("{v}"),
             FieldValue::String(v) => v.clone(),
         }

@@ -1,7 +1,7 @@
 use super::data_table::write_data_table;
 use super::metadata::write_metadata;
 use super::section::Section;
-use crate::consts::{CRC16, RWTF_HEADER_SIZE};
+use crate::consts::RWTF_HEADER_SIZE;
 use crate::error::Result;
 use crate::types::MetadataEntry;
 use std::convert::TryFrom;
@@ -114,6 +114,7 @@ mod tests {
                     ColumnWriter::StringColumnWriter(cwi) => {
                         assert!(cwi.write(Some(&"hey".to_string())).is_ok());
                     }
+                    ColumnWriter::F64ColumnWriter(_) => {}
                 }
             }
         }
@@ -190,6 +191,7 @@ mod tests {
                                     .flatten(),
                             ).is_ok());
                         }
+                        ColumnWriter::F64ColumnWriter(_) => {}
                     }
                 });
             }

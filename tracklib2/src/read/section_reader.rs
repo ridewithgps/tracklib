@@ -1,5 +1,5 @@
 use super::data_table::DataTableEntry;
-use super::decoders::{BoolDecoder, Decoder, I64Decoder, StringDecoder};
+use super::decoders::*;
 use super::presence_column::parse_presence_column;
 use crate::error::{Result, TracklibError};
 use crate::types::{FieldDescription, FieldType, FieldValue};
@@ -9,6 +9,10 @@ enum ColumnDecoder<'a> {
     I64 {
         field_description: &'a FieldDescription,
         decoder: I64Decoder<'a>,
+    },
+    F64 {
+        field_description: &'a FieldDescription,
+        decoder: F64Decoder<'a>,
     },
     Bool {
         field_description: &'a FieldDescription,
@@ -49,6 +53,10 @@ impl<'a> SectionReader<'a> {
                     FieldType::I64 => ColumnDecoder::I64 {
                         field_description,
                         decoder: I64Decoder::new(column_data, presence_column_view)?,
+                    },
+                    FieldType::F64 => ColumnDecoder::F64 {
+                        field_description,
+                        decoder: F64Decoder::new(column_data, presence_column_view)?,
                     },
                     FieldType::Bool => ColumnDecoder::Bool {
                         field_description,
@@ -112,6 +120,15 @@ impl<'a, 'b> Iterator for ColumnIter<'a, 'b> {
                         .map(|maybe_v| (*field_description, maybe_v.map(|v| FieldValue::I64(v))))
                         .map_err(|e| e),
                 ),
+                ColumnDecoder::F64 {
+                    ref field_description,
+                    ref mut decoder,
+                } => Some(
+                    decoder
+                        .decode()
+                        .map(|maybe_v| (*field_description, maybe_v.map(|v| FieldValue::F64(v))))
+                        .map_err(|e| e),
+                ),
                 ColumnDecoder::Bool {
                     ref field_description,
                     ref mut decoder,
@@ -153,7 +170,7 @@ mod tests {
                                0x03, // leb128 section point count
                                0x26, // leb128 section data size
                                // Types Table
-                               0x03, // field count
+                               0x04, // field count
                                0x00, // first field type = I64
                                0x01, // name length
                                b'a', // name
@@ -166,9 +183,13 @@ mod tests {
                                0x01, // name length
                                b'c', // name
                                0x12, // leb128 data size
+                               0x01, // fourth field type = F64
+                               0x01, // name length
+                               b'f', // name
+                               0x0C, // leb128 data size
 
-                               0x67, // crc
-                               0x3C];
+                               0xE9, // crc
+                               0x0B];
 
         assert_matches!(parse_data_table(data_table_buf), Ok((&[], data_table_entries)) => {
             assert_eq!(data_table_entries.len(), 1);
@@ -177,12 +198,12 @@ mod tests {
             let buf = &[
                 // Presence Column
                 0b00000111,
-                0b00000101,
-                0b00000111,
-                0x1A, // crc
-                0x75,
-                0xEA,
-                0xC4,
+                0b00001101,
+                0b00001111,
+                0xF0, // crc
+                0xDB,
+                0xAA,
+                0x68,
 
                 // Data Column 1 = I64
                 0x01, // 1
@@ -220,13 +241,29 @@ mod tests {
                 0xA3, // crc
                 0x02,
                 0xEC,
-                0x48];
+                0x48,
+
+                // Data Column 4 = F64
+                // None
+                0x80, // 1.0
+                0xAD,
+                0xE2,
+                0x04,
+                0xC0, // 2.5
+                0xC3,
+                0x93,
+                0x07,
+                0xCC, // crc
+                0xEC,
+                0xC5,
+                0x15
+            ];
 
             assert_matches!(SectionReader::new(buf, &data_table_entries[0]), Ok(mut section_reader) => {
                 // Row 1
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
                     let values = column_iter.collect::<Vec<_>>();
-                    assert_eq!(values.len(), 3);
+                    assert_eq!(values.len(), 4);
                     assert_matches!(&values[0], Ok((field_description, field_value)) => {
                         assert_eq!(*field_description, data_table_entries[0].types()[0].field_description());
                         assert_eq!(*field_description, &FieldDescription::new("a".to_string(), FieldType::I64));
@@ -242,12 +279,17 @@ mod tests {
                         assert_eq!(*field_description, &FieldDescription::new("c".to_string(), FieldType::String));
                         assert_eq!(field_value, &Some(FieldValue::String("Ride".to_string())));
                     });
+                    assert_matches!(&values[3], Ok((field_description, field_value)) => {
+                        assert_eq!(*field_description, data_table_entries[0].types()[3].field_description());
+                        assert_eq!(*field_description, &FieldDescription::new("f".to_string(), FieldType::F64));
+                        assert_eq!(field_value, &None);
+                    });
                 });
 
                 // Row 2
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
                     let values = column_iter.collect::<Vec<_>>();
-                    assert_eq!(values.len(), 3);
+                    assert_eq!(values.len(), 4);
                     assert_matches!(&values[0], Ok((field_description, field_value)) => {
                         assert_eq!(*field_description, data_table_entries[0].types()[0].field_description());
                         assert_eq!(*field_description, &FieldDescription::new("a".to_string(), FieldType::I64));
@@ -263,12 +305,17 @@ mod tests {
                         assert_eq!(*field_description, &FieldDescription::new("c".to_string(), FieldType::String));
                         assert_eq!(field_value, &Some(FieldValue::String("with".to_string())));
                     });
+                    assert_matches!(&values[3], Ok((field_description, field_value)) => {
+                        assert_eq!(*field_description, data_table_entries[0].types()[3].field_description());
+                        assert_eq!(*field_description, &FieldDescription::new("f".to_string(), FieldType::F64));
+                        assert_eq!(field_value, &Some(FieldValue::F64(1.0)));
+                    });
                 });
 
                 // Row 3
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
                     let values = column_iter.collect::<Vec<_>>();
-                    assert_eq!(values.len(), 3);
+                    assert_eq!(values.len(), 4);
                     assert_matches!(&values[0], Ok((field_description, field_value)) => {
                         assert_eq!(*field_description, data_table_entries[0].types()[0].field_description());
                         assert_eq!(*field_description, &FieldDescription::new("a".to_string(), FieldType::I64));
@@ -283,6 +330,11 @@ mod tests {
                         assert_eq!(*field_description, data_table_entries[0].types()[2].field_description());
                         assert_eq!(*field_description, &FieldDescription::new("c".to_string(), FieldType::String));
                         assert_eq!(field_value, &Some(FieldValue::String("GPS".to_string())));
+                    });
+                    assert_matches!(&values[3], Ok((field_description, field_value)) => {
+                        assert_eq!(*field_description, data_table_entries[0].types()[3].field_description());
+                        assert_eq!(*field_description, &FieldDescription::new("f".to_string(), FieldType::F64));
+                        assert_eq!(field_value, &Some(FieldValue::F64(2.5)));
                     });
                 });
 

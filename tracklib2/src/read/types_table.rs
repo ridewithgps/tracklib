@@ -52,6 +52,7 @@ fn parse_types_table_entry<'a>(
 
         let fieldtype = match type_tag {
             0x00 => FieldType::I64,
+            0x01 => FieldType::F64,
             0x04 => FieldType::String,
             0x05 => FieldType::Bool,
             _ => {
@@ -126,7 +127,7 @@ mod tests {
                     b'e',
                     b'!',
                     0x07, // data size = 7 ("Hello!" + leb128 length prefix)
-                    0x00, // fourth entry type: i64 = 0
+                    0x01, // fourth entry type: f64 = 0
                     0x01, // name len = 1
                     b'i', // name = "i"
                     0x02]; // data size = 2
@@ -140,7 +141,7 @@ mod tests {
                                      TypesTableEntry{field_description: FieldDescription::new("long name!".to_string(), FieldType::String),
                                                      size: 7,
                                                      offset: 3},
-                                     TypesTableEntry{field_description: FieldDescription::new("i".to_string(), FieldType::I64),
+                                     TypesTableEntry{field_description: FieldDescription::new("i".to_string(), FieldType::F64),
                                                      size: 2,
                                                      offset: 10}]);
         });

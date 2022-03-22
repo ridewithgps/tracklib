@@ -317,6 +317,35 @@ mod tests {
     }
 
     #[test]
+    fn test_decode_string_with_invalid_utf8() {
+        #[rustfmt::skip]
+        let presence_buf = &[0b00000001,
+                             0xFC, // crc
+                             0x5D,
+                             0x36,
+                             0xB5];
+        let presence_column =
+            assert_matches!(parse_presence_column(1, 1)(presence_buf), Ok((&[], pc)) => pc);
+        let presence_column_view = assert_matches!(presence_column.view(0), Some(v) => v);
+        #[rustfmt::skip]
+        let buf = &[0x05,
+                    b'a', // name with invalid utf8
+                    0xF0,
+                    0x90,
+                    0x80,
+                    b'b',
+                    0xE2, // crc
+                    0x76,
+                    0xD0,
+                    0x42];
+        assert_matches!(StringDecoder::new(buf, presence_column_view), Ok(mut decoder) => {
+            assert_matches!(decoder.decode(), Ok(Some(s)) => {
+                assert_eq!(s, "a�b");
+            });
+        });
+    }
+
+    #[test]
     fn test_decode_bad_crc() {
         #[rustfmt::skip]
         let presence_buf = &[0b00000000,

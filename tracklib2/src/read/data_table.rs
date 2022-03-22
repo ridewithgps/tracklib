@@ -106,6 +106,7 @@ mod tests {
                     0x00, // section type = track points
                     0x00, // leb128 section point count
                     0x00, // leb128 section data size
+
                     // Types Table
                     0x03, // field count
                     0x00, // first field type = I64
@@ -178,6 +179,48 @@ mod tests {
                             TypesTableEntry::new_for_tests(FieldType::I64, "Ride", 0, 0),
                             TypesTableEntry::new_for_tests(FieldType::Bool, "with", 0, 0),
                             TypesTableEntry::new_for_tests(FieldType::String, "GPS", 0, 0)
+                        ]
+                    }
+                ]
+            );
+        });
+    }
+
+    #[test]
+    fn test_invalid_utf8_fieldname() {
+        #[rustfmt::skip]
+        let buf = &[0x01, // number of sections
+
+                    // Section 1
+                    0x00, // section type = track points
+                    0x00, // leb128 section point count
+                    0x00, // leb128 section data size
+
+                    // Types Table
+                    0x01, // field count
+                    0x00, // first field type = I64
+                    0x05, // name length
+                    b'a', // name with invalid utf8
+                    0xF0,
+                    0x90,
+                    0x80,
+                    b'b',
+                    0x00, // leb128 data size
+
+                    0xEB, // crc
+                    0xE9];
+
+        assert_matches!(parse_data_table(buf), Ok((&[], entries)) => {
+            assert_eq!(
+                entries,
+                vec![
+                    DataTableEntry {
+                        section_type: SectionType::TrackPoints,
+                        offset: 0,
+                        size: 0,
+                        rows: 0,
+                        types: vec![
+                            TypesTableEntry::new_for_tests(FieldType::I64, "a�b", 0, 0),
                         ]
                     }
                 ]

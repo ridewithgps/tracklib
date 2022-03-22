@@ -116,4 +116,40 @@ mod tests {
                          0xF8]);
         });
     }
+
+    #[test]
+    fn test_data_table_with_multibyte_character() {
+        let section = Section::new(
+            SectionType::TrackPoints,
+            vec![("I ♥ NY".to_string(), FieldType::F64)],
+        );
+
+        let mut buf = Vec::new();
+        assert_matches!(write_data_table(&mut buf, &[section]), Ok(()) => {
+            #[rustfmt::skip]
+            assert_eq!(buf,
+                       &[0x01, // number of sections
+
+                         // Section 1
+                         0x00, // section type = track points
+                         0x00, // leb128 section point count
+                         0x08, // leb128 section data size
+                         // Types Table
+                         0x01, // field count
+                         0x01, // first field type = F64
+                         0x08, // name length
+                         b'I', // name
+                         b' ',
+                         0xE2, // heart
+                         0x99,
+                         0xA5,
+                         b' ',
+                         b'N',
+                         b'Y',
+                         0x04, // leb128 data size
+
+                         0x7D, // crc
+                         0x13]);
+        });
+    }
 }

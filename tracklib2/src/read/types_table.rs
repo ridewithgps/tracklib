@@ -62,14 +62,7 @@ fn parse_types_table_entry<'a>(
             }
         };
 
-        let name = match String::from_utf8(field_name.to_vec()) {
-            Ok(s) => s,
-            Err(_) => {
-                return Err(nom::Err::Error(TracklibError::ParseError {
-                    error_kind: nom::error::ErrorKind::Tag,
-                }))
-            }
-        };
+        let name = String::from_utf8_lossy(field_name).into_owned();
 
         Ok((
             input,
@@ -168,8 +161,10 @@ mod tests {
                     0x01, // name len = 1
                     0xC0, // name: invalid utf-8
                     0x02]; // data size = 2
-        assert_matches!(parse_types_table(buf), Err(nom::Err::Error(TracklibError::ParseError{error_kind})) => {
-            assert_eq!(error_kind, nom::error::ErrorKind::Tag);
+        assert_matches!(parse_types_table(buf), Ok((&[], entries)) => {
+            assert_eq!(entries, vec![TypesTableEntry{field_description: FieldDescription::new("�".to_string(), FieldType::I64),
+                                                     size: 2,
+                                                     offset: 0}])
         });
     }
 }

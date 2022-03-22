@@ -1,3 +1,4 @@
+pub mod bitstream;
 mod crc;
 mod data_table;
 mod decoders;

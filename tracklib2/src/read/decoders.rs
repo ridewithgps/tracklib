@@ -1,9 +1,8 @@
+use super::bitstream;
 use super::crc::CRC;
 use super::presence_column::PresenceColumnView;
 use crate::error::Result;
 use crate::error::TracklibError;
-use nom::{multi::length_data, number::complete::le_u8};
-use nom_leb128::{leb128_i64, leb128_u64};
 
 pub(crate) trait Decoder {
     type T;
@@ -49,22 +48,10 @@ impl<'a> Decoder for I64Decoder<'a> {
     type T = i64;
 
     fn decode(&mut self) -> Result<Option<Self::T>> {
-        if let Some(is_present) = self.presence_column_view.next() {
-            if is_present {
-                let (rest, value) = leb128_i64(self.data)?;
-                let new = self.prev + value;
-                self.prev = new;
-                self.data = rest;
-                Ok(Some(new))
-            } else {
-                Ok(None)
-            }
-        } else {
-            // ran out of rows, this is an error
-            return Err(TracklibError::ParseIncompleteError {
-                needed: nom::Needed::Unknown,
-            });
-        }
+        let (rest, value) =
+            bitstream::read_i64(self.presence_column_view.next(), self.data, &mut self.prev)?;
+        self.data = rest;
+        Ok(value)
     }
 }
 
@@ -94,22 +81,10 @@ impl<'a> Decoder for F64Decoder<'a> {
     type T = f64;
 
     fn decode(&mut self) -> Result<Option<Self::T>> {
-        if let Some(is_present) = self.presence_column_view.next() {
-            if is_present {
-                let (rest, value) = leb128_i64(self.data)?;
-                let new = self.prev + value;
-                self.prev = new;
-                self.data = rest;
-                Ok(Some((new as f64) / 10e6))
-            } else {
-                Ok(None)
-            }
-        } else {
-            // ran out of rows, this is an error
-            return Err(TracklibError::ParseIncompleteError {
-                needed: nom::Needed::Unknown,
-            });
-        }
+        let (rest, value) =
+            bitstream::read_i64(self.presence_column_view.next(), self.data, &mut self.prev)?;
+        self.data = rest;
+        Ok(value.map(|v| (v as f64) / 10e6))
     }
 }
 
@@ -137,20 +112,9 @@ impl<'a> Decoder for BoolDecoder<'a> {
     type T = bool;
 
     fn decode(&mut self) -> Result<Option<Self::T>> {
-        if let Some(is_present) = self.presence_column_view.next() {
-            if is_present {
-                let (rest, value) = le_u8(self.data)?;
-                self.data = rest;
-                Ok(Some(value != 0))
-            } else {
-                Ok(None)
-            }
-        } else {
-            // ran out of rows, this is an error
-            return Err(TracklibError::ParseIncompleteError {
-                needed: nom::Needed::Unknown,
-            });
-        }
+        let (rest, value) = bitstream::read_bool(self.presence_column_view.next(), self.data)?;
+        self.data = rest;
+        Ok(value)
     }
 }
 
@@ -178,20 +142,9 @@ impl<'a> Decoder for StringDecoder<'a> {
     type T = String;
 
     fn decode(&mut self) -> Result<Option<Self::T>> {
-        if let Some(is_present) = self.presence_column_view.next() {
-            if is_present {
-                let (rest, string_bytes) = length_data(leb128_u64)(self.data)?;
-                self.data = rest;
-                Ok(Some(String::from_utf8(string_bytes.to_vec()).unwrap()))
-            } else {
-                Ok(None)
-            }
-        } else {
-            // ran out of rows, this is an error
-            return Err(TracklibError::ParseIncompleteError {
-                needed: nom::Needed::Unknown,
-            });
-        }
+        let (rest, value) = bitstream::read_bytes(self.presence_column_view.next(), self.data)?;
+        self.data = rest;
+        Ok(value.map(|bytes| String::from_utf8_lossy(bytes).into_owned()))
     }
 }
 

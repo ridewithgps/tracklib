@@ -1,3 +1,4 @@
+pub mod bitstream;
 mod crcwriter;
 mod data_table;
 pub mod encoders;

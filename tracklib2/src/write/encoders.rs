@@ -1,6 +1,5 @@
+use super::bitstream;
 use crate::error::Result;
-use std::convert::TryFrom;
-use std::io::Write;
 
 pub trait Encoder: Default {
     type T;
@@ -27,14 +26,7 @@ impl Encoder for I64Encoder {
         presence: &mut Vec<bool>,
     ) -> Result<()> {
         presence.push(value.is_some());
-        if let Some(val) = value {
-            let v = *val;
-            let delta = v - self.prev;
-            self.prev = v;
-            leb128::write::signed(buf, delta)?;
-        }
-
-        Ok(())
+        bitstream::write_i64(value, buf, &mut self.prev)
     }
 }
 
@@ -53,14 +45,11 @@ impl Encoder for F64Encoder {
         presence: &mut Vec<bool>,
     ) -> Result<()> {
         presence.push(value.is_some());
-        if let Some(val) = value {
-            let v = (*val * 10e6) as i64;
-            let delta = v - self.prev;
-            self.prev = v;
-            leb128::write::signed(buf, delta)?;
-        }
-
-        Ok(())
+        bitstream::write_i64(
+            value.map(|val| (*val * 10e6) as i64).as_ref(),
+            buf,
+            &mut self.prev,
+        )
     }
 }
 
@@ -77,11 +66,7 @@ impl Encoder for BoolEncoder {
         presence: &mut Vec<bool>,
     ) -> Result<()> {
         presence.push(value.is_some());
-        if let Some(val) = value {
-            let v = *val as u8;
-            buf.write_all(&v.to_le_bytes())?;
-        }
-        Ok(())
+        bitstream::write_bool(value, buf)
     }
 }
 
@@ -98,14 +83,7 @@ impl Encoder for StringEncoder {
         presence: &mut Vec<bool>,
     ) -> Result<()> {
         presence.push(value.is_some());
-        if let Some(string) = value {
-            // Write the length of the string
-            leb128::write::unsigned(buf, u64::try_from(string.len()).unwrap())?;
-            // Write the string itself
-            buf.write_all(string.as_bytes())?;
-        }
-
-        Ok(())
+        bitstream::write_bytes(value.map(|v| v.as_bytes()), buf)
     }
 }
 
@@ -231,7 +209,7 @@ mod tests {
     fn test_bool_encoder() {
         let mut data_buf = vec![];
         let mut presence_buf = vec![];
-        let mut encoder = BoolEncoder;
+        let mut encoder = BoolEncoder::default();
 
         assert!(encoder
             .encode(Some(&true), &mut data_buf, &mut presence_buf)
@@ -278,7 +256,7 @@ mod tests {
     fn test_string_encoder() {
         let mut data_buf = vec![];
         let mut presence_buf = vec![];
-        let mut encoder = StringEncoder;
+        let mut encoder = StringEncoder::default();
 
         assert!(encoder
             .encode(Some(&"A".to_string()), &mut data_buf, &mut presence_buf)

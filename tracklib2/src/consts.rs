@@ -14,3 +14,4 @@ pub(crate) const RWTFMAGIC: [u8; 8] = [0x89,  // non-ascii
 pub(crate) const RWTF_HEADER_SIZE: u16 = 24;
 pub(crate) const RWTF_FILE_VERSION: u8 = 0x01;
 pub(crate) const RWTF_CREATOR_VERSION: u8 = 0x00;
+pub(crate) const SCHEMA_VERSION: u8 = 0x00;

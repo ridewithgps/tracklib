@@ -1,6 +1,7 @@
+use crate::consts::SCHEMA_VERSION;
 use crate::error::TracklibError;
 use crate::schema::*;
-use nom::{multi::length_data, number::complete::le_u8, IResult};
+use nom::{bytes::complete::tag, multi::length_data, number::complete::le_u8, IResult};
 use nom_leb128::leb128_u64;
 use std::convert::TryFrom;
 
@@ -76,6 +77,7 @@ fn parse_schema_entry<'a>(
 }
 
 pub(crate) fn parse_schema(input: &[u8]) -> IResult<&[u8], Vec<SchemaEntry>, TracklibError> {
+    let (input, _schema_version) = tag(&SCHEMA_VERSION.to_le_bytes())(input)?;
     let (mut input, entry_count) = le_u8(input)?;
     let mut entries = Vec::with_capacity(usize::from(entry_count));
     let mut offset = 0;
@@ -96,7 +98,8 @@ mod tests {
     #[test]
     fn test_test_parse_schema() {
         #[rustfmt::skip]
-        let buf = &[0x04, // entry count = 4
+        let buf = &[0x00, // schema version
+                    0x04, // entry count = 4
                     0x00, // first entry type: i64 = 0
                     0x01, // name len = 1
                     b'm', // name = "m"
@@ -133,7 +136,8 @@ mod tests {
     #[test]
     fn test_schema_invalid_field_tag() {
         #[rustfmt::skip]
-        let buf = &[0x01, // entry count
+        let buf = &[0x00, // schema version
+                    0x01, // entry count
                     0xEF, // first entry type: invalid
                     0x01, // name len = 1
                     b'm', // name = "m"
@@ -146,7 +150,8 @@ mod tests {
     #[test]
     fn test_schema_invalid_utf8() {
         #[rustfmt::skip]
-        let buf = &[0x01, // entry count
+        let buf = &[0x00, // schema version
+                    0x01, // entry count
                     0x00, // first entry type: I64
                     0x01, // name len = 1
                     0xC0, // name: invalid utf-8

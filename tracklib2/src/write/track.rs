@@ -252,6 +252,7 @@ mod tests {
                 0x33, // leb128 data size
 
                 // Schema for Section 1
+                0x00, // schema version
                 0x03, // field count
                 0x00, // first field type = I64
                 0x01, // name len
@@ -272,6 +273,7 @@ mod tests {
                 0x26, // leb128 data size
 
                 // Schema for Section 2
+                0x00, // schema version
                 0x03, // field count
                 0x00, // first field type = I64
                 0x01, // name length
@@ -287,8 +289,8 @@ mod tests {
                 0x12, // leb128 data size
 
                 // Data Table CRC
-                0x49,
-                0xEC,
+                0xC9,
+                0xAF,
 
                 // Data Section 1
 

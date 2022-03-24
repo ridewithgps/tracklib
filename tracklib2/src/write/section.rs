@@ -1,5 +1,6 @@
 use super::crcwriter::CrcWriter;
 use super::encoders::*;
+use crate::consts::SCHEMA_VERSION;
 use crate::error::Result;
 use crate::schema::*;
 use crate::types::SectionType;
@@ -163,6 +164,7 @@ impl Section {
 
     #[rustfmt::skip]
     pub(crate) fn write_schema<W: Write>(&self, out: &mut W) -> Result<()> {
+        out.write_all(&SCHEMA_VERSION.to_le_bytes())?;                            // 1 byte  - schema version
         out.write_all(&u8::try_from(self.schema.fields().len())?.to_le_bytes())?; // 1 byte  - number of entries
 
         for (i, field_def) in self.schema.fields().iter().enumerate() {
@@ -475,7 +477,8 @@ mod tests {
         assert_matches!(section.write_schema(&mut buf), Ok(()) => {
             #[rustfmt::skip]
             assert_eq!(buf,
-                       &[0x05, // entry count = 5
+                       &[0x00, // schema version
+                         0x05, // entry count = 5
                          0x00, // first entry type: i64 = 0
                          0x01, // name len = 1
                          b'm', // name = "m"

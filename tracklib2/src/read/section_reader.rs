@@ -192,6 +192,7 @@ mod tests {
                                0x03, // leb128 section point count
                                0x26, // leb128 section data size
                                // Schema
+                               0x00, // schema version
                                0x04, // field count
                                0x00, // first field type = I64
                                0x01, // name length
@@ -210,8 +211,8 @@ mod tests {
                                b'f', // name
                                0x0C, // leb128 data size
 
-                               0xE9, // crc
-                               0x0B];
+                               0x81, // crc
+                               0x7D];
 
         assert_matches!(parse_data_table(data_table_buf), Ok((&[], data_table_entries)) => {
             assert_eq!(data_table_entries.len(), 1);

@@ -69,6 +69,7 @@ mod tests {
                          0x00, // leb128 section point count
                          0x10, // leb128 section data size
                          // Schema
+                         0x00, // schema version
                          0x03, // field count
                          0x00, // first field type = I64
                          0x01, // name length
@@ -90,6 +91,7 @@ mod tests {
                          0x10, // leb128 section data size
 
                          // Schema
+                         0x00, // schema version
                          0x03, // field count
                          0x00, // first field type = I64
                          0x04, // name length
@@ -112,9 +114,8 @@ mod tests {
                          b'S', // name
                          0x04, // leb128 data size
 
-
-                         0xFB, // crc
-                         0xF8]);
+                         0x20, // crc
+                         0x5D]);
         });
     }
 
@@ -136,6 +137,7 @@ mod tests {
                          0x00, // leb128 section point count
                          0x08, // leb128 section data size
                          // Schema
+                         0x00, // schema version
                          0x01, // field count
                          0x01, // first field type = F64
                          0x08, // name length
@@ -149,7 +151,7 @@ mod tests {
                          b'Y',
                          0x04, // leb128 data size
 
-                         0x7D, // crc
+                         0x35, // crc
                          0x13]);
         });
     }

@@ -108,6 +108,7 @@ mod tests {
                     0x00, // leb128 section data size
 
                     // Schema
+                    0x00, // schema version
                     0x03, // field count
                     0x00, // first field type = I64
                     0x01, // name length
@@ -129,6 +130,7 @@ mod tests {
                     0x00, // leb128 section data size
 
                     // Schema
+                    0x00, // schema version
                     0x03, // field count
                     0x00, // first field type = I64
                     0x04, // name length
@@ -152,8 +154,8 @@ mod tests {
                     0x00, // leb128 data size
 
 
-                    0x4E, // crc
-                    0x88];
+                    0x8E, // crc
+                    0x77];
 
         assert_matches!(parse_data_table(buf), Ok((&[], entries)) => {
             assert_eq!(
@@ -197,6 +199,7 @@ mod tests {
                     0x00, // leb128 section data size
 
                     // Schema
+                    0x00, // schema version
                     0x01, // field count
                     0x00, // first field type = I64
                     0x05, // name length
@@ -207,8 +210,8 @@ mod tests {
                     b'b',
                     0x00, // leb128 data size
 
-                    0xEB, // crc
-                    0xE9];
+                    0x41, // crc
+                    0x43];
 
         assert_matches!(parse_data_table(buf), Ok((&[], entries)) => {
             assert_eq!(

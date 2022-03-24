@@ -9,4 +9,4 @@ mod metadata;
 mod presence_column;
 mod section_reader;
 pub mod track;
-pub mod types_table;
+mod types_table;

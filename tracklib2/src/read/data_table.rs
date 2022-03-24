@@ -7,7 +7,7 @@ use nom_leb128::leb128_u64;
 use std::convert::TryFrom;
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
-pub struct DataTableEntry {
+pub(crate) struct DataTableEntry {
     section_type: SectionType,
     offset: usize,
     size: usize,
@@ -16,23 +16,23 @@ pub struct DataTableEntry {
 }
 
 impl DataTableEntry {
-    pub fn section_type(&self) -> &SectionType {
+    pub(crate) fn section_type(&self) -> &SectionType {
         &self.section_type
     }
 
-    pub fn offset(&self) -> usize {
+    pub(crate) fn offset(&self) -> usize {
         self.offset
     }
 
-    pub fn size(&self) -> usize {
+    pub(crate) fn size(&self) -> usize {
         self.size
     }
 
-    pub fn rows(&self) -> usize {
+    pub(crate) fn rows(&self) -> usize {
         self.rows
     }
 
-    pub fn types(&self) -> &[TypesTableEntry] {
+    pub(crate) fn types(&self) -> &[TypesTableEntry] {
         self.types.as_slice()
     }
 }
@@ -94,7 +94,7 @@ pub(crate) fn parse_data_table(input: &[u8]) -> IResult<&[u8], Vec<DataTableEntr
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::FieldType;
+    use crate::schema::DataType;
     use assert_matches::assert_matches;
 
     #[test]
@@ -165,9 +165,9 @@ mod tests {
                         size: 0,
                         rows: 0,
                         types: vec![
-                            TypesTableEntry::new_for_tests(FieldType::I64, "a", 0, 0),
-                            TypesTableEntry::new_for_tests(FieldType::Bool, "b", 0, 0),
-                            TypesTableEntry::new_for_tests(FieldType::String, "c", 0, 0)
+                            TypesTableEntry::new_for_tests("a", DataType::I64, 0, 0),
+                            TypesTableEntry::new_for_tests("b", DataType::Bool, 0, 0),
+                            TypesTableEntry::new_for_tests("c", DataType::String, 0, 0)
                         ]
                     },
                     DataTableEntry {
@@ -176,9 +176,9 @@ mod tests {
                         size: 0,
                         rows: 0,
                         types: vec![
-                            TypesTableEntry::new_for_tests(FieldType::I64, "Ride", 0, 0),
-                            TypesTableEntry::new_for_tests(FieldType::Bool, "with", 0, 0),
-                            TypesTableEntry::new_for_tests(FieldType::String, "GPS", 0, 0)
+                            TypesTableEntry::new_for_tests("Ride", DataType::I64, 0, 0),
+                            TypesTableEntry::new_for_tests("with", DataType::Bool, 0, 0),
+                            TypesTableEntry::new_for_tests("GPS", DataType::String, 0, 0)
                         ]
                     }
                 ]
@@ -220,7 +220,7 @@ mod tests {
                         size: 0,
                         rows: 0,
                         types: vec![
-                            TypesTableEntry::new_for_tests(FieldType::I64, "a�b", 0, 0),
+                            TypesTableEntry::new_for_tests("a�b", DataType::I64, 0, 0),
                         ]
                     }
                 ]

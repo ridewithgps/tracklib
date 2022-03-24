@@ -1,13 +1,13 @@
 use crate::error::TracklibError;
-use crate::types::{FieldDescription, FieldType};
+use crate::schema::*;
 use nom::{multi::length_data, number::complete::le_u8, IResult};
 use nom_leb128::leb128_u64;
 use std::convert::TryFrom;
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
-pub struct TypesTableEntry {
-    field_description: FieldDescription,
+pub(crate) struct TypesTableEntry {
+    field_definition: FieldDefinition,
     size: usize,
     offset: usize,
 }
@@ -15,13 +15,13 @@ pub struct TypesTableEntry {
 #[cfg(test)]
 impl TypesTableEntry {
     pub(crate) fn new_for_tests(
-        fieldtype: FieldType,
         name: &str,
+        data_type: DataType,
         size: usize,
         offset: usize,
     ) -> Self {
         Self {
-            field_description: FieldDescription::new(name.to_string(), fieldtype),
+            field_definition: FieldDefinition::new(name, data_type),
             size,
             offset,
         }
@@ -29,8 +29,8 @@ impl TypesTableEntry {
 }
 
 impl TypesTableEntry {
-    pub(crate) fn field_description(&self) -> &FieldDescription {
-        &self.field_description
+    pub(crate) fn field_definition(&self) -> &FieldDefinition {
+        &self.field_definition
     }
 
     pub(crate) fn size(&self) -> usize {
@@ -50,11 +50,11 @@ fn parse_types_table_entry<'a>(
         let (input, field_name) = length_data(le_u8)(input)?;
         let (input, data_size) = leb128_u64(input)?;
 
-        let fieldtype = match type_tag {
-            0x00 => FieldType::I64,
-            0x01 => FieldType::F64,
-            0x04 => FieldType::String,
-            0x05 => FieldType::Bool,
+        let data_type = match type_tag {
+            0x00 => DataType::I64,
+            0x01 => DataType::F64,
+            0x04 => DataType::String,
+            0x05 => DataType::Bool,
             _ => {
                 return Err(nom::Err::Error(TracklibError::ParseError {
                     error_kind: nom::error::ErrorKind::Tag,
@@ -62,12 +62,12 @@ fn parse_types_table_entry<'a>(
             }
         };
 
-        let name = String::from_utf8_lossy(field_name).into_owned();
+        let name = String::from_utf8_lossy(field_name);
 
         Ok((
             input,
             TypesTableEntry {
-                field_description: FieldDescription::new(name, fieldtype),
+                field_definition: FieldDefinition::new(name, data_type),
                 size: usize::try_from(data_size).expect("usize != u64"),
                 offset,
             },
@@ -125,18 +125,10 @@ mod tests {
                     b'i', // name = "i"
                     0x02]; // data size = 2
         assert_matches!(parse_types_table(buf), Ok((&[], entries)) => {
-            assert_eq!(entries, vec![TypesTableEntry{field_description: FieldDescription::new("m".to_string(), FieldType::I64),
-                                                     size: 2,
-                                                     offset: 0},
-                                     TypesTableEntry{field_description: FieldDescription::new("k".to_string(), FieldType::Bool),
-                                                     size: 1,
-                                                     offset: 2},
-                                     TypesTableEntry{field_description: FieldDescription::new("long name!".to_string(), FieldType::String),
-                                                     size: 7,
-                                                     offset: 3},
-                                     TypesTableEntry{field_description: FieldDescription::new("i".to_string(), FieldType::F64),
-                                                     size: 2,
-                                                     offset: 10}]);
+            assert_eq!(entries, vec![TypesTableEntry::new_for_tests("m", DataType::I64, 2, 0),
+                                     TypesTableEntry::new_for_tests("k", DataType::Bool, 1, 2),
+                                     TypesTableEntry::new_for_tests("long name!", DataType::String, 7, 3),
+                                     TypesTableEntry::new_for_tests("i", DataType::F64, 2, 10)]);
         });
     }
 
@@ -162,9 +154,7 @@ mod tests {
                     0xC0, // name: invalid utf-8
                     0x02]; // data size = 2
         assert_matches!(parse_types_table(buf), Ok((&[], entries)) => {
-            assert_eq!(entries, vec![TypesTableEntry{field_description: FieldDescription::new("�".to_string(), FieldType::I64),
-                                                     size: 2,
-                                                     offset: 0}])
+            assert_eq!(entries, vec![TypesTableEntry::new_for_tests("�", DataType::I64, 2, 0)])
         });
     }
 }

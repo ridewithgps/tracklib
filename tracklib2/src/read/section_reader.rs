@@ -2,32 +2,34 @@ use super::data_table::DataTableEntry;
 use super::decoders::*;
 use super::presence_column::parse_presence_column;
 use crate::error::{Result, TracklibError};
-use crate::types::{FieldDescription, FieldType, FieldValue};
+use crate::schema::*;
+use crate::types::{FieldValue, SectionType};
 
 #[cfg_attr(test, derive(Debug))]
 enum ColumnDecoder<'a> {
     I64 {
-        field_description: &'a FieldDescription,
+        field_definition: &'a FieldDefinition,
         decoder: I64Decoder<'a>,
     },
     F64 {
-        field_description: &'a FieldDescription,
+        field_definition: &'a FieldDefinition,
         decoder: F64Decoder<'a>,
     },
     Bool {
-        field_description: &'a FieldDescription,
+        field_definition: &'a FieldDefinition,
         decoder: BoolDecoder<'a>,
     },
     String {
-        field_description: &'a FieldDescription,
+        field_definition: &'a FieldDefinition,
         decoder: StringDecoder<'a>,
     },
 }
 
 #[cfg_attr(test, derive(Debug))]
 pub struct SectionReader<'a> {
-    data_table_entry: &'a DataTableEntry,
     decoders: Vec<ColumnDecoder<'a>>,
+    section_type: SectionType,
+    schema: Schema,
     rows: usize,
 }
 
@@ -36,34 +38,43 @@ impl<'a> SectionReader<'a> {
         let (column_data, presence_column) =
             parse_presence_column(data_table_entry.types().len(), data_table_entry.rows())(input)?;
 
+        let schema = Schema::with_fields(
+            data_table_entry
+                .types()
+                .iter()
+                .map(|types_table_entry| types_table_entry.field_definition().clone())
+                .collect(),
+        );
+
         let decoders = data_table_entry
             .types()
             .iter()
             .enumerate()
-            .map(|(i, field)| {
-                let column_data = &column_data[field.offset()..field.offset() + field.size()];
+            .map(|(i, types_table_entry)| {
+                let column_data = &column_data[types_table_entry.offset()
+                    ..types_table_entry.offset() + types_table_entry.size()];
                 let presence_column_view =
                     presence_column
                         .view(i)
                         .ok_or_else(|| TracklibError::ParseIncompleteError {
                             needed: nom::Needed::Unknown,
                         })?;
-                let field_description = field.field_description();
-                let decoder = match field_description.fieldtype() {
-                    FieldType::I64 => ColumnDecoder::I64 {
-                        field_description,
+                let field_definition = types_table_entry.field_definition();
+                let decoder = match field_definition.data_type() {
+                    DataType::I64 => ColumnDecoder::I64 {
+                        field_definition,
                         decoder: I64Decoder::new(column_data, presence_column_view)?,
                     },
-                    FieldType::F64 => ColumnDecoder::F64 {
-                        field_description,
+                    DataType::F64 => ColumnDecoder::F64 {
+                        field_definition,
                         decoder: F64Decoder::new(column_data, presence_column_view)?,
                     },
-                    FieldType::Bool => ColumnDecoder::Bool {
-                        field_description,
+                    DataType::Bool => ColumnDecoder::Bool {
+                        field_definition,
                         decoder: BoolDecoder::new(column_data, presence_column_view)?,
                     },
-                    FieldType::String => ColumnDecoder::String {
-                        field_description,
+                    DataType::String => ColumnDecoder::String {
+                        field_definition,
                         decoder: StringDecoder::new(column_data, presence_column_view)?,
                     },
                 };
@@ -72,14 +83,23 @@ impl<'a> SectionReader<'a> {
             .collect::<Result<Vec<_>>>()?;
 
         Ok(Self {
-            data_table_entry,
+            schema,
+            section_type: data_table_entry.section_type().clone(),
             decoders,
             rows: data_table_entry.rows(),
         })
     }
 
-    pub fn data_table_entry(&self) -> &'a DataTableEntry {
-        self.data_table_entry
+    pub fn section_type(&self) -> &SectionType {
+        &self.section_type
+    }
+
+    pub fn rows(&self) -> usize {
+        self.rows
+    }
+
+    pub fn schema(&self) -> &Schema {
+        &self.schema
     }
 
     pub fn open_column_iter<'r>(&'r mut self) -> Option<ColumnIter<'r, 'a>> {
@@ -105,46 +125,46 @@ impl<'a, 'b> ColumnIter<'a, 'b> {
 }
 
 impl<'a, 'b> Iterator for ColumnIter<'a, 'b> {
-    type Item = Result<(&'a FieldDescription, Option<FieldValue>)>;
+    type Item = Result<(&'a FieldDefinition, Option<FieldValue>)>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some(decoder_enum) = self.decoders.get_mut(self.index) {
             self.index += 1;
             match decoder_enum {
                 ColumnDecoder::I64 {
-                    ref field_description,
+                    ref field_definition,
                     ref mut decoder,
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| (*field_description, maybe_v.map(|v| FieldValue::I64(v))))
+                        .map(|maybe_v| (*field_definition, maybe_v.map(|v| FieldValue::I64(v))))
                         .map_err(|e| e),
                 ),
                 ColumnDecoder::F64 {
-                    ref field_description,
+                    ref field_definition,
                     ref mut decoder,
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| (*field_description, maybe_v.map(|v| FieldValue::F64(v))))
+                        .map(|maybe_v| (*field_definition, maybe_v.map(|v| FieldValue::F64(v))))
                         .map_err(|e| e),
                 ),
                 ColumnDecoder::Bool {
-                    ref field_description,
+                    ref field_definition,
                     ref mut decoder,
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| (*field_description, maybe_v.map(|v| FieldValue::Bool(v))))
+                        .map(|maybe_v| (*field_definition, maybe_v.map(|v| FieldValue::Bool(v))))
                         .map_err(|e| e),
                 ),
                 ColumnDecoder::String {
-                    ref field_description,
+                    ref field_definition,
                     ref mut decoder,
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| (*field_description, maybe_v.map(|v| FieldValue::String(v))))
+                        .map(|maybe_v| (*field_definition, maybe_v.map(|v| FieldValue::String(v))))
                         .map_err(|e| e),
                 ),
             }
@@ -264,24 +284,24 @@ mod tests {
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
                     let values = column_iter.collect::<Vec<_>>();
                     assert_eq!(values.len(), 4);
-                    assert_matches!(&values[0], Ok((field_description, field_value)) => {
-                        assert_eq!(*field_description, data_table_entries[0].types()[0].field_description());
-                        assert_eq!(*field_description, &FieldDescription::new("a".to_string(), FieldType::I64));
+                    assert_matches!(&values[0], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].types()[0].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("a", DataType::I64));
                         assert_eq!(field_value, &Some(FieldValue::I64(1)));
                     });
-                    assert_matches!(&values[1], Ok((field_description, field_value)) => {
-                        assert_eq!(*field_description, data_table_entries[0].types()[1].field_description());
-                        assert_eq!(*field_description, &FieldDescription::new("b".to_string(), FieldType::Bool));
+                    assert_matches!(&values[1], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].types()[1].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("b", DataType::Bool));
                         assert_eq!(field_value, &Some(FieldValue::Bool(false)));
                     });
-                    assert_matches!(&values[2], Ok((field_description, field_value)) => {
-                        assert_eq!(*field_description, data_table_entries[0].types()[2].field_description());
-                        assert_eq!(*field_description, &FieldDescription::new("c".to_string(), FieldType::String));
+                    assert_matches!(&values[2], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].types()[2].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("c", DataType::String));
                         assert_eq!(field_value, &Some(FieldValue::String("Ride".to_string())));
                     });
-                    assert_matches!(&values[3], Ok((field_description, field_value)) => {
-                        assert_eq!(*field_description, data_table_entries[0].types()[3].field_description());
-                        assert_eq!(*field_description, &FieldDescription::new("f".to_string(), FieldType::F64));
+                    assert_matches!(&values[3], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].types()[3].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("f", DataType::F64));
                         assert_eq!(field_value, &None);
                     });
                 });
@@ -290,24 +310,24 @@ mod tests {
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
                     let values = column_iter.collect::<Vec<_>>();
                     assert_eq!(values.len(), 4);
-                    assert_matches!(&values[0], Ok((field_description, field_value)) => {
-                        assert_eq!(*field_description, data_table_entries[0].types()[0].field_description());
-                        assert_eq!(*field_description, &FieldDescription::new("a".to_string(), FieldType::I64));
+                    assert_matches!(&values[0], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].types()[0].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("a", DataType::I64));
                         assert_eq!(field_value, &Some(FieldValue::I64(2)));
                     });
-                    assert_matches!(&values[1], Ok((field_description, field_value)) => {
-                        assert_eq!(*field_description, data_table_entries[0].types()[1].field_description());
-                        assert_eq!(*field_description, &FieldDescription::new("b".to_string(), FieldType::Bool));
+                    assert_matches!(&values[1], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].types()[1].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("b", DataType::Bool));
                         assert_eq!(field_value, &None);
                     });
-                    assert_matches!(&values[2], Ok((field_description, field_value)) => {
-                        assert_eq!(*field_description, data_table_entries[0].types()[2].field_description());
-                        assert_eq!(*field_description, &FieldDescription::new("c".to_string(), FieldType::String));
+                    assert_matches!(&values[2], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].types()[2].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("c", DataType::String));
                         assert_eq!(field_value, &Some(FieldValue::String("with".to_string())));
                     });
-                    assert_matches!(&values[3], Ok((field_description, field_value)) => {
-                        assert_eq!(*field_description, data_table_entries[0].types()[3].field_description());
-                        assert_eq!(*field_description, &FieldDescription::new("f".to_string(), FieldType::F64));
+                    assert_matches!(&values[3], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].types()[3].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("f", DataType::F64));
                         assert_eq!(field_value, &Some(FieldValue::F64(1.0)));
                     });
                 });
@@ -316,24 +336,24 @@ mod tests {
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
                     let values = column_iter.collect::<Vec<_>>();
                     assert_eq!(values.len(), 4);
-                    assert_matches!(&values[0], Ok((field_description, field_value)) => {
-                        assert_eq!(*field_description, data_table_entries[0].types()[0].field_description());
-                        assert_eq!(*field_description, &FieldDescription::new("a".to_string(), FieldType::I64));
+                    assert_matches!(&values[0], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].types()[0].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("a", DataType::I64));
                         assert_eq!(field_value, &Some(FieldValue::I64(4)));
                     });
-                    assert_matches!(&values[1], Ok((field_description, field_value)) => {
-                        assert_eq!(*field_description, data_table_entries[0].types()[1].field_description());
-                        assert_eq!(*field_description, &FieldDescription::new("b".to_string(), FieldType::Bool));
+                    assert_matches!(&values[1], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].types()[1].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("b", DataType::Bool));
                         assert_eq!(field_value, &Some(FieldValue::Bool(true)));
                     });
-                    assert_matches!(&values[2], Ok((field_description, field_value)) => {
-                        assert_eq!(*field_description, data_table_entries[0].types()[2].field_description());
-                        assert_eq!(*field_description, &FieldDescription::new("c".to_string(), FieldType::String));
+                    assert_matches!(&values[2], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].types()[2].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("c", DataType::String));
                         assert_eq!(field_value, &Some(FieldValue::String("GPS".to_string())));
                     });
-                    assert_matches!(&values[3], Ok((field_description, field_value)) => {
-                        assert_eq!(*field_description, data_table_entries[0].types()[3].field_description());
-                        assert_eq!(*field_description, &FieldDescription::new("f".to_string(), FieldType::F64));
+                    assert_matches!(&values[3], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].types()[3].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("f", DataType::F64));
                         assert_eq!(field_value, &Some(FieldValue::F64(2.5)));
                     });
                 });

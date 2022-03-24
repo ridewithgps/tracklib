@@ -1,33 +1,3 @@
-#[derive(Debug, Clone)]
-#[cfg_attr(test, derive(PartialEq))]
-pub enum FieldType {
-    I64,
-    F64,
-    String,
-    Bool,
-}
-
-#[derive(Clone, Debug)]
-#[cfg_attr(test, derive(PartialEq))]
-pub struct FieldDescription {
-    name: String,
-    fieldtype: FieldType,
-}
-
-impl FieldDescription {
-    pub fn new(name: String, fieldtype: FieldType) -> Self {
-        Self { name, fieldtype }
-    }
-
-    pub fn name(&self) -> &str {
-        self.name.as_str()
-    }
-
-    pub fn fieldtype(&self) -> &FieldType {
-        &self.fieldtype
-    }
-}
-
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub enum FieldValue {
@@ -52,7 +22,7 @@ pub enum MetadataEntry {
     CreatedAt(u64),
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub enum SectionType {
     TrackPoints,

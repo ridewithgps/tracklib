@@ -23,7 +23,8 @@ pub(crate) fn write_data_table<W: Write>(out: &mut W, sections: &[Section]) -> R
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{FieldType, SectionType};
+    use crate::schema::*;
+    use crate::types::SectionType;
     use assert_matches::assert_matches;
 
     #[test]
@@ -41,20 +42,20 @@ mod tests {
     fn test_data_table() {
         let section1 = Section::new(
             SectionType::TrackPoints,
-            vec![
-                ("a".to_string(), FieldType::I64),
-                ("b".to_string(), FieldType::Bool),
-                ("c".to_string(), FieldType::String),
-            ],
+            Schema::with_fields(vec![
+                FieldDefinition::new("a", DataType::I64),
+                FieldDefinition::new("b", DataType::Bool),
+                FieldDefinition::new("c", DataType::String),
+            ]),
         );
 
         let section2 = Section::new(
             SectionType::CoursePoints,
-            vec![
-                ("Ride".to_string(), FieldType::I64),
-                ("with".to_string(), FieldType::Bool),
-                ("GPS".to_string(), FieldType::String),
-            ],
+            Schema::with_fields(vec![
+                FieldDefinition::new("Ride", DataType::I64),
+                FieldDefinition::new("with", DataType::Bool),
+                FieldDefinition::new("GPS", DataType::String),
+            ]),
         );
 
         let mut buf = Vec::new();
@@ -121,7 +122,7 @@ mod tests {
     fn test_data_table_with_multibyte_character() {
         let section = Section::new(
             SectionType::TrackPoints,
-            vec![("I ♥ NY".to_string(), FieldType::F64)],
+            Schema::with_fields(vec![FieldDefinition::new("I ♥ NY", DataType::F64)]),
         );
 
         let mut buf = Vec::new();

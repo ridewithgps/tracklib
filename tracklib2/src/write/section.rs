@@ -1,11 +1,12 @@
 use super::crcwriter::CrcWriter;
 use super::encoders::*;
 use crate::error::Result;
-use crate::types::{FieldDescription, FieldType, SectionType};
+use crate::schema::*;
+use crate::types::SectionType;
 use std::convert::TryFrom;
 use std::io::{self, Write};
 
-impl FieldType {
+impl DataType {
     fn type_tag(&self) -> u8 {
         match self {
             Self::I64 => 0x00,
@@ -55,12 +56,12 @@ enum Buffer {
 }
 
 impl Buffer {
-    fn new(field_type: &FieldType) -> Self {
-        match field_type {
-            &FieldType::I64 => Buffer::I64(BufferImpl::default()),
-            &FieldType::F64 => Buffer::F64(BufferImpl::default()),
-            &FieldType::Bool => Buffer::Bool(BufferImpl::default()),
-            &FieldType::String => Buffer::String(BufferImpl::default()),
+    fn new(data_type: &DataType) -> Self {
+        match data_type {
+            DataType::I64 => Buffer::I64(BufferImpl::default()),
+            DataType::Bool => Buffer::Bool(BufferImpl::default()),
+            DataType::String => Buffer::String(BufferImpl::default()),
+            DataType::F64 => Buffer::F64(BufferImpl::default()),
         }
     }
 
@@ -77,37 +78,35 @@ impl Buffer {
 pub struct Section {
     section_type: SectionType,
     rows_written: usize,
-    fields: Vec<FieldDescription>,
+    schema: Schema,
     column_data: Vec<Buffer>,
 }
 
 impl Section {
     // TODO: provide a size_hint param to size buffer Vecs (at least presence)
-    pub fn new(section_type: SectionType, mapping: Vec<(String, FieldType)>) -> Self {
-        let mut fields = Vec::with_capacity(mapping.len());
-        let mut column_data = Vec::with_capacity(mapping.len());
-
-        for (name, fieldtype) in mapping {
-            column_data.push(Buffer::new(&fieldtype));
-            fields.push(FieldDescription::new(name, fieldtype));
-        }
+    pub fn new(section_type: SectionType, schema: Schema) -> Self {
+        let column_data = schema
+            .fields()
+            .iter()
+            .map(|field_def| Buffer::new(field_def.data_type()))
+            .collect();
 
         Self {
             section_type,
             rows_written: 0,
-            fields,
+            schema,
             column_data,
         }
     }
 
-    pub fn fields(&self) -> &[FieldDescription] {
-        &self.fields
+    pub fn schema(&self) -> &Schema {
+        &self.schema
     }
 
     /// mut borrow of self so only one row can be open at a time
     pub fn open_row_builder(&mut self) -> RowBuilder {
         self.rows_written += 1; // TODO: bug when you open a row builder but never write data with it?
-        RowBuilder::new(&self.fields, &mut self.column_data)
+        RowBuilder::new(&self.schema, &mut self.column_data)
     }
 
     pub(crate) fn type_tag(&self) -> u8 {
@@ -120,7 +119,7 @@ impl Section {
 
     pub(crate) fn data_size(&self) -> usize {
         const CRC_BYTES: usize = 4;
-        let presence_bytes_required = (self.fields.len() + 7) / 8;
+        let presence_bytes_required = (self.schema.fields().len() + 7) / 8;
         let presence_bytes = (presence_bytes_required * self.rows_written) + CRC_BYTES;
         let data_bytes: usize = self
             .column_data
@@ -132,12 +131,12 @@ impl Section {
 
     fn write_presence_column<W: Write>(&self, out: &mut W) -> Result<()> {
         let mut crcwriter = CrcWriter::new32(out);
-        let bytes_required = (self.fields.len() + 7) / 8;
+        let bytes_required = (self.schema.fields().len() + 7) / 8;
 
         for row_i in 0..self.rows_written {
             let mut row = vec![0; bytes_required];
             let mut mask: u8 = 1;
-            let mut bit_index = (self.fields.len() + 7) & !7; // next multiple of 8
+            let mut bit_index = (self.schema.fields().len() + 7) & !7; // next multiple of 8
             for buffer in self.column_data.iter() {
                 let is_present = match buffer {
                     Buffer::I64(buffer_impl) => buffer_impl.presence.get(row_i),
@@ -164,9 +163,9 @@ impl Section {
 
     #[rustfmt::skip]
     pub(crate) fn write_types_table<W: Write>(&self, out: &mut W) -> Result<()> {
-        out.write_all(&u8::try_from(self.fields.len())?.to_le_bytes())?;          // 1 byte  - number of entries
+        out.write_all(&u8::try_from(self.schema.fields().len())?.to_le_bytes())?; // 1 byte  - number of entries
 
-        for (i, field) in self.fields.iter().enumerate() {
+        for (i, field_def) in self.schema.fields().iter().enumerate() {
             let data_column_size = self
                 .column_data
                 .get(i)
@@ -178,9 +177,9 @@ impl Section {
                 })
                 .unwrap_or(0);
 
-            out.write_all(&field.fieldtype().type_tag().to_le_bytes())?;          // 1 byte  - field type tag
-            out.write_all(&u8::try_from(field.name().len())?.to_le_bytes())?;     // 1 byte  - field name length
-            out.write_all(field.name().as_bytes())?;                              // ? bytes - the name of this field
+            out.write_all(&field_def.data_type().type_tag().to_le_bytes())?;      // 1 byte  - field type tag
+            out.write_all(&u8::try_from(field_def.name().len())?.to_le_bytes())?; // 1 byte  - field name length
+            out.write_all(field_def.name().as_bytes())?;                          // ? bytes - the name of this field
             leb128::write::unsigned(out, u64::try_from(data_column_size)?)?;      // ? bytes - leb128 column data size
         }
 
@@ -204,15 +203,15 @@ impl Section {
 }
 
 pub struct RowBuilder<'a> {
-    fields: &'a [FieldDescription],
+    schema: &'a Schema,
     column_data: &'a mut Vec<Buffer>,
     field_index: usize,
 }
 
 impl<'a> RowBuilder<'a> {
-    fn new(fields: &'a [FieldDescription], column_data: &'a mut Vec<Buffer>) -> Self {
+    fn new(schema: &'a Schema, column_data: &'a mut Vec<Buffer>) -> Self {
         Self {
-            fields,
+            schema,
             column_data,
             field_index: 0,
         }
@@ -223,21 +222,21 @@ impl<'a> RowBuilder<'a> {
         let field_index = self.field_index;
         self.field_index += 1;
 
-        let maybe_field_desc = self.fields.get(field_index);
+        let maybe_field_def = self.schema.fields().get(field_index);
         let maybe_buffer = self.column_data.get_mut(field_index);
 
-        match (maybe_field_desc, maybe_buffer) {
-            (Some(field_desc), Some(Buffer::I64(ref mut buffer_impl))) => Some(
-                ColumnWriter::I64ColumnWriter(ColumnWriterImpl::new(&field_desc, buffer_impl)),
+        match (maybe_field_def, maybe_buffer) {
+            (Some(field_def), Some(Buffer::I64(ref mut buffer_impl))) => Some(
+                ColumnWriter::I64ColumnWriter(ColumnWriterImpl::new(&field_def, buffer_impl)),
             ),
-            (Some(field_desc), Some(Buffer::F64(ref mut buffer_impl))) => Some(
-                ColumnWriter::F64ColumnWriter(ColumnWriterImpl::new(&field_desc, buffer_impl)),
+            (Some(field_def), Some(Buffer::F64(ref mut buffer_impl))) => Some(
+                ColumnWriter::F64ColumnWriter(ColumnWriterImpl::new(&field_def, buffer_impl)),
             ),
-            (Some(field_desc), Some(Buffer::Bool(ref mut buffer_impl))) => Some(
-                ColumnWriter::BoolColumnWriter(ColumnWriterImpl::new(&field_desc, buffer_impl)),
+            (Some(field_def), Some(Buffer::Bool(ref mut buffer_impl))) => Some(
+                ColumnWriter::BoolColumnWriter(ColumnWriterImpl::new(&field_def, buffer_impl)),
             ),
-            (Some(field_desc), Some(Buffer::String(ref mut buffer_impl))) => Some(
-                ColumnWriter::StringColumnWriter(ColumnWriterImpl::new(&field_desc, buffer_impl)),
+            (Some(field_def), Some(Buffer::String(ref mut buffer_impl))) => Some(
+                ColumnWriter::StringColumnWriter(ColumnWriterImpl::new(&field_def, buffer_impl)),
             ),
             _ => None,
         }
@@ -256,20 +255,20 @@ pub enum ColumnWriter<'a> {
 // TODO: is this must_use correct?
 #[must_use]
 pub struct ColumnWriterImpl<'a, E: Encoder> {
-    field_description: &'a FieldDescription,
+    field_definition: &'a FieldDefinition,
     buf: &'a mut BufferImpl<E>,
 }
 
 impl<'a, E: Encoder> ColumnWriterImpl<'a, E> {
-    fn new(field_description: &'a FieldDescription, buf: &'a mut BufferImpl<E>) -> Self {
+    fn new(field_definition: &'a FieldDefinition, buf: &'a mut BufferImpl<E>) -> Self {
         Self {
-            field_description,
+            field_definition,
             buf,
         }
     }
 
-    pub fn field_description(&self) -> &FieldDescription {
-        &self.field_description
+    pub fn field_definition(&self) -> &FieldDefinition {
+        &self.field_definition
     }
 
     /// Takes `self` so that only one value per column can be written
@@ -294,11 +293,11 @@ mod tests {
     fn test_write_presence_column() {
         let mut section = Section::new(
             SectionType::TrackPoints,
-            vec![
-                ("a".to_string(), FieldType::I64),
-                ("b".to_string(), FieldType::Bool),
-                ("c".to_string(), FieldType::String),
-            ],
+            Schema::with_fields(vec![
+                FieldDefinition::new("a", DataType::I64),
+                FieldDefinition::new("b", DataType::Bool),
+                FieldDefinition::new("c", DataType::String),
+            ]),
         );
         let mut buf = Vec::new();
         assert_matches!(section.write_presence_column(&mut buf), Ok(()) => {
@@ -355,28 +354,11 @@ mod tests {
     fn test_multibyte_presence_column() {
         let mut section = Section::new(
             SectionType::TrackPoints,
-            vec![
-                ("1".to_string(), FieldType::Bool),
-                ("2".to_string(), FieldType::Bool),
-                ("3".to_string(), FieldType::Bool),
-                ("4".to_string(), FieldType::Bool),
-                ("5".to_string(), FieldType::Bool),
-                ("6".to_string(), FieldType::Bool),
-                ("7".to_string(), FieldType::Bool),
-                ("8".to_string(), FieldType::Bool),
-                ("9".to_string(), FieldType::Bool),
-                ("10".to_string(), FieldType::Bool),
-                ("11".to_string(), FieldType::Bool),
-                ("12".to_string(), FieldType::Bool),
-                ("13".to_string(), FieldType::Bool),
-                ("14".to_string(), FieldType::Bool),
-                ("15".to_string(), FieldType::Bool),
-                ("16".to_string(), FieldType::Bool),
-                ("17".to_string(), FieldType::Bool),
-                ("18".to_string(), FieldType::Bool),
-                ("19".to_string(), FieldType::Bool),
-                ("20".to_string(), FieldType::Bool),
-            ],
+            Schema::with_fields(
+                (0..20)
+                    .map(|i| FieldDefinition::new(i.to_string(), DataType::Bool))
+                    .collect(),
+            ),
         );
 
         for i in 0..2 {
@@ -406,7 +388,11 @@ mod tests {
     fn test_write_huge_presence_column() {
         let mut section = Section::new(
             SectionType::TrackPoints,
-            (0..80).map(|i| (i.to_string(), FieldType::Bool)).collect(),
+            Schema::with_fields(
+                (0..80)
+                    .map(|i| FieldDefinition::new(i.to_string(), DataType::Bool))
+                    .collect(),
+            ),
         );
 
         #[rustfmt::skip]
@@ -458,13 +444,13 @@ mod tests {
     fn test_types_table() {
         let mut section = Section::new(
             SectionType::TrackPoints,
-            vec![
-                ("m".to_string(), FieldType::I64),
-                ("k".to_string(), FieldType::Bool),
-                ("long name!".to_string(), FieldType::String),
-                ("i".to_string(), FieldType::I64),
-                ("f".to_string(), FieldType::F64),
-            ],
+            Schema::with_fields(vec![
+                FieldDefinition::new("m", DataType::I64),
+                FieldDefinition::new("k", DataType::Bool),
+                FieldDefinition::new("long name!", DataType::String),
+                FieldDefinition::new("i", DataType::I64),
+                FieldDefinition::new("f", DataType::F64),
+            ]),
         );
 
         let mut rowbuilder = section.open_row_builder();
@@ -552,26 +538,26 @@ mod tests {
 
         let mut section = Section::new(
             SectionType::TrackPoints,
-            vec![
-                ("a".to_string(), FieldType::I64),
-                ("b".to_string(), FieldType::Bool),
-                ("c".to_string(), FieldType::String),
-                ("d".to_string(), FieldType::F64),
-            ],
+            Schema::with_fields(vec![
+                FieldDefinition::new("a", DataType::I64),
+                FieldDefinition::new("b", DataType::Bool),
+                FieldDefinition::new("c", DataType::String),
+                FieldDefinition::new("d", DataType::F64),
+            ]),
         );
 
-        let mapping = section.fields().to_vec();
+        let fields = section.schema().fields().to_vec();
 
         for entry in v {
             let mut rowbuilder = section.open_row_builder();
 
-            for field_desc in mapping.iter() {
+            for field_def in fields.iter() {
                 assert_matches!(rowbuilder.next_column_writer(), Some(cw) => {
                     match cw {
                         ColumnWriter::I64ColumnWriter(cwi) => {
                             assert!(cwi.write(
                                 entry
-                                    .get(field_desc.name())
+                                    .get(field_def.name())
                                     .map(|v| match v {
                                         V::I64(v) => Some(v),
                                         _ => None,
@@ -582,7 +568,7 @@ mod tests {
                         ColumnWriter::BoolColumnWriter(cwi) => {
                             assert!(cwi.write(
                                 entry
-                                    .get(field_desc.name())
+                                    .get(field_def.name())
                                     .map(|v| match v {
                                         V::Bool(v) => Some(v),
                                         _ => None,
@@ -593,7 +579,7 @@ mod tests {
                         ColumnWriter::StringColumnWriter(cwi) => {
                             assert!(cwi.write(
                                 entry
-                                    .get(field_desc.name())
+                                    .get(field_def.name())
                                     .map(|v| match v {
                                         V::String(v) => Some(v),
                                         _ => None,
@@ -604,7 +590,7 @@ mod tests {
                         ColumnWriter::F64ColumnWriter(cwi) => {
                             assert!(cwi.write(
                                 entry
-                                    .get(field_desc.name())
+                                    .get(field_def.name())
                                     .map(|v| match v {
                                         V::F64(v) => Some(v),
                                         _ => None,

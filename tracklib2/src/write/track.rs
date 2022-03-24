@@ -40,7 +40,8 @@ pub fn write_track<W: Write>(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::types::{FieldType, SectionType, TrackType};
+    use crate::schema::*;
+    use crate::types::{SectionType, TrackType};
     use crate::write::section::ColumnWriter;
     use assert_matches::assert_matches;
     use std::collections::HashMap;
@@ -93,11 +94,11 @@ mod tests {
     fn test_write_a_track() {
         let mut section1 = Section::new(
             SectionType::CoursePoints,
-            vec![
-                ("m".to_string(), FieldType::I64),
-                ("k".to_string(), FieldType::Bool),
-                ("j".to_string(), FieldType::String),
-            ],
+            Schema::with_fields(vec![
+                FieldDefinition::new("m", DataType::I64),
+                FieldDefinition::new("k", DataType::Bool),
+                FieldDefinition::new("j", DataType::String),
+            ]),
         );
 
         for _ in 0..5 {
@@ -143,25 +144,25 @@ mod tests {
 
         let mut section2 = Section::new(
             SectionType::TrackPoints,
-            vec![
-                ("a".to_string(), FieldType::I64),
-                ("b".to_string(), FieldType::Bool),
-                ("c".to_string(), FieldType::String),
-            ],
+            Schema::with_fields(vec![
+                FieldDefinition::new("a", DataType::I64),
+                FieldDefinition::new("b", DataType::Bool),
+                FieldDefinition::new("c", DataType::String),
+            ]),
         );
 
-        let mapping = section2.fields().to_vec();
+        let fields = section2.schema().fields().to_vec();
 
         for entry in v {
             let mut rowbuilder = section2.open_row_builder();
 
-            for field_desc in mapping.iter() {
+            for field_def in fields.iter() {
                 assert_matches!(rowbuilder.next_column_writer(), Some(cw) => {
                     match cw {
                         ColumnWriter::I64ColumnWriter(cwi) => {
                             assert!(cwi.write(
                                 entry
-                                    .get(field_desc.name())
+                                    .get(field_def.name())
                                     .map(|v| match v {
                                         V::I64(v) => Some(v),
                                         _ => None,
@@ -172,7 +173,7 @@ mod tests {
                         ColumnWriter::BoolColumnWriter(cwi) => {
                             assert!(cwi.write(
                                 entry
-                                    .get(field_desc.name())
+                                    .get(field_def.name())
                                     .map(|v| match v {
                                         V::Bool(v) => Some(v),
                                         _ => None,
@@ -183,7 +184,7 @@ mod tests {
                         ColumnWriter::StringColumnWriter(cwi) => {
                             assert!(cwi.write(
                                 entry
-                                    .get(field_desc.name())
+                                    .get(field_def.name())
                                     .map(|v| match v {
                                         V::String(v) => Some(v),
                                         _ => None,

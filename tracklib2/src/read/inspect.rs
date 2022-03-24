@@ -1,9 +1,8 @@
-use crate::types::FieldValue;
-
 use super::data_table::{parse_data_table, DataTableEntry};
 use super::header::{parse_header, Header};
 use super::metadata::parse_metadata;
 use super::section_reader::SectionReader;
+use crate::types::FieldValue;
 use nom::Offset;
 use term_table::row::Row;
 use term_table::table_cell::{Alignment, TableCell};
@@ -158,7 +157,7 @@ fn try_format_data_table(
                     table.add_row(Row::new(vec![
                         TableCell::new_with_alignment("Column", 1, Alignment::Left),
                         TableCell::new_with_alignment(
-                            bold(types_table_entry.field_description().name()),
+                            bold(types_table_entry.field_definition().name()),
                             2,
                             Alignment::Center,
                         ),
@@ -168,7 +167,7 @@ fn try_format_data_table(
                         TableCell::new(""),
                         TableCell::new_with_alignment("Type", 1, Alignment::Left),
                         TableCell::new_with_alignment(
-                            format!("{:?}", types_table_entry.field_description().fieldtype()),
+                            format!("{:?}", types_table_entry.field_definition().data_type()),
                             1,
                             Alignment::Right,
                         ),
@@ -274,7 +273,7 @@ fn try_format_section(data_start: &[u8], entry_num: usize, entry: &DataTableEntr
                     .into_iter()
                     .chain(entry.types().iter().map(|types_table_entry| {
                         TableCell::new_with_alignment(
-                            types_table_entry.field_description().name(),
+                            types_table_entry.field_definition().name(),
                             1,
                             Alignment::Center,
                         )

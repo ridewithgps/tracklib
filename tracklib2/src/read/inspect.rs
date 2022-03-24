@@ -110,9 +110,9 @@ fn try_format_data_table(
                     Alignment::Center,
                 )]));
                 table.add_row(Row::new(vec![
-                    TableCell::new("Section Type"),
+                    TableCell::new("Encoding"),
                     TableCell::new_with_alignment(
-                        format!("{:?}", data_table_entry.section_type()),
+                        format!("{:?}", data_table_entry.section_encoding()),
                         2,
                         Alignment::Right,
                     ),

@@ -1,14 +1,14 @@
 use super::crc::CRC;
 use super::schema::{parse_schema, SchemaEntry};
 use crate::error::TracklibError;
-use crate::types::SectionType;
+use crate::types::SectionEncoding;
 use nom::{number::complete::le_u8, IResult};
 use nom_leb128::leb128_u64;
 use std::convert::TryFrom;
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub(crate) struct DataTableEntry {
-    section_type: SectionType,
+    section_encoding: SectionEncoding,
     offset: usize,
     size: usize,
     rows: usize,
@@ -16,8 +16,8 @@ pub(crate) struct DataTableEntry {
 }
 
 impl DataTableEntry {
-    pub(crate) fn section_type(&self) -> &SectionType {
-        &self.section_type
+    pub(crate) fn section_encoding(&self) -> &SectionEncoding {
+        &self.section_encoding
     }
 
     pub(crate) fn offset(&self) -> usize {
@@ -46,9 +46,8 @@ fn parse_data_table_entry(
         let (input, size) = leb128_u64(input)?;
         let (input, schema_entries) = parse_schema(input)?;
 
-        let section_type = match type_tag {
-            0x00 => SectionType::TrackPoints,
-            0x01 => SectionType::CoursePoints,
+        let section_encoding = match type_tag {
+            0x00 => SectionEncoding::Standard,
             _ => {
                 return Err(nom::Err::Error(TracklibError::ParseError {
                     error_kind: nom::error::ErrorKind::Tag,
@@ -59,7 +58,7 @@ fn parse_data_table_entry(
         Ok((
             input,
             DataTableEntry {
-                section_type,
+                section_encoding,
                 offset,
                 size: usize::try_from(size).expect("usize != u64"),
                 rows: usize::try_from(rows).expect("usize != u64"),
@@ -103,7 +102,7 @@ mod tests {
         let buf = &[0x02, // number of sections
 
                     // Section 1
-                    0x00, // section type = track points
+                    0x00, // section encoding = standard
                     0x00, // leb128 section point count
                     0x00, // leb128 section data size
 
@@ -125,7 +124,7 @@ mod tests {
 
 
                     // Section 2
-                    0x01, // section type = course points
+                    0x00, // section encoding = standard
                     0x00, // leb128 section point count
                     0x00, // leb128 section data size
 
@@ -154,15 +153,15 @@ mod tests {
                     0x00, // leb128 data size
 
 
-                    0x8E, // crc
-                    0x77];
+                    0xDA, // crc
+                    0x8E];
 
         assert_matches!(parse_data_table(buf), Ok((&[], entries)) => {
             assert_eq!(
                 entries,
                 vec![
                     DataTableEntry {
-                        section_type: SectionType::TrackPoints,
+                        section_encoding: SectionEncoding::Standard,
                         offset: 0,
                         size: 0,
                         rows: 0,
@@ -173,7 +172,7 @@ mod tests {
                         ]
                     },
                     DataTableEntry {
-                        section_type: SectionType::CoursePoints,
+                        section_encoding: SectionEncoding::Standard,
                         offset: 0,
                         size: 0,
                         rows: 0,
@@ -194,7 +193,7 @@ mod tests {
         let buf = &[0x01, // number of sections
 
                     // Section 1
-                    0x00, // section type = track points
+                    0x00, // section encoding = standard
                     0x00, // leb128 section point count
                     0x00, // leb128 section data size
 
@@ -218,7 +217,7 @@ mod tests {
                 entries,
                 vec![
                     DataTableEntry {
-                        section_type: SectionType::TrackPoints,
+                        section_encoding: SectionEncoding::Standard,
                         offset: 0,
                         size: 0,
                         rows: 0,

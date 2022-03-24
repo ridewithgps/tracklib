@@ -41,7 +41,7 @@ pub fn write_track<W: Write>(
 mod tests {
     use super::*;
     use crate::schema::*;
-    use crate::types::{SectionType, TrackType};
+    use crate::types::{SectionEncoding, TrackType};
     use crate::write::section::ColumnWriter;
     use assert_matches::assert_matches;
     use std::collections::HashMap;
@@ -93,7 +93,7 @@ mod tests {
     #[test]
     fn test_write_a_track() {
         let mut section1 = Section::new(
-            SectionType::CoursePoints,
+            SectionEncoding::Standard,
             Schema::with_fields(vec![
                 FieldDefinition::new("m", DataType::I64),
                 FieldDefinition::new("k", DataType::Bool),
@@ -143,7 +143,7 @@ mod tests {
         v.push(h);
 
         let mut section2 = Section::new(
-            SectionType::TrackPoints,
+            SectionEncoding::Standard,
             Schema::with_fields(vec![
                 FieldDefinition::new("a", DataType::I64),
                 FieldDefinition::new("b", DataType::Bool),
@@ -247,7 +247,7 @@ mod tests {
                 0x02, // two sections
 
                 // Data Table Section 1
-                0x01, // type of section = course points
+                0x00, // section encoding = standard
                 0x05, // leb128 point count
                 0x33, // leb128 data size
 
@@ -268,7 +268,7 @@ mod tests {
                 0x18, // leb128 data size
 
                 // Data Table Section 2
-                0x00, // type of section = track points
+                0x00, // section encoding = standard
                 0x03, // leb128 point count
                 0x26, // leb128 data size
 
@@ -289,8 +289,8 @@ mod tests {
                 0x12, // leb128 data size
 
                 // Data Table CRC
-                0xC9,
-                0xAF,
+                0xC8,
+                0x42,
 
                 // Data Section 1
 

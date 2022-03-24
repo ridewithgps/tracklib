@@ -24,7 +24,7 @@ pub enum MetadataEntry {
 
 #[derive(Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
-pub enum SectionType {
-    TrackPoints,
-    CoursePoints,
+pub enum SectionEncoding {
+    Standard,
+    // Encrypted,
 }

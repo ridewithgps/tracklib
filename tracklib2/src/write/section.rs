@@ -3,7 +3,7 @@ use super::encoders::*;
 use crate::consts::SCHEMA_VERSION;
 use crate::error::Result;
 use crate::schema::*;
-use crate::types::SectionType;
+use crate::types::SectionEncoding;
 use std::convert::TryFrom;
 use std::io::{self, Write};
 
@@ -14,15 +14,6 @@ impl DataType {
             Self::F64 => 0x01,
             Self::String => 0x04,
             Self::Bool => 0x05,
-        }
-    }
-}
-
-impl SectionType {
-    fn type_tag(&self) -> u8 {
-        match self {
-            Self::TrackPoints => 0x00,
-            Self::CoursePoints => 0x01,
         }
     }
 }
@@ -77,7 +68,7 @@ impl Buffer {
 }
 
 pub struct Section {
-    section_type: SectionType,
+    section_encoding: SectionEncoding,
     rows_written: usize,
     schema: Schema,
     column_data: Vec<Buffer>,
@@ -85,7 +76,7 @@ pub struct Section {
 
 impl Section {
     // TODO: provide a size_hint param to size buffer Vecs (at least presence)
-    pub fn new(section_type: SectionType, schema: Schema) -> Self {
+    pub fn new(section_encoding: SectionEncoding, schema: Schema) -> Self {
         let column_data = schema
             .fields()
             .iter()
@@ -93,7 +84,7 @@ impl Section {
             .collect();
 
         Self {
-            section_type,
+            section_encoding,
             rows_written: 0,
             schema,
             column_data,
@@ -110,8 +101,8 @@ impl Section {
         RowBuilder::new(&self.schema, &mut self.column_data)
     }
 
-    pub(crate) fn type_tag(&self) -> u8 {
-        self.section_type.type_tag()
+    pub(crate) fn encoding(&self) -> &SectionEncoding {
+        &self.section_encoding
     }
 
     pub(crate) fn rows(&self) -> usize {
@@ -294,7 +285,7 @@ mod tests {
     #[test]
     fn test_write_presence_column() {
         let mut section = Section::new(
-            SectionType::TrackPoints,
+            SectionEncoding::Standard,
             Schema::with_fields(vec![
                 FieldDefinition::new("a", DataType::I64),
                 FieldDefinition::new("b", DataType::Bool),
@@ -355,7 +346,7 @@ mod tests {
     #[test]
     fn test_multibyte_presence_column() {
         let mut section = Section::new(
-            SectionType::TrackPoints,
+            SectionEncoding::Standard,
             Schema::with_fields(
                 (0..20)
                     .map(|i| FieldDefinition::new(i.to_string(), DataType::Bool))
@@ -389,7 +380,7 @@ mod tests {
     #[test]
     fn test_write_huge_presence_column() {
         let mut section = Section::new(
-            SectionType::TrackPoints,
+            SectionEncoding::Standard,
             Schema::with_fields(
                 (0..80)
                     .map(|i| FieldDefinition::new(i.to_string(), DataType::Bool))
@@ -445,7 +436,7 @@ mod tests {
     #[test]
     fn test_schema() {
         let mut section = Section::new(
-            SectionType::TrackPoints,
+            SectionEncoding::Standard,
             Schema::with_fields(vec![
                 FieldDefinition::new("m", DataType::I64),
                 FieldDefinition::new("k", DataType::Bool),
@@ -540,7 +531,7 @@ mod tests {
         v.push(h);
 
         let mut section = Section::new(
-            SectionType::TrackPoints,
+            SectionEncoding::Standard,
             Schema::with_fields(vec![
                 FieldDefinition::new("a", DataType::I64),
                 FieldDefinition::new("b", DataType::Bool),

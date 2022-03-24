@@ -1,8 +1,17 @@
 use super::crcwriter::CrcWriter;
 use super::section::Section;
 use crate::error::Result;
+use crate::types::SectionEncoding;
 use std::convert::TryFrom;
 use std::io::Write;
+
+impl SectionEncoding {
+    fn type_tag(&self) -> u8 {
+        match self {
+            Self::Standard => 0x00,
+        }
+    }
+}
 
 #[rustfmt::skip]
 pub(crate) fn write_data_table<W: Write>(out: &mut W, sections: &[Section]) -> Result<()> {
@@ -10,7 +19,7 @@ pub(crate) fn write_data_table<W: Write>(out: &mut W, sections: &[Section]) -> R
 
     crcwriter.write_all(&u8::try_from(sections.len())?.to_le_bytes())?;                // 1 byte  - number of sections
     for section in sections.iter() {
-        crcwriter.write_all(&section.type_tag().to_le_bytes())?;                       // 1 byte  - section type
+        crcwriter.write_all(&section.encoding().type_tag().to_le_bytes())?;            // 1 byte  - section encoding
         leb128::write::unsigned(&mut crcwriter, u64::try_from(section.rows())?)?;      // ? bytes - number of points in this section
         leb128::write::unsigned(&mut crcwriter, u64::try_from(section.data_size())?)?; // ? bytes - leb128 section size
         section.write_schema(&mut crcwriter)?;                                         // ? bytes - schema
@@ -24,7 +33,7 @@ pub(crate) fn write_data_table<W: Write>(out: &mut W, sections: &[Section]) -> R
 mod tests {
     use super::*;
     use crate::schema::*;
-    use crate::types::SectionType;
+    use crate::types::SectionEncoding;
     use assert_matches::assert_matches;
 
     #[test]
@@ -41,7 +50,7 @@ mod tests {
     #[test]
     fn test_data_table() {
         let section1 = Section::new(
-            SectionType::TrackPoints,
+            SectionEncoding::Standard,
             Schema::with_fields(vec![
                 FieldDefinition::new("a", DataType::I64),
                 FieldDefinition::new("b", DataType::Bool),
@@ -50,7 +59,7 @@ mod tests {
         );
 
         let section2 = Section::new(
-            SectionType::CoursePoints,
+            SectionEncoding::Standard,
             Schema::with_fields(vec![
                 FieldDefinition::new("Ride", DataType::I64),
                 FieldDefinition::new("with", DataType::Bool),
@@ -65,7 +74,7 @@ mod tests {
                        &[0x02, // number of sections
 
                          // Section 1
-                         0x00, // section type = track points
+                         0x00, // section encoding = standard
                          0x00, // leb128 section point count
                          0x10, // leb128 section data size
                          // Schema
@@ -86,7 +95,7 @@ mod tests {
 
 
                          // Section 2
-                         0x01, // section type = course points
+                         0x00, // section encoding = standard
                          0x00, // leb128 section point count
                          0x10, // leb128 section data size
 
@@ -114,15 +123,15 @@ mod tests {
                          b'S', // name
                          0x04, // leb128 data size
 
-                         0x20, // crc
-                         0x5D]);
+                         0x74, // crc
+                         0xA4]);
         });
     }
 
     #[test]
     fn test_data_table_with_multibyte_character() {
         let section = Section::new(
-            SectionType::TrackPoints,
+            SectionEncoding::Standard,
             Schema::with_fields(vec![FieldDefinition::new("I ♥ NY", DataType::F64)]),
         );
 
@@ -133,7 +142,7 @@ mod tests {
                        &[0x01, // number of sections
 
                          // Section 1
-                         0x00, // section type = track points
+                         0x00, // section encoding = standard
                          0x00, // leb128 section point count
                          0x08, // leb128 section data size
                          // Schema

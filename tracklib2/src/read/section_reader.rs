@@ -3,7 +3,7 @@ use super::decoders::*;
 use super::presence_column::parse_presence_column;
 use crate::error::{Result, TracklibError};
 use crate::schema::*;
-use crate::types::{FieldValue, SectionType};
+use crate::types::{FieldValue, SectionEncoding};
 
 #[cfg_attr(test, derive(Debug))]
 enum ColumnDecoder<'a> {
@@ -28,7 +28,7 @@ enum ColumnDecoder<'a> {
 #[cfg_attr(test, derive(Debug))]
 pub struct SectionReader<'a> {
     decoders: Vec<ColumnDecoder<'a>>,
-    section_type: SectionType,
+    section_encoding: SectionEncoding,
     schema: Schema,
     rows: usize,
 }
@@ -86,14 +86,14 @@ impl<'a> SectionReader<'a> {
 
         Ok(Self {
             schema,
-            section_type: data_table_entry.section_type().clone(),
+            section_encoding: data_table_entry.section_encoding().clone(),
             decoders,
             rows: data_table_entry.rows(),
         })
     }
 
-    pub fn section_type(&self) -> &SectionType {
-        &self.section_type
+    pub fn section_encoding(&self) -> &SectionEncoding {
+        &self.section_encoding
     }
 
     pub fn rows(&self) -> usize {
@@ -188,7 +188,7 @@ mod tests {
         let data_table_buf = &[0x01, // number of sections
 
                                // Section 1
-                               0x00, // section type = track points
+                               0x00, // section encoding = standard
                                0x03, // leb128 section point count
                                0x26, // leb128 section data size
                                // Schema

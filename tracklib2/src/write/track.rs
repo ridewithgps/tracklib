@@ -251,7 +251,7 @@ mod tests {
                 0x05, // leb128 point count
                 0x33, // leb128 data size
 
-                // Types Table for Section 1
+                // Schema for Section 1
                 0x03, // field count
                 0x00, // first field type = I64
                 0x01, // name len
@@ -271,7 +271,7 @@ mod tests {
                 0x03, // leb128 point count
                 0x26, // leb128 data size
 
-                // Types Table for Section 2
+                // Schema for Section 2
                 0x03, // field count
                 0x00, // first field type = I64
                 0x01, // name length

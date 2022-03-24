@@ -162,7 +162,7 @@ impl Section {
     }
 
     #[rustfmt::skip]
-    pub(crate) fn write_types_table<W: Write>(&self, out: &mut W) -> Result<()> {
+    pub(crate) fn write_schema<W: Write>(&self, out: &mut W) -> Result<()> {
         out.write_all(&u8::try_from(self.schema.fields().len())?.to_le_bytes())?; // 1 byte  - number of entries
 
         for (i, field_def) in self.schema.fields().iter().enumerate() {
@@ -441,7 +441,7 @@ mod tests {
     }
 
     #[test]
-    fn test_types_table() {
+    fn test_schema() {
         let mut section = Section::new(
             SectionType::TrackPoints,
             Schema::with_fields(vec![
@@ -472,7 +472,7 @@ mod tests {
         }
 
         let mut buf = Vec::new();
-        assert_matches!(section.write_types_table(&mut buf), Ok(()) => {
+        assert_matches!(section.write_schema(&mut buf), Ok(()) => {
             #[rustfmt::skip]
             assert_eq!(buf,
                        &[0x05, // entry count = 5

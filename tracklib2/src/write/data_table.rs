@@ -13,7 +13,7 @@ pub(crate) fn write_data_table<W: Write>(out: &mut W, sections: &[Section]) -> R
         crcwriter.write_all(&section.type_tag().to_le_bytes())?;                       // 1 byte  - section type
         leb128::write::unsigned(&mut crcwriter, u64::try_from(section.rows())?)?;      // ? bytes - number of points in this section
         leb128::write::unsigned(&mut crcwriter, u64::try_from(section.data_size())?)?; // ? bytes - leb128 section size
-        section.write_types_table(&mut crcwriter)?;                                    // ? bytes - types table
+        section.write_schema(&mut crcwriter)?;                                         // ? bytes - schema
     }
     crcwriter.append_crc()?;                                                           // 2 bytes - crc
 
@@ -68,7 +68,7 @@ mod tests {
                          0x00, // section type = track points
                          0x00, // leb128 section point count
                          0x10, // leb128 section data size
-                         // Types Table
+                         // Schema
                          0x03, // field count
                          0x00, // first field type = I64
                          0x01, // name length
@@ -89,7 +89,7 @@ mod tests {
                          0x00, // leb128 section point count
                          0x10, // leb128 section data size
 
-                         // Types Table
+                         // Schema
                          0x03, // field count
                          0x00, // first field type = I64
                          0x04, // name length
@@ -135,7 +135,7 @@ mod tests {
                          0x00, // section type = track points
                          0x00, // leb128 section point count
                          0x08, // leb128 section data size
-                         // Types Table
+                         // Schema
                          0x01, // field count
                          0x01, // first field type = F64
                          0x08, // name length

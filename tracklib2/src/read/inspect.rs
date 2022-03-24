@@ -30,12 +30,12 @@ fn format_header(header: &Header) -> String {
     )]));
     table.add_row(Row::new(vec![
         TableCell::new("File Version"),
-        TableCell::new_with_alignment(format!("{:#04X}", header.file_version), 1, Alignment::Right),
+        TableCell::new_with_alignment(format!("{:#04X}", header.file_version()), 1, Alignment::Right),
     ]));
     table.add_row(Row::new(vec![
         TableCell::new("Creator Version"),
         TableCell::new_with_alignment(
-            format!("{:#04X}", header.creator_version),
+            format!("{:#04X}", header.creator_version()),
             1,
             Alignment::Right,
         ),
@@ -43,14 +43,14 @@ fn format_header(header: &Header) -> String {
     table.add_row(Row::new(vec![
         TableCell::new("Metadata Offset"),
         TableCell::new_with_alignment(
-            format!("{:#04X}", header.metadata_offset),
+            format!("{:#04X}", header.metadata_offset()),
             1,
             Alignment::Right,
         ),
     ]));
     table.add_row(Row::new(vec![
         TableCell::new("Data Offset"),
-        TableCell::new_with_alignment(format!("{:#04X}", header.data_offset), 1, Alignment::Right),
+        TableCell::new_with_alignment(format!("{:#04X}", header.data_offset()), 1, Alignment::Right),
     ]));
 
     table.render()
@@ -318,13 +318,13 @@ pub fn inspect(input: &[u8]) -> Result<String, String> {
 
     // Metadata
     out.push_str(&try_format_metadata(
-        &input[usize::from(header.metadata_offset)..],
+        &input[usize::from(header.metadata_offset())..],
     ));
     out.push_str("\n\n");
 
     // Data Table
     let (maybe_data_table, data_table_out) =
-        try_format_data_table(input, usize::from(header.data_offset));
+        try_format_data_table(input, usize::from(header.data_offset()));
     out.push_str(&data_table_out);
 
     // Data

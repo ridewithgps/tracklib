@@ -9,11 +9,29 @@ use nom::{
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
-pub struct Header {
-    pub(crate) file_version: u8,
-    pub(crate) creator_version: u8,
-    pub(crate) metadata_offset: u16,
-    pub(crate) data_offset: u16,
+pub(crate) struct Header {
+    file_version: u8,
+    creator_version: u8,
+    metadata_offset: u16,
+    data_offset: u16,
+}
+
+impl Header {
+    pub(crate) fn file_version(&self) -> u8 {
+        self.file_version
+    }
+
+    pub(crate) fn creator_version(&self) -> u8 {
+        self.creator_version
+    }
+
+    pub(crate) fn metadata_offset(&self) -> u16 {
+        self.metadata_offset
+    }
+
+    pub(crate) fn data_offset(&self) -> u16 {
+        self.data_offset
+    }
 }
 
 pub(crate) fn parse_header(input: &[u8]) -> IResult<&[u8], Header, TracklibError> {

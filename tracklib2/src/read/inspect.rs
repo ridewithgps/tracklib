@@ -98,7 +98,8 @@ fn try_format_data_table(
 
             for (i, data_table_entry) in data_table.iter().enumerate() {
                 const CRC_BYTES: usize = 4;
-                let presence_column_bytes_required = (data_table_entry.types().len() + 7) / 8;
+                let presence_column_bytes_required =
+                    (data_table_entry.schema_entries().len() + 7) / 8;
                 let presence_column_size =
                     presence_column_bytes_required * data_table_entry.rows() + CRC_BYTES;
 
@@ -153,11 +154,11 @@ fn try_format_data_table(
                     ),
                 ]));
 
-                for types_table_entry in data_table_entry.types() {
+                for schema_entry in data_table_entry.schema_entries() {
                     table.add_row(Row::new(vec![
                         TableCell::new_with_alignment("Column", 1, Alignment::Left),
                         TableCell::new_with_alignment(
-                            bold(types_table_entry.field_definition().name()),
+                            bold(schema_entry.field_definition().name()),
                             2,
                             Alignment::Center,
                         ),
@@ -167,7 +168,7 @@ fn try_format_data_table(
                         TableCell::new(""),
                         TableCell::new_with_alignment("Type", 1, Alignment::Left),
                         TableCell::new_with_alignment(
-                            format!("{:?}", types_table_entry.field_definition().data_type()),
+                            format!("{:?}", schema_entry.field_definition().data_type()),
                             1,
                             Alignment::Right,
                         ),
@@ -177,7 +178,7 @@ fn try_format_data_table(
                         TableCell::new(""),
                         TableCell::new_with_alignment("Size", 1, Alignment::Left),
                         TableCell::new_with_alignment(
-                            format!("{:#04X}", types_table_entry.size()),
+                            format!("{:#04X}", schema_entry.size()),
                             1,
                             Alignment::Right,
                         ),
@@ -191,7 +192,7 @@ fn try_format_data_table(
                             Alignment::Right,
                         ),
                         TableCell::new_with_alignment(
-                            format!("{:#04X}", types_table_entry.offset()),
+                            format!("{:#04X}", schema_entry.offset()),
                             1,
                             Alignment::Right,
                         ),
@@ -207,7 +208,7 @@ fn try_format_data_table(
                         TableCell::new_with_alignment(
                             format!(
                                 "{:#04X}",
-                                types_table_entry.offset()
+                                schema_entry.offset()
                                     + presence_column_size
                                     + data_table_entry.offset()
                                     + data_start_offset
@@ -264,16 +265,16 @@ fn try_format_section(data_start: &[u8], entry_num: usize, entry: &DataTableEntr
         Ok(mut section_reader) => {
             table.add_row(Row::new(vec![TableCell::new_with_alignment(
                 bold(&format!("Data {entry_num}")),
-                entry.types().len() + 1,
+                entry.schema_entries().len() + 1,
                 Alignment::Center,
             )]));
 
             table.add_row(Row::new(
                 [TableCell::new_with_alignment("#", 1, Alignment::Center)]
                     .into_iter()
-                    .chain(entry.types().iter().map(|types_table_entry| {
+                    .chain(entry.schema_entries().iter().map(|schema_entry| {
                         TableCell::new_with_alignment(
-                            types_table_entry.field_definition().name(),
+                            schema_entry.field_definition().name(),
                             1,
                             Alignment::Center,
                         )

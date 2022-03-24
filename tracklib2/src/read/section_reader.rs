@@ -35,31 +35,33 @@ pub struct SectionReader<'a> {
 
 impl<'a> SectionReader<'a> {
     pub(crate) fn new(input: &'a [u8], data_table_entry: &'a DataTableEntry) -> Result<Self> {
-        let (column_data, presence_column) =
-            parse_presence_column(data_table_entry.types().len(), data_table_entry.rows())(input)?;
+        let (column_data, presence_column) = parse_presence_column(
+            data_table_entry.schema_entries().len(),
+            data_table_entry.rows(),
+        )(input)?;
 
         let schema = Schema::with_fields(
             data_table_entry
-                .types()
+                .schema_entries()
                 .iter()
-                .map(|types_table_entry| types_table_entry.field_definition().clone())
+                .map(|schema_entry| schema_entry.field_definition().clone())
                 .collect(),
         );
 
         let decoders = data_table_entry
-            .types()
+            .schema_entries()
             .iter()
             .enumerate()
-            .map(|(i, types_table_entry)| {
-                let column_data = &column_data[types_table_entry.offset()
-                    ..types_table_entry.offset() + types_table_entry.size()];
+            .map(|(i, schema_entry)| {
+                let column_data = &column_data
+                    [schema_entry.offset()..schema_entry.offset() + schema_entry.size()];
                 let presence_column_view =
                     presence_column
                         .view(i)
                         .ok_or_else(|| TracklibError::ParseIncompleteError {
                             needed: nom::Needed::Unknown,
                         })?;
-                let field_definition = types_table_entry.field_definition();
+                let field_definition = schema_entry.field_definition();
                 let decoder = match field_definition.data_type() {
                     DataType::I64 => ColumnDecoder::I64 {
                         field_definition,
@@ -189,7 +191,7 @@ mod tests {
                                0x00, // section type = track points
                                0x03, // leb128 section point count
                                0x26, // leb128 section data size
-                               // Types Table
+                               // Schema
                                0x04, // field count
                                0x00, // first field type = I64
                                0x01, // name length
@@ -285,22 +287,22 @@ mod tests {
                     let values = column_iter.collect::<Vec<_>>();
                     assert_eq!(values.len(), 4);
                     assert_matches!(&values[0], Ok((field_definition, field_value)) => {
-                        assert_eq!(*field_definition, data_table_entries[0].types()[0].field_definition());
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[0].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("a", DataType::I64));
                         assert_eq!(field_value, &Some(FieldValue::I64(1)));
                     });
                     assert_matches!(&values[1], Ok((field_definition, field_value)) => {
-                        assert_eq!(*field_definition, data_table_entries[0].types()[1].field_definition());
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[1].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("b", DataType::Bool));
                         assert_eq!(field_value, &Some(FieldValue::Bool(false)));
                     });
                     assert_matches!(&values[2], Ok((field_definition, field_value)) => {
-                        assert_eq!(*field_definition, data_table_entries[0].types()[2].field_definition());
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[2].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("c", DataType::String));
                         assert_eq!(field_value, &Some(FieldValue::String("Ride".to_string())));
                     });
                     assert_matches!(&values[3], Ok((field_definition, field_value)) => {
-                        assert_eq!(*field_definition, data_table_entries[0].types()[3].field_definition());
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[3].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("f", DataType::F64));
                         assert_eq!(field_value, &None);
                     });
@@ -311,22 +313,22 @@ mod tests {
                     let values = column_iter.collect::<Vec<_>>();
                     assert_eq!(values.len(), 4);
                     assert_matches!(&values[0], Ok((field_definition, field_value)) => {
-                        assert_eq!(*field_definition, data_table_entries[0].types()[0].field_definition());
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[0].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("a", DataType::I64));
                         assert_eq!(field_value, &Some(FieldValue::I64(2)));
                     });
                     assert_matches!(&values[1], Ok((field_definition, field_value)) => {
-                        assert_eq!(*field_definition, data_table_entries[0].types()[1].field_definition());
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[1].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("b", DataType::Bool));
                         assert_eq!(field_value, &None);
                     });
                     assert_matches!(&values[2], Ok((field_definition, field_value)) => {
-                        assert_eq!(*field_definition, data_table_entries[0].types()[2].field_definition());
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[2].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("c", DataType::String));
                         assert_eq!(field_value, &Some(FieldValue::String("with".to_string())));
                     });
                     assert_matches!(&values[3], Ok((field_definition, field_value)) => {
-                        assert_eq!(*field_definition, data_table_entries[0].types()[3].field_definition());
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[3].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("f", DataType::F64));
                         assert_eq!(field_value, &Some(FieldValue::F64(1.0)));
                     });
@@ -337,22 +339,22 @@ mod tests {
                     let values = column_iter.collect::<Vec<_>>();
                     assert_eq!(values.len(), 4);
                     assert_matches!(&values[0], Ok((field_definition, field_value)) => {
-                        assert_eq!(*field_definition, data_table_entries[0].types()[0].field_definition());
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[0].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("a", DataType::I64));
                         assert_eq!(field_value, &Some(FieldValue::I64(4)));
                     });
                     assert_matches!(&values[1], Ok((field_definition, field_value)) => {
-                        assert_eq!(*field_definition, data_table_entries[0].types()[1].field_definition());
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[1].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("b", DataType::Bool));
                         assert_eq!(field_value, &Some(FieldValue::Bool(true)));
                     });
                     assert_matches!(&values[2], Ok((field_definition, field_value)) => {
-                        assert_eq!(*field_definition, data_table_entries[0].types()[2].field_definition());
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[2].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("c", DataType::String));
                         assert_eq!(field_value, &Some(FieldValue::String("GPS".to_string())));
                     });
                     assert_matches!(&values[3], Ok((field_definition, field_value)) => {
-                        assert_eq!(*field_definition, data_table_entries[0].types()[3].field_definition());
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[3].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("f", DataType::F64));
                         assert_eq!(field_value, &Some(FieldValue::F64(2.5)));
                     });

@@ -1,5 +1,5 @@
 use super::crc::CRC;
-use super::types_table::{parse_types_table, TypesTableEntry};
+use super::schema::{parse_schema, SchemaEntry};
 use crate::error::TracklibError;
 use crate::types::SectionType;
 use nom::{number::complete::le_u8, IResult};
@@ -12,7 +12,7 @@ pub(crate) struct DataTableEntry {
     offset: usize,
     size: usize,
     rows: usize,
-    types: Vec<TypesTableEntry>,
+    schema_entries: Vec<SchemaEntry>,
 }
 
 impl DataTableEntry {
@@ -32,8 +32,8 @@ impl DataTableEntry {
         self.rows
     }
 
-    pub(crate) fn types(&self) -> &[TypesTableEntry] {
-        self.types.as_slice()
+    pub(crate) fn schema_entries(&self) -> &[SchemaEntry] {
+        self.schema_entries.as_slice()
     }
 }
 
@@ -44,7 +44,7 @@ fn parse_data_table_entry(
         let (input, type_tag) = le_u8(input)?;
         let (input, rows) = leb128_u64(input)?;
         let (input, size) = leb128_u64(input)?;
-        let (input, types) = parse_types_table(input)?;
+        let (input, schema_entries) = parse_schema(input)?;
 
         let section_type = match type_tag {
             0x00 => SectionType::TrackPoints,
@@ -63,7 +63,7 @@ fn parse_data_table_entry(
                 offset,
                 size: usize::try_from(size).expect("usize != u64"),
                 rows: usize::try_from(rows).expect("usize != u64"),
-                types,
+                schema_entries,
             },
         ))
     }
@@ -107,7 +107,7 @@ mod tests {
                     0x00, // leb128 section point count
                     0x00, // leb128 section data size
 
-                    // Types Table
+                    // Schema
                     0x03, // field count
                     0x00, // first field type = I64
                     0x01, // name length
@@ -128,7 +128,7 @@ mod tests {
                     0x00, // leb128 section point count
                     0x00, // leb128 section data size
 
-                    // Types Table
+                    // Schema
                     0x03, // field count
                     0x00, // first field type = I64
                     0x04, // name length
@@ -164,10 +164,10 @@ mod tests {
                         offset: 0,
                         size: 0,
                         rows: 0,
-                        types: vec![
-                            TypesTableEntry::new_for_tests("a", DataType::I64, 0, 0),
-                            TypesTableEntry::new_for_tests("b", DataType::Bool, 0, 0),
-                            TypesTableEntry::new_for_tests("c", DataType::String, 0, 0)
+                        schema_entries: vec![
+                            SchemaEntry::new_for_tests("a", DataType::I64, 0, 0),
+                            SchemaEntry::new_for_tests("b", DataType::Bool, 0, 0),
+                            SchemaEntry::new_for_tests("c", DataType::String, 0, 0)
                         ]
                     },
                     DataTableEntry {
@@ -175,10 +175,10 @@ mod tests {
                         offset: 0,
                         size: 0,
                         rows: 0,
-                        types: vec![
-                            TypesTableEntry::new_for_tests("Ride", DataType::I64, 0, 0),
-                            TypesTableEntry::new_for_tests("with", DataType::Bool, 0, 0),
-                            TypesTableEntry::new_for_tests("GPS", DataType::String, 0, 0)
+                        schema_entries: vec![
+                            SchemaEntry::new_for_tests("Ride", DataType::I64, 0, 0),
+                            SchemaEntry::new_for_tests("with", DataType::Bool, 0, 0),
+                            SchemaEntry::new_for_tests("GPS", DataType::String, 0, 0)
                         ]
                     }
                 ]
@@ -196,7 +196,7 @@ mod tests {
                     0x00, // leb128 section point count
                     0x00, // leb128 section data size
 
-                    // Types Table
+                    // Schema
                     0x01, // field count
                     0x00, // first field type = I64
                     0x05, // name length
@@ -219,8 +219,8 @@ mod tests {
                         offset: 0,
                         size: 0,
                         rows: 0,
-                        types: vec![
-                            TypesTableEntry::new_for_tests("a�b", DataType::I64, 0, 0),
+                        schema_entries: vec![
+                            SchemaEntry::new_for_tests("a�b", DataType::I64, 0, 0),
                         ]
                     }
                 ]

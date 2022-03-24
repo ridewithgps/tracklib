@@ -7,6 +7,6 @@ mod header;
 pub mod inspect;
 mod metadata;
 mod presence_column;
+mod schema;
 mod section_reader;
 pub mod track;
-mod types_table;

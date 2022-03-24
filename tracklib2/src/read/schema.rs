@@ -6,14 +6,14 @@ use std::convert::TryFrom;
 
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
-pub(crate) struct TypesTableEntry {
+pub(crate) struct SchemaEntry {
     field_definition: FieldDefinition,
     size: usize,
     offset: usize,
 }
 
 #[cfg(test)]
-impl TypesTableEntry {
+impl SchemaEntry {
     pub(crate) fn new_for_tests(
         name: &str,
         data_type: DataType,
@@ -28,7 +28,7 @@ impl TypesTableEntry {
     }
 }
 
-impl TypesTableEntry {
+impl SchemaEntry {
     pub(crate) fn field_definition(&self) -> &FieldDefinition {
         &self.field_definition
     }
@@ -42,9 +42,9 @@ impl TypesTableEntry {
     }
 }
 
-fn parse_types_table_entry<'a>(
+fn parse_schema_entry<'a>(
     offset: usize,
-) -> impl Fn(&[u8]) -> IResult<&[u8], TypesTableEntry, TracklibError> {
+) -> impl Fn(&[u8]) -> IResult<&[u8], SchemaEntry, TracklibError> {
     move |input: &[u8]| {
         let (input, type_tag) = le_u8(input)?;
         let (input, field_name) = length_data(le_u8)(input)?;
@@ -66,7 +66,7 @@ fn parse_types_table_entry<'a>(
 
         Ok((
             input,
-            TypesTableEntry {
+            SchemaEntry {
                 field_definition: FieldDefinition::new(name, data_type),
                 size: usize::try_from(data_size).expect("usize != u64"),
                 offset,
@@ -75,14 +75,12 @@ fn parse_types_table_entry<'a>(
     }
 }
 
-pub(crate) fn parse_types_table(
-    input: &[u8],
-) -> IResult<&[u8], Vec<TypesTableEntry>, TracklibError> {
+pub(crate) fn parse_schema(input: &[u8]) -> IResult<&[u8], Vec<SchemaEntry>, TracklibError> {
     let (mut input, entry_count) = le_u8(input)?;
     let mut entries = Vec::with_capacity(usize::from(entry_count));
     let mut offset = 0;
     for _ in 0..entry_count {
-        let (rest, entry) = parse_types_table_entry(offset)(input)?;
+        let (rest, entry) = parse_schema_entry(offset)(input)?;
         input = rest;
         offset += entry.size;
         entries.push(entry);
@@ -96,7 +94,7 @@ mod tests {
     use assert_matches::assert_matches;
 
     #[test]
-    fn test_test_parse_types_table() {
+    fn test_test_parse_schema() {
         #[rustfmt::skip]
         let buf = &[0x04, // entry count = 4
                     0x00, // first entry type: i64 = 0
@@ -124,37 +122,37 @@ mod tests {
                     0x01, // name len = 1
                     b'i', // name = "i"
                     0x02]; // data size = 2
-        assert_matches!(parse_types_table(buf), Ok((&[], entries)) => {
-            assert_eq!(entries, vec![TypesTableEntry::new_for_tests("m", DataType::I64, 2, 0),
-                                     TypesTableEntry::new_for_tests("k", DataType::Bool, 1, 2),
-                                     TypesTableEntry::new_for_tests("long name!", DataType::String, 7, 3),
-                                     TypesTableEntry::new_for_tests("i", DataType::F64, 2, 10)]);
+        assert_matches!(parse_schema(buf), Ok((&[], entries)) => {
+            assert_eq!(entries, vec![SchemaEntry::new_for_tests("m", DataType::I64, 2, 0),
+                                     SchemaEntry::new_for_tests("k", DataType::Bool, 1, 2),
+                                     SchemaEntry::new_for_tests("long name!", DataType::String, 7, 3),
+                                     SchemaEntry::new_for_tests("i", DataType::F64, 2, 10)]);
         });
     }
 
     #[test]
-    fn test_types_table_invalid_field_tag() {
+    fn test_schema_invalid_field_tag() {
         #[rustfmt::skip]
         let buf = &[0x01, // entry count
                     0xEF, // first entry type: invalid
                     0x01, // name len = 1
                     b'm', // name = "m"
                     0x02]; // data size = 2
-        assert_matches!(parse_types_table(buf), Err(nom::Err::Error(TracklibError::ParseError{error_kind})) => {
+        assert_matches!(parse_schema(buf), Err(nom::Err::Error(TracklibError::ParseError{error_kind})) => {
             assert_eq!(error_kind, nom::error::ErrorKind::Tag);
         });
     }
 
     #[test]
-    fn test_types_table_invalid_utf8() {
+    fn test_schema_invalid_utf8() {
         #[rustfmt::skip]
         let buf = &[0x01, // entry count
                     0x00, // first entry type: I64
                     0x01, // name len = 1
                     0xC0, // name: invalid utf-8
                     0x02]; // data size = 2
-        assert_matches!(parse_types_table(buf), Ok((&[], entries)) => {
-            assert_eq!(entries, vec![TypesTableEntry::new_for_tests("�", DataType::I64, 2, 0)])
+        assert_matches!(parse_schema(buf), Ok((&[], entries)) => {
+            assert_eq!(entries, vec![SchemaEntry::new_for_tests("�", DataType::I64, 2, 0)])
         });
     }
 }

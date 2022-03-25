@@ -30,11 +30,11 @@ pub enum TracklibError {
 pub type Result<T, E = TracklibError> = std::result::Result<T, E>;
 
 impl<I: Sized> nom::error::ParseError<I> for TracklibError {
-    fn from_error_kind(input: I, kind: nom::error::ErrorKind) -> Self {
+    fn from_error_kind(_input: I, kind: nom::error::ErrorKind) -> Self {
         Self::ParseError { error_kind: kind }
     }
 
-    fn append(input: I, kind: nom::error::ErrorKind, other: Self) -> Self {
+    fn append(_input: I, _kind: nom::error::ErrorKind, other: Self) -> Self {
         other
     }
 }

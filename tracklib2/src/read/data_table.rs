@@ -4,7 +4,6 @@ use crate::error::TracklibError;
 use crate::types::SectionEncoding;
 use nom::{number::complete::le_u8, IResult};
 use nom_leb128::leb128_u64;
-use std::convert::TryFrom;
 
 #[cfg_attr(test, derive(Debug, PartialEq))]
 pub(crate) struct DataTableEntry {
@@ -24,6 +23,7 @@ impl DataTableEntry {
         self.offset
     }
 
+    #[cfg(feature = "inspect")]
     pub(crate) fn size(&self) -> usize {
         self.size
     }

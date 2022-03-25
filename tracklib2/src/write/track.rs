@@ -4,7 +4,6 @@ use super::section::Section;
 use crate::consts::RWTF_HEADER_SIZE;
 use crate::error::Result;
 use crate::types::MetadataEntry;
-use std::convert::TryFrom;
 use std::io::{self, Write};
 
 pub fn write_track<W: Write>(

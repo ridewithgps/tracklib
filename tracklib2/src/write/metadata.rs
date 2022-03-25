@@ -1,7 +1,6 @@
 use super::crcwriter::CrcWriter;
 use crate::error::Result;
 use crate::types::{MetadataEntry, TrackType};
-use std::convert::TryFrom;
 use std::io::Write;
 
 impl MetadataEntry {

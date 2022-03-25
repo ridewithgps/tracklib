@@ -4,7 +4,6 @@ use crate::consts::SCHEMA_VERSION;
 use crate::error::Result;
 use crate::schema::*;
 use crate::types::SectionEncoding;
-use std::convert::TryFrom;
 use std::io::{self, Write};
 
 impl DataType {
@@ -354,7 +353,7 @@ mod tests {
             ),
         );
 
-        for i in 0..2 {
+        for _ in 0..2 {
             let mut rowbuilder = section.open_row_builder();
             while let Some(cw) = rowbuilder.next_column_writer() {
                 match cw {

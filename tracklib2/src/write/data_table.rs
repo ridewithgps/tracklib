@@ -2,7 +2,6 @@ use super::crcwriter::CrcWriter;
 use super::section::Section;
 use crate::error::Result;
 use crate::types::SectionEncoding;
-use std::convert::TryFrom;
 use std::io::Write;
 
 impl SectionEncoding {

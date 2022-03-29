@@ -4,7 +4,7 @@ use crate::schema::*;
 use nom::{bytes::complete::tag, multi::length_data, number::complete::le_u8, IResult};
 use nom_leb128::leb128_u64;
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub(crate) struct SchemaEntry {
     field_definition: FieldDefinition,

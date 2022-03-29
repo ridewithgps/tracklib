@@ -22,7 +22,7 @@ pub enum MetadataEntry {
     CreatedAt(u64),
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Copy, Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 pub enum SectionEncoding {
     Standard,

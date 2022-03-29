@@ -1,7 +1,7 @@
 use super::data_table::{parse_data_table, DataTableEntry};
 use super::header::{parse_header, Header};
 use super::metadata::parse_metadata;
-use super::section_reader::SectionReader;
+use super::section::Section;
 use crate::types::FieldValue;
 use nom::Offset;
 use term_table::row::Row;
@@ -30,7 +30,11 @@ fn format_header(header: &Header) -> String {
     )]));
     table.add_row(Row::new(vec![
         TableCell::new("File Version"),
-        TableCell::new_with_alignment(format!("{:#04X}", header.file_version()), 1, Alignment::Right),
+        TableCell::new_with_alignment(
+            format!("{:#04X}", header.file_version()),
+            1,
+            Alignment::Right,
+        ),
     ]));
     table.add_row(Row::new(vec![
         TableCell::new("Creator Version"),
@@ -50,7 +54,11 @@ fn format_header(header: &Header) -> String {
     ]));
     table.add_row(Row::new(vec![
         TableCell::new("Data Offset"),
-        TableCell::new_with_alignment(format!("{:#04X}", header.data_offset()), 1, Alignment::Right),
+        TableCell::new_with_alignment(
+            format!("{:#04X}", header.data_offset()),
+            1,
+            Alignment::Right,
+        ),
     ]));
 
     table.render()
@@ -260,8 +268,9 @@ fn try_format_section(data_start: &[u8], entry_num: usize, entry: &DataTableEntr
     let mut table = Table::new();
 
     let data = &data_start[usize::try_from(entry.offset()).expect("usize != u64")..];
+    let section = Section::new(data, &entry);
 
-    match SectionReader::new(data, &entry) {
+    match section.reader() {
         Ok(mut section_reader) => {
             table.add_row(Row::new(vec![TableCell::new_with_alignment(
                 bold(&format!("Data {entry_num}")),

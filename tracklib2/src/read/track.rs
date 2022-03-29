@@ -1,7 +1,7 @@
 use super::data_table::{parse_data_table, DataTableEntry};
 use super::header::{parse_header, Header};
 use super::metadata::parse_metadata;
-use super::section_reader::SectionReader;
+use super::section::Section;
 use crate::error::Result;
 use crate::types::MetadataEntry;
 
@@ -17,7 +17,8 @@ impl<'a> TrackReader<'a> {
     pub fn from_bytes(data: &'a [u8]) -> Result<Self> {
         let (_, header) = parse_header(data)?;
         let (_, metadata_entries) = parse_metadata(&data[usize::from(header.metadata_offset())..])?;
-        let (data_start, data_table) = parse_data_table(&data[usize::from(header.data_offset())..])?;
+        let (data_start, data_table) =
+            parse_data_table(&data[usize::from(header.data_offset())..])?;
 
         Ok(Self {
             header,
@@ -39,10 +40,10 @@ impl<'a> TrackReader<'a> {
         &self.metadata_entries
     }
 
-    pub fn section(&self, index: usize) -> Option<Result<SectionReader>> {
+    pub fn section(&self, index: usize) -> Option<Section> {
         let section = self.data_table.get(index)?;
         let data = &self.data_start[usize::try_from(section.offset()).expect("usize != u64")..];
-        Some(SectionReader::new(data, &section))
+        Some(Section::new(data, &section))
     }
 
     pub fn sections(&self) -> SectionIter {
@@ -59,14 +60,14 @@ pub struct SectionIter<'a> {
 }
 
 impl<'a> Iterator for SectionIter<'a> {
-    type Item = Result<SectionReader<'a>>;
+    type Item = Section<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         if let Some((section, rest)) = self.entries.split_first() {
             self.entries = rest;
 
             let data = &self.data[usize::try_from(section.offset()).expect("usize != u64")..];
-            Some(SectionReader::new(data, &section))
+            Some(Section::new(data, &section))
         } else {
             None
         }
@@ -76,8 +77,9 @@ impl<'a> Iterator for SectionIter<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::schema::*;
+    use crate::types::{FieldValue, SectionEncoding, TrackType};
     use assert_matches::assert_matches;
-    use crate::types::{TrackType, FieldValue};
 
     #[test]
     fn test_read_a_track() {
@@ -288,46 +290,71 @@ mod tests {
 
         assert_eq!(track.metadata().len(), 1);
 
-        assert_matches!(track.metadata()[0], MetadataEntry::TrackType(TrackType::Segment(5)));
+        assert_matches!(
+            track.metadata()[0],
+            MetadataEntry::TrackType(TrackType::Segment(5))
+        );
 
-        let expected_section_0 = vec![vec![Some(FieldValue::I64(42)),
-                                           Some(FieldValue::Bool(true)),
-                                           Some(FieldValue::String("hey".to_string()))],
-                                      vec![Some(FieldValue::I64(42)),
-                                           Some(FieldValue::Bool(true)),
-                                           Some(FieldValue::String("hey".to_string()))],
-                                      vec![Some(FieldValue::I64(42)),
-                                           Some(FieldValue::Bool(true)),
-                                           Some(FieldValue::String("hey".to_string()))],
-                                      vec![Some(FieldValue::I64(42)),
-                                           Some(FieldValue::Bool(true)),
-                                           Some(FieldValue::String("hey".to_string()))],
-                                      vec![Some(FieldValue::I64(42)),
-                                           Some(FieldValue::Bool(true)),
-                                           Some(FieldValue::String("hey".to_string()))]];
+        let expected_section_0 = vec![
+            vec![
+                Some(FieldValue::I64(42)),
+                Some(FieldValue::Bool(true)),
+                Some(FieldValue::String("hey".to_string())),
+            ],
+            vec![
+                Some(FieldValue::I64(42)),
+                Some(FieldValue::Bool(true)),
+                Some(FieldValue::String("hey".to_string())),
+            ],
+            vec![
+                Some(FieldValue::I64(42)),
+                Some(FieldValue::Bool(true)),
+                Some(FieldValue::String("hey".to_string())),
+            ],
+            vec![
+                Some(FieldValue::I64(42)),
+                Some(FieldValue::Bool(true)),
+                Some(FieldValue::String("hey".to_string())),
+            ],
+            vec![
+                Some(FieldValue::I64(42)),
+                Some(FieldValue::Bool(true)),
+                Some(FieldValue::String("hey".to_string())),
+            ],
+        ];
 
-        let expected_section_1 = vec![vec![Some(FieldValue::I64(1)),
-                                           Some(FieldValue::Bool(false)),
-                                           Some(FieldValue::String("Ride".to_string()))],
-                                      vec![Some(FieldValue::I64(2)),
-                                           None,
-                                           Some(FieldValue::String("with".to_string()))],
-                                      vec![Some(FieldValue::I64(4)),
-                                           Some(FieldValue::Bool(true)),
-                                           Some(FieldValue::String("GPS".to_string()))]];
+        let expected_section_1 = vec![
+            vec![
+                Some(FieldValue::I64(1)),
+                Some(FieldValue::Bool(false)),
+                Some(FieldValue::String("Ride".to_string())),
+            ],
+            vec![
+                Some(FieldValue::I64(2)),
+                None,
+                Some(FieldValue::String("with".to_string())),
+            ],
+            vec![
+                Some(FieldValue::I64(4)),
+                Some(FieldValue::Bool(true)),
+                Some(FieldValue::String("GPS".to_string())),
+            ],
+        ];
 
         let sections = track
             .sections()
             .map(|section| {
-                let mut section = section?;
+                let mut section_reader = section.reader()?;
                 let mut v = vec![];
-                while let Some(columniter) = section.open_column_iter() {
-                    v.push(columniter
-                           .map(|column_result| {
-                               let (_field_def, field_value) = column_result.unwrap();
-                               field_value
-                           })
-                           .collect::<Vec<_>>());
+                while let Some(columniter) = section_reader.open_column_iter() {
+                    v.push(
+                        columniter
+                            .map(|column_result| {
+                                let (_field_def, field_value) = column_result.unwrap();
+                                field_value
+                            })
+                            .collect::<Vec<_>>(),
+                    );
                 }
                 Ok(v)
             })
@@ -339,30 +366,48 @@ mod tests {
             assert_eq!(sections[1], expected_section_1);
         });
 
-        assert_matches!(track.section(0), Some(Ok(mut section)) => {
-            let mut v = vec![];
-            while let Some(columniter) = section.open_column_iter() {
-                v.push(columniter
-                       .map(|column_result| {
-                           let (_field_def, field_value) = column_result.unwrap();
-                           field_value
-                       })
-                       .collect::<Vec<_>>());
-            }
-            assert_eq!(v, expected_section_0);
+        assert_matches!(track.section(0), Some(section) => {
+            assert_eq!(section.encoding(), SectionEncoding::Standard);
+            assert_eq!(section.rows(), 5);
+            assert_eq!(section.schema(), Schema::with_fields(vec![
+                FieldDefinition::new("m", DataType::I64),
+                FieldDefinition::new("k", DataType::Bool),
+                FieldDefinition::new("j", DataType::String),
+            ]));
+            assert_matches!(section.reader(), Ok(mut section_reader) => {
+                let mut v = vec![];
+                while let Some(columniter) = section_reader.open_column_iter() {
+                    v.push(columniter
+                           .map(|column_result| {
+                               let (_field_def, field_value) = column_result.unwrap();
+                               field_value
+                           })
+                           .collect::<Vec<_>>());
+                }
+                assert_eq!(v, expected_section_0);
+            });
         });
 
-        assert_matches!(track.section(1), Some(Ok(mut section)) => {
-            let mut v = vec![];
-            while let Some(columniter) = section.open_column_iter() {
-                v.push(columniter
-                       .map(|column_result| {
-                           let (_field_def, field_value) = column_result.unwrap();
-                           field_value
-                       })
-                       .collect::<Vec<_>>());
-            }
-            assert_eq!(v, expected_section_1);
+        assert_matches!(track.section(1), Some(section) => {
+            assert_eq!(section.encoding(), SectionEncoding::Standard);
+            assert_eq!(section.rows(), 3);
+            assert_eq!(section.schema(), Schema::with_fields(vec![
+                FieldDefinition::new("a", DataType::I64),
+                FieldDefinition::new("b", DataType::Bool),
+                FieldDefinition::new("c", DataType::String),
+            ]));
+            assert_matches!(section.reader(), Ok(mut section_reader) => {
+                let mut v = vec![];
+                while let Some(columniter) = section_reader.open_column_iter() {
+                    v.push(columniter
+                           .map(|column_result| {
+                               let (_field_def, field_value) = column_result.unwrap();
+                               field_value
+                           })
+                           .collect::<Vec<_>>());
+                }
+                assert_eq!(v, expected_section_1);
+            });
         });
 
         assert!(track.section(2).is_none());

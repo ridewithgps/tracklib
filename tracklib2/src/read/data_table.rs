@@ -15,8 +15,8 @@ pub(crate) struct DataTableEntry {
 }
 
 impl DataTableEntry {
-    pub(crate) fn section_encoding(&self) -> &SectionEncoding {
-        &self.section_encoding
+    pub(crate) fn section_encoding(&self) -> SectionEncoding {
+        self.section_encoding
     }
 
     pub(crate) fn offset(&self) -> usize {

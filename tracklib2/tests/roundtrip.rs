@@ -43,8 +43,8 @@ mod tests {
         let track_reader = TrackReader::from_bytes(&buf).unwrap();
         let mut read_values: Vec<i64> = vec![];
         for section in track_reader.sections() {
-            let mut s = section.unwrap();
-            while let Some(columniter) = s.open_column_iter() {
+            let mut section_reader = section.reader().unwrap();
+            while let Some(columniter) = section_reader.open_column_iter() {
                 let vals = columniter.collect::<Vec<_>>();
                 assert_eq!(vals.len(), 1);
                 let (_field_desc, field_value) = vals[0].as_ref().unwrap();
@@ -83,8 +83,8 @@ mod tests {
         let track_reader = TrackReader::from_bytes(&buf).unwrap();
         let mut read_values: Vec<f64> = vec![];
         for section in track_reader.sections() {
-            let mut s = section.unwrap();
-            while let Some(columniter) = s.open_column_iter() {
+            let mut section_reader = section.reader().unwrap();
+            while let Some(columniter) = section_reader.open_column_iter() {
                 let vals = columniter.collect::<Vec<_>>();
                 assert_eq!(vals.len(), 1);
                 let (_field_desc, field_value) = vals[0].as_ref().unwrap();
@@ -123,8 +123,8 @@ mod tests {
         let track_reader = TrackReader::from_bytes(&buf).unwrap();
         let mut read_values: Vec<bool> = vec![];
         for section in track_reader.sections() {
-            let mut s = section.unwrap();
-            while let Some(columniter) = s.open_column_iter() {
+            let mut section_reader = section.reader().unwrap();
+            while let Some(columniter) = section_reader.open_column_iter() {
                 let vals = columniter.collect::<Vec<_>>();
                 assert_eq!(vals.len(), 1);
                 let (_field_desc, field_value) = vals[0].as_ref().unwrap();
@@ -170,8 +170,8 @@ mod tests {
         let track_reader = TrackReader::from_bytes(&buf).unwrap();
         let mut read_values: Vec<String> = vec![];
         for section in track_reader.sections() {
-            let mut s = section.unwrap();
-            while let Some(columniter) = s.open_column_iter() {
+            let mut section_reader = section.reader().unwrap();
+            while let Some(columniter) = section_reader.open_column_iter() {
                 let vals = columniter.collect::<Vec<_>>();
                 assert_eq!(vals.len(), 1);
                 let (_field_desc, field_value) = vals[0].as_ref().unwrap();

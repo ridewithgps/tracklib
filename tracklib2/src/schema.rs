@@ -1,4 +1,5 @@
 #[derive(Debug)]
+#[cfg_attr(test, derive(PartialEq))]
 pub struct Schema {
     fields: Vec<FieldDefinition>,
 }
@@ -13,8 +14,7 @@ impl Schema {
     }
 }
 
-#[derive(Clone, Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(Clone, Debug, PartialEq)]
 pub struct FieldDefinition {
     name: String,
     data_type: DataType,
@@ -44,8 +44,7 @@ pub enum BitstreamType {
     Bool,
 }
 
-#[derive(Clone, Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(Clone, Debug, PartialEq)]
 pub enum DataType {
     I64,
     Bool,

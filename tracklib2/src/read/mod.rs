@@ -8,5 +8,5 @@ pub mod inspect;
 mod metadata;
 mod presence_column;
 mod schema;
-mod section_reader;
+mod section;
 pub mod track;

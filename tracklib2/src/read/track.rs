@@ -14,7 +14,7 @@ pub struct TrackReader<'a> {
 }
 
 impl<'a> TrackReader<'a> {
-    pub fn from_bytes(data: &'a [u8]) -> Result<Self> {
+    pub fn new(data: &'a [u8]) -> Result<Self> {
         let (_, header) = parse_header(data)?;
         let (_, metadata_entries) = parse_metadata(&data[usize::from(header.metadata_offset())..])?;
         let (data_start, data_table) =
@@ -283,7 +283,7 @@ mod tests {
             0xEC,
             0x48];
 
-        let track = assert_matches!(TrackReader::from_bytes(buf), Ok(track) => track);
+        let track = assert_matches!(TrackReader::new(buf), Ok(track) => track);
 
         assert_eq!(track.file_version(), 1);
         assert_eq!(track.creator_version(), 0);

@@ -87,5 +87,19 @@ methods!(
         }
 
         metadata_array
+    },
+    fn trackreader_file_version() -> Integer {
+        Integer::from(u32::from(
+            rtself
+                .get_data(&*TRACK_READER_WRAPPER)
+                .with_track_reader(|track_reader| track_reader.file_version()),
+        ))
+    },
+    fn trackreader_creator_version() -> Integer {
+        Integer::from(u32::from(
+            rtself
+                .get_data(&*TRACK_READER_WRAPPER)
+                .with_track_reader(|track_reader| track_reader.creator_version()),
+        ))
     }
 );

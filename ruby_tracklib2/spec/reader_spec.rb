@@ -205,4 +205,10 @@ describe TrackReader do
     track_reader = TrackReader.new(data)
     expect(track_reader.metadata()).to eq([[:track_type, :segment, 5]])
   end
+
+  it "can read versions" do
+    track_reader = TrackReader.new(data)
+    expect(track_reader.file_version()).to eq(1)
+    expect(track_reader.creator_version()).to eq(0)
+  end
 end

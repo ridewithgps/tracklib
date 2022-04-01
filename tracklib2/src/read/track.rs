@@ -52,6 +52,10 @@ impl<'a> TrackReader<'a> {
             entries: &self.data_table,
         }
     }
+
+    pub fn section_count(&self) -> usize {
+        self.data_table.len()
+    }
 }
 
 pub struct SectionIter<'a> {
@@ -287,7 +291,7 @@ mod tests {
 
         assert_eq!(track.file_version(), 1);
         assert_eq!(track.creator_version(), 0);
-
+        assert_eq!(track.section_count(), 2);
         assert_eq!(track.metadata().len(), 1);
 
         assert_matches!(

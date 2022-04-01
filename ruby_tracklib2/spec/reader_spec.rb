@@ -112,7 +112,7 @@ data = [
   0x8D,
   0x79,
   0x68,
-  
+
   # Data Column 2 = Bool
   0x01, # true
   0x01, # true
@@ -210,5 +210,31 @@ describe TrackReader do
     track_reader = TrackReader.new(data)
     expect(track_reader.file_version()).to eq(1)
     expect(track_reader.creator_version()).to eq(0)
+  end
+
+  it "can iterate through sections" do
+    track_reader = TrackReader.new(data)
+    expect(track_reader.section_count()).to eq(2)
+
+    expect(track_reader.section_encoding(0)).to eq(:standard)
+    expect(track_reader.section_schema(0)).to eq([["m", :i64], ["k", :bool], ["j", :string]])
+    expect(track_reader.section_rows(0)).to eq(5)
+    expect(track_reader.section_data(0)).to eq([{"m"=>42, "k"=>true, "j"=>"hey"},
+                                                {"m"=>42, "k"=>true, "j"=>"hey"},
+                                                {"m"=>42, "k"=>true, "j"=>"hey"},
+                                                {"m"=>42, "k"=>true, "j"=>"hey"},
+                                                {"m"=>42, "k"=>true, "j"=>"hey"}])
+
+    expect(track_reader.section_encoding(1)).to eq(:standard)
+    expect(track_reader.section_schema(1)).to eq([["a", :i64], ["b", :bool], ["c", :string]])
+    expect(track_reader.section_rows(1)).to eq(3)
+    expect(track_reader.section_data(1)).to eq([{"a"=>1, "b"=>false, "c"=>"Ride"},
+                                                {"a"=>2, "c"=>"with"},
+                                                {"a"=>4, "b"=>true, "c"=>"GPS"}])
+  end
+
+  it "raises an exception for an invalid section index" do
+    track_reader = TrackReader.new(data)
+    expect {track_reader.section_encoding(2) }.to raise_error("Section does not exist")
   end
 end

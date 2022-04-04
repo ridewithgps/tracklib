@@ -40,7 +40,7 @@ mod tests {
         assert!(write_track(&mut buf, &[], &[section]).is_ok());
 
         // Read
-        let track_reader = TrackReader::from_bytes(&buf).unwrap();
+        let track_reader = TrackReader::new(&buf).unwrap();
         let mut read_values: Vec<i64> = vec![];
         for section in track_reader.sections() {
             let mut section_reader = section.reader().unwrap();
@@ -80,7 +80,7 @@ mod tests {
         assert!(write_track(&mut buf, &[], &[section]).is_ok());
 
         // Read
-        let track_reader = TrackReader::from_bytes(&buf).unwrap();
+        let track_reader = TrackReader::new(&buf).unwrap();
         let mut read_values: Vec<f64> = vec![];
         for section in track_reader.sections() {
             let mut section_reader = section.reader().unwrap();
@@ -120,7 +120,7 @@ mod tests {
         assert!(write_track(&mut buf, &[], &[section]).is_ok());
 
         // Read
-        let track_reader = TrackReader::from_bytes(&buf).unwrap();
+        let track_reader = TrackReader::new(&buf).unwrap();
         let mut read_values: Vec<bool> = vec![];
         for section in track_reader.sections() {
             let mut section_reader = section.reader().unwrap();
@@ -167,7 +167,7 @@ mod tests {
         assert!(write_track(&mut buf, &[], &[section]).is_ok());
 
         // Read
-        let track_reader = TrackReader::from_bytes(&buf).unwrap();
+        let track_reader = TrackReader::new(&buf).unwrap();
         let mut read_values: Vec<String> = vec![];
         for section in track_reader.sections() {
             let mut section_reader = section.reader().unwrap();

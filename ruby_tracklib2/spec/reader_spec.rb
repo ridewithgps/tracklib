@@ -235,6 +235,53 @@ describe TrackReader do
 
   it "raises an exception for an invalid section index" do
     track_reader = TrackReader.new(data)
-    expect {track_reader.section_encoding(2) }.to raise_error("Section does not exist")
+    expect { track_reader.section_encoding(2) }.to raise_error("Section does not exist")
+  end
+
+  it "can select a subset of fields" do
+    track_reader = TrackReader.new(data)
+    # field that doesn't exist
+    expect(track_reader.section_data(0, [["z", :i64]])).to eq([{},
+                                                               {},
+                                                               {},
+                                                               {},
+                                                               {}])
+    # field that does exist, but it's a different type
+    expect(track_reader.section_data(0, [["m", :bool]])).to eq([{},
+                                                                {},
+                                                                {},
+                                                                {},
+                                                                {}])
+    # both of these fields exist
+    expect(track_reader.section_data(0, [["m", :i64], ["j", :string]])).to eq([{"m"=>42, "j"=>"hey"},
+                                                                               {"m"=>42, "j"=>"hey"},
+                                                                               {"m"=>42, "j"=>"hey"},
+                                                                               {"m"=>42, "j"=>"hey"},
+                                                                               {"m"=>42, "j"=>"hey"}])
+    # one field that exists and one that doesn't
+    expect(track_reader.section_data(0, [["m", :i64], ["z", :i64]])).to eq([{"m"=>42},
+                                                                            {"m"=>42},
+                                                                            {"m"=>42},
+                                                                            {"m"=>42},
+                                                                            {"m"=>42}])
+
+    # Error Conditions:
+
+    # invalid schema type - this is just treated as not passing in a schema
+    expect(track_reader.section_data(0, "Foo")).to eq([{"m"=>42, "k"=>true, "j"=>"hey"},
+                                                       {"m"=>42, "k"=>true, "j"=>"hey"},
+                                                       {"m"=>42, "k"=>true, "j"=>"hey"},
+                                                       {"m"=>42, "k"=>true, "j"=>"hey"},
+                                                       {"m"=>42, "k"=>true, "j"=>"hey"}])
+    # invalid schema entry type
+    expect { track_reader.section_data(0, ["Foo"]) }.to raise_error
+    # invalid schema entry length
+    expect { track_reader.section_data(0, [["Foo", :bool, 5]]) }.to raise_error
+    # invalid schema entry name type
+    expect { track_reader.section_data(0, [[:Foo, :bool]]) }.to raise_error
+    # invalid schema entry data type
+    expect { track_reader.section_data(0, [["Foo", "bool"]]) }.to raise_error
+    # invalid schema entry data type value
+    expect { track_reader.section_data(0, [["Foo", :invalid]]) }.to raise_error
   end
 end

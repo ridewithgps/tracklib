@@ -1,3 +1,4 @@
+mod schema;
 mod track_reader;
 use rutie::{Class, Object};
 

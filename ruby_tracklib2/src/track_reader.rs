@@ -185,7 +185,7 @@ methods!(
                 .unwrap(),
         )
     },
-    fn trackreader_section_data(index: Integer) -> Array {
+    fn trackreader_section_data(index: Integer, schema: Array) -> Array {
         let ruby_index = index.map_err(|e| VM::raise_ex(e)).unwrap();
         let rust_index = usize::try_from(ruby_index.to_u64())
             .map_err(|e| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
@@ -194,12 +194,22 @@ methods!(
             .get_data(&*TRACK_READER_WRAPPER)
             .with_track_reader(|track_reader| {
                 track_reader.section(rust_index).map(|section| {
-                    let mut section_reader = section
-                        .reader()
-                        .map_err(|e| {
-                            VM::raise(Class::from_existing("Exception"), &format!("{}", e))
-                        })
-                        .unwrap();
+                    let mut section_reader = if let Ok(ruby_schema) = schema {
+                        let tracklib_schema = crate::schema::create_schema(ruby_schema);
+                        section
+                            .reader_for_schema(&tracklib_schema)
+                            .map_err(|e| {
+                                VM::raise(Class::from_existing("Exception"), &format!("{}", e))
+                            })
+                            .unwrap()
+                    } else {
+                        section
+                            .reader()
+                            .map_err(|e| {
+                                VM::raise(Class::from_existing("Exception"), &format!("{}", e))
+                            })
+                            .unwrap()
+                    };
 
                     let mut data_array = Array::new();
                     while let Some(columniter) = section_reader.open_column_iter() {

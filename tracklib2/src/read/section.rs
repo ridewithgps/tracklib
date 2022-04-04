@@ -51,7 +51,7 @@ impl<'a> Section<'a> {
         )
     }
 
-    pub fn reader_for_schema(&self, schema: &Schema) -> Option<Result<SectionReader>> {
+    pub fn reader_for_schema(&self, schema: &Schema) -> Result<SectionReader> {
         let schema_entries = schema
             .fields()
             .into_iter()
@@ -64,16 +64,12 @@ impl<'a> Section<'a> {
             })
             .collect::<Vec<_>>();
 
-        if schema_entries.len() == schema.fields().len() {
-            Some(SectionReader::new(
-                self.input,
-                schema_entries,
-                self.data_table_entry.schema_entries().len(),
-                self.data_table_entry.rows(),
-            ))
-        } else {
-            None
-        }
+        SectionReader::new(
+            self.input,
+            schema_entries,
+            self.data_table_entry.schema_entries().len(),
+            self.data_table_entry.rows(),
+        )
     }
 }
 
@@ -545,18 +541,109 @@ mod tests {
             // Missing field
             assert_matches!(section.reader_for_schema(&Schema::with_fields(vec![
                 FieldDefinition::new("z", DataType::Bool),
-            ])), None);
+            ])), Ok(mut section_reader) => {
+                // Row 1
+                assert_eq!(section_reader.rows_remaining(), 3);
+                assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
+                    assert_eq!(column_iter.count(), 0);
+                });
+
+                // Row 2
+                assert_eq!(section_reader.rows_remaining(), 2);
+                assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
+                    assert_eq!(column_iter.count(), 0);
+                });
+
+                // Row 3
+                assert_eq!(section_reader.rows_remaining(), 1);
+                assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
+                    assert_eq!(column_iter.count(), 0);
+                });
+
+                // Trying to get another row will return nothing
+                assert_eq!(section_reader.rows_remaining(), 0);
+                assert_matches!(section_reader.open_column_iter(), None);
+            });
 
             // Field exists but we're asking for the wrong type
             assert_matches!(section.reader_for_schema(&Schema::with_fields(vec![
                 FieldDefinition::new("b", DataType::I64),
-            ])), None);
+            ])), Ok(mut section_reader) => {
+                // Row 1
+                assert_eq!(section_reader.rows_remaining(), 3);
+                assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
+                    assert_eq!(column_iter.count(), 0);
+                });
+
+                // Row 2
+                assert_eq!(section_reader.rows_remaining(), 2);
+                assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
+                    assert_eq!(column_iter.count(), 0);
+                });
+
+                // Row 3
+                assert_eq!(section_reader.rows_remaining(), 1);
+                assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
+                    assert_eq!(column_iter.count(), 0);
+                });
+
+                // Trying to get another row will return nothing
+                assert_eq!(section_reader.rows_remaining(), 0);
+                assert_matches!(section_reader.open_column_iter(), None);
+            });
+
+
+            // Only one of these fields exists
+            assert_matches!(section.reader_for_schema(&Schema::with_fields(vec![
+                FieldDefinition::new("b", DataType::Bool),
+                FieldDefinition::new("z", DataType::Bool),
+            ])), Ok(mut section_reader) => {
+                // Row 1
+                assert_eq!(section_reader.rows_remaining(), 3);
+                assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
+                    let values = column_iter.collect::<Vec<_>>();
+                    assert_eq!(values.len(), 1);
+                    assert_matches!(&values[0], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[1].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("b", DataType::Bool));
+                        assert_eq!(field_value, &Some(FieldValue::Bool(false)));
+                    });
+                });
+
+                // Row 2
+                assert_eq!(section_reader.rows_remaining(), 2);
+                assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
+                    let values = column_iter.collect::<Vec<_>>();
+                    assert_eq!(values.len(), 1);
+                    assert_matches!(&values[0], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[1].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("b", DataType::Bool));
+                        assert_eq!(field_value, &None);
+                    });
+                });
+
+                // Row 3
+                assert_eq!(section_reader.rows_remaining(), 1);
+                assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
+                    let values = column_iter.collect::<Vec<_>>();
+                    assert_eq!(values.len(), 1);
+                    assert_matches!(&values[0], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[1].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("b", DataType::Bool));
+                        assert_eq!(field_value, &Some(FieldValue::Bool(true)));
+                    });
+                });
+
+                // Trying to get another row will return nothing
+                assert_eq!(section_reader.rows_remaining(), 0);
+                assert_matches!(section_reader.open_column_iter(), None);
+            });
 
             // Both of these fields exist
             assert_matches!(section.reader_for_schema(&Schema::with_fields(vec![
                 FieldDefinition::new("b", DataType::Bool),
                 FieldDefinition::new("f", DataType::F64),
-            ])), Some(Ok(mut section_reader)) => {
+            ])), Ok(mut section_reader) => {
                 // Row 1
                 assert_eq!(section_reader.rows_remaining(), 3);
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {

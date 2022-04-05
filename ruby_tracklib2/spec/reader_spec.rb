@@ -200,20 +200,20 @@ data = [
   0x48
 ].pack("c*")
 
-describe TrackReader do
+describe Tracklib::TrackReader do
   it "can read metadata" do
-    track_reader = TrackReader.new(data)
+    track_reader = Tracklib::TrackReader.new(data)
     expect(track_reader.metadata()).to eq([[:track_type, :segment, 5]])
   end
 
   it "can read versions" do
-    track_reader = TrackReader.new(data)
+    track_reader = Tracklib::TrackReader.new(data)
     expect(track_reader.file_version()).to eq(1)
     expect(track_reader.creator_version()).to eq(0)
   end
 
   it "can iterate through sections" do
-    track_reader = TrackReader.new(data)
+    track_reader = Tracklib::TrackReader.new(data)
     expect(track_reader.section_count()).to eq(2)
 
     expect(track_reader.section_encoding(0)).to eq(:standard)
@@ -234,12 +234,12 @@ describe TrackReader do
   end
 
   it "raises an exception for an invalid section index" do
-    track_reader = TrackReader.new(data)
+    track_reader = Tracklib::TrackReader.new(data)
     expect { track_reader.section_encoding(2) }.to raise_error("Section does not exist")
   end
 
   it "can select a subset of fields" do
-    track_reader = TrackReader.new(data)
+    track_reader = Tracklib::TrackReader.new(data)
     # field that doesn't exist
     expect(track_reader.section_data(0, [["z", :i64]])).to eq([{},
                                                                {},

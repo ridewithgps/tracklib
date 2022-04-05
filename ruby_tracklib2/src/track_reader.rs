@@ -1,7 +1,7 @@
 use ouroboros::self_referencing;
 use rutie::{
     class, methods, wrappable_struct, AnyObject, Array, Boolean, Class, Float, Hash, Integer,
-    Object, RString, Symbol, VM,
+    Module, Object, RString, Symbol, VM,
 };
 use tracklib2;
 
@@ -33,7 +33,9 @@ methods!(
                 .unwrap()
         });
 
-        Class::from_existing("TrackReader").wrap_data(wrapper, &*TRACK_READER_WRAPPER)
+        Module::from_existing("Tracklib")
+            .get_nested_class("TrackReader")
+            .wrap_data(wrapper, &*TRACK_READER_WRAPPER)
     },
     fn trackreader_metadata() -> Array {
         let metadata_entries = rtself

@@ -1,5 +1,6 @@
 mod schema;
 mod track_reader;
+mod write;
 use rutie::{Module, Object};
 
 #[allow(non_snake_case)]
@@ -20,5 +21,11 @@ pub extern "C" fn Init_Tracklib() {
                 class.def("section_rows", track_reader::trackreader_section_rows);
                 class.def("section_data", track_reader::trackreader_section_data);
             });
+
+        module.define_nested_class("Section", None).define(|class| {
+            class.def_self("new", write::section_new);
+        });
+
+        module.define_module_function("write_track", write::write_track);
     });
 }

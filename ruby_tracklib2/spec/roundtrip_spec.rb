@@ -49,4 +49,12 @@ describe Tracklib do
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.section_data(0)).to eq(data)
   end
+
+  it "can roundtrip metadata" do
+    metadata = [[:created_at, Time.new(1970, 1, 2, 11, 12, 13, "UTC")],
+                [:track_type, :route, 1000]]
+    buf = Tracklib::write_track(metadata, [])
+    reader = Tracklib::TrackReader::new(buf)
+    expect(reader.metadata()).to eq(metadata)
+  end
 end

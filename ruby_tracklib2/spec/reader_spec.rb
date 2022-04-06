@@ -20,25 +20,36 @@ data = [
   0x00,
   0x18, # metadata table offset
   0x00,
-  0x23, # data offset
+  0x2E, # data offset
   0x00,
   0x00, # e reserve
   0x00,
-  0x89, # header crc
-  0x98,
+  0x8B, # header crc
+  0x34,
 
   # Metadata Table
-  0x01, # one entry
+  0x02, # two entries
   0x00, # entry type: track_type = 0x00
   0x05, # two byte entry size = 5
   0x00,
-  0x02, # track type: segment = 0x02
-  0x05, # four byte segment ID
+  0x00, # track type: trip = 0x00
+  0x14, # four byte trip ID = 20
   0x00,
   0x00,
   0x00,
-  0xD4, # crc
-  0x93,
+  0x01, # entry type: created_at = 0x01
+  0x08, # two byte entry size = 8
+  0x00,
+  0x00, # eight byte timestamp: zero seconds elapsed
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x23, # crc
+  0xD2,
 
   # Data Table
   0x02, # two sections
@@ -203,7 +214,8 @@ data = [
 describe Tracklib::TrackReader do
   it "can read metadata" do
     track_reader = Tracklib::TrackReader.new(data)
-    expect(track_reader.metadata()).to eq([[:track_type, :segment, 5]])
+    expect(track_reader.metadata()).to eq([[:track_type, :trip, 20],
+                                           [:created_at, Time.new(1970, 1, 1, 0, 0, 0, "UTC")]])
   end
 
   it "can read versions" do

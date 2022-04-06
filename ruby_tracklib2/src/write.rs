@@ -1,6 +1,6 @@
 use rutie::{
     class, methods, module, wrappable_struct, AnyObject, Array, Boolean, Class, Encoding, Float,
-    Hash, Integer, Module, NilClass, Object, RString, Symbol, VerifiedObject, VM,
+    Hash, Integer, Module, Object, RString, Symbol, VerifiedObject, VM,
 };
 
 pub struct SectionInner {
@@ -29,6 +29,105 @@ methods!(
         };
         let mut tracklib_section =
             tracklib2::write::section::Section::new(tracklib_encoding, tracklib_schema);
+
+        for ruby_row_obj in data.map_err(|e| VM::raise_ex(e)).unwrap() {
+            let ruby_row = ruby_row_obj
+                .try_convert_to::<Hash>()
+                .map_err(|e| VM::raise_ex(e))
+                .unwrap();
+
+            let mut rowbuilder = tracklib_section.open_row_builder();
+
+            while let Some(column_writer) = rowbuilder.next_column_writer() {
+                match column_writer {
+                    tracklib2::write::section::ColumnWriter::I64ColumnWriter(cwi) => {
+                        let ruby_field_name =
+                            RString::from(String::from(cwi.field_definition().name()));
+                        let ruby_field = ruby_row.at(&ruby_field_name);
+
+                        let write_result = if ruby_field.is_nil() {
+                            cwi.write(None)
+                        } else {
+                            cwi.write(Some(&match ruby_field.try_convert_to::<Integer>() {
+                                Ok(i) => i.to_i64(),
+                                Err(int_e) => ruby_field
+                                    .try_convert_to::<Float>()
+                                    .map_err(|_| VM::raise_ex(int_e))
+                                    .unwrap()
+                                    .to_f64()
+                                    .round() as i64,
+                            }))
+                        };
+
+                        if let Err(e) = write_result {
+                            VM::raise(Class::from_existing("Exception"), &format!("{:?}", e));
+                        }
+                    }
+                    tracklib2::write::section::ColumnWriter::BoolColumnWriter(cwi) => {
+                        let ruby_field_name =
+                            RString::from(String::from(cwi.field_definition().name()));
+                        let ruby_field = ruby_row.at(&ruby_field_name);
+
+                        let write_result = if ruby_field.is_nil() {
+                            cwi.write(None)
+                        } else {
+                            cwi.write(Some(
+                                &ruby_field
+                                    .try_convert_to::<Boolean>()
+                                    .map_err(|e| VM::raise_ex(e))
+                                    .unwrap()
+                                    .to_bool(),
+                            ))
+                        };
+
+                        if let Err(e) = write_result {
+                            VM::raise(Class::from_existing("Exception"), &format!("{:?}", e));
+                        }
+                    }
+                    tracklib2::write::section::ColumnWriter::StringColumnWriter(cwi) => {
+                        let ruby_field_name =
+                            RString::from(String::from(cwi.field_definition().name()));
+                        let ruby_field = ruby_row.at(&ruby_field_name);
+
+                        let write_result = if ruby_field.is_nil() {
+                            cwi.write(None)
+                        } else {
+                            cwi.write(Some(
+                                &ruby_field
+                                    .try_convert_to::<RString>()
+                                    .map_err(|e| VM::raise_ex(e))
+                                    .unwrap()
+                                    .to_string(),
+                            ))
+                        };
+
+                        if let Err(e) = write_result {
+                            VM::raise(Class::from_existing("Exception"), &format!("{:?}", e));
+                        }
+                    }
+                    tracklib2::write::section::ColumnWriter::F64ColumnWriter(cwi) => {
+                        let ruby_field_name =
+                            RString::from(String::from(cwi.field_definition().name()));
+                        let ruby_field = ruby_row.at(&ruby_field_name);
+
+                        let write_result = if ruby_field.is_nil() {
+                            cwi.write(None)
+                        } else {
+                            cwi.write(Some(
+                                &Float::implicit_to_f(ruby_field)
+                                    .map_err(|e| VM::raise_ex(e))
+                                    .unwrap()
+                                    .to_f64(),
+                            ))
+                        };
+
+                        if let Err(e) = write_result {
+                            VM::raise(Class::from_existing("Exception"), &format!("{:?}", e));
+                        }
+                    }
+                }
+            }
+        }
 
         Module::from_existing("Tracklib")
             .get_nested_class("Section")

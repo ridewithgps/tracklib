@@ -3,11 +3,11 @@ use rutie::{
     Hash, Integer, Module, Object, RString, Symbol, VerifiedObject, VM,
 };
 
-pub struct SectionInner {
-    inner: tracklib2::write::section::Section,
+pub struct WrappableSection {
+    section: tracklib2::write::section::Section,
 }
 
-wrappable_struct!(SectionInner, SectionWrapper, SECTION_WRAPPER);
+wrappable_struct!(WrappableSection, SectionWrapper, SECTION_WRAPPER_INSTANCE);
 
 class!(Section);
 
@@ -132,10 +132,10 @@ methods!(
         Module::from_existing("Tracklib")
             .get_nested_class("Section")
             .wrap_data(
-                SectionInner {
-                    inner: tracklib_section,
+                WrappableSection {
+                    section: tracklib_section,
                 },
-                &*SECTION_WRAPPER,
+                &*SECTION_WRAPPER_INSTANCE,
             )
     },
 );
@@ -275,7 +275,7 @@ methods!(
 
         let tracklib_sections = section_wrappers
             .iter()
-            .map(|section_wrapper| &section_wrapper.get_data(&*SECTION_WRAPPER).inner)
+            .map(|section_wrapper| &section_wrapper.get_data(&*SECTION_WRAPPER_INSTANCE).section)
             .collect::<Vec<_>>();
 
         let mut buf = vec![];

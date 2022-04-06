@@ -1,5 +1,5 @@
-mod schema;
 mod read;
+mod schema;
 mod write;
 use rutie::{Module, Object};
 

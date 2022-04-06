@@ -6,7 +6,7 @@ use rutie::{
 use tracklib2;
 
 #[self_referencing]
-pub struct TrackReaderWrapper {
+pub struct WrappableTrackReader {
     data: Vec<u8>,
     #[borrows(data)]
     #[not_covariant]
@@ -14,9 +14,9 @@ pub struct TrackReaderWrapper {
 }
 
 wrappable_struct!(
+    WrappableTrackReader,
     TrackReaderWrapper,
-    TrackReaderWrapperWrapper,
-    TRACK_READER_WRAPPER
+    TRACK_READER_WRAPPER_INSTANCE
 );
 
 class!(TrackReader);
@@ -27,7 +27,7 @@ methods!(
     fn trackreader_new(bytes: RString) -> AnyObject {
         let source = bytes.map_err(|e| VM::raise_ex(e)).unwrap();
         let data = source.to_bytes_unchecked().to_vec();
-        let wrapper = TrackReaderWrapper::new(data, |d| {
+        let wrapper = WrappableTrackReader::new(data, |d| {
             tracklib2::read::track::TrackReader::new(d)
                 .map_err(|e| VM::raise(Class::from_existing("Exception"), &format!("{}", e)))
                 .unwrap()
@@ -35,11 +35,11 @@ methods!(
 
         Module::from_existing("Tracklib")
             .get_nested_class("TrackReader")
-            .wrap_data(wrapper, &*TRACK_READER_WRAPPER)
+            .wrap_data(wrapper, &*TRACK_READER_WRAPPER_INSTANCE)
     },
     fn trackreader_metadata() -> Array {
         let metadata_entries = rtself
-            .get_data(&*TRACK_READER_WRAPPER)
+            .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
             .with_track_reader(|track_reader| track_reader.metadata());
 
         let mut metadata_array = Array::new();
@@ -94,14 +94,14 @@ methods!(
     fn trackreader_file_version() -> Integer {
         Integer::from(u32::from(
             rtself
-                .get_data(&*TRACK_READER_WRAPPER)
+                .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
                 .with_track_reader(|track_reader| track_reader.file_version()),
         ))
     },
     fn trackreader_creator_version() -> Integer {
         Integer::from(u32::from(
             rtself
-                .get_data(&*TRACK_READER_WRAPPER)
+                .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
                 .with_track_reader(|track_reader| track_reader.creator_version()),
         ))
     },
@@ -109,7 +109,7 @@ methods!(
         Integer::from(
             u64::try_from(
                 rtself
-                    .get_data(&*TRACK_READER_WRAPPER)
+                    .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
                     .with_track_reader(|track_reader| track_reader.section_count()),
             )
             .map_err(|e| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
@@ -122,7 +122,7 @@ methods!(
             .map_err(|e| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
             .unwrap();
         let encoding = rtself
-            .get_data(&*TRACK_READER_WRAPPER)
+            .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
             .with_track_reader(|track_reader| {
                 track_reader
                     .section(rust_index)
@@ -141,7 +141,7 @@ methods!(
             .map_err(|e| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
             .unwrap();
         let schema = rtself
-            .get_data(&*TRACK_READER_WRAPPER)
+            .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
             .with_track_reader(|track_reader| {
                 track_reader
                     .section(rust_index)
@@ -172,7 +172,7 @@ methods!(
             .map_err(|e| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
             .unwrap();
         let rows = rtself
-            .get_data(&*TRACK_READER_WRAPPER)
+            .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
             .with_track_reader(|track_reader| {
                 track_reader
                     .section(rust_index)
@@ -193,7 +193,7 @@ methods!(
             .map_err(|e| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
             .unwrap();
         let data = rtself
-            .get_data(&*TRACK_READER_WRAPPER)
+            .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
             .with_track_reader(|track_reader| {
                 track_reader.section(rust_index).map(|section| {
                     let mut section_reader = if let Ok(ruby_schema) = schema {

@@ -37,7 +37,7 @@ mod tests {
                 }
             }
         }
-        assert!(write_track(&mut buf, &[], &[section]).is_ok());
+        assert!(write_track(&mut buf, &[], &[&section]).is_ok());
 
         // Read
         let track_reader = TrackReader::new(&buf).unwrap();
@@ -77,7 +77,7 @@ mod tests {
                 }
             }
         }
-        assert!(write_track(&mut buf, &[], &[section]).is_ok());
+        assert!(write_track(&mut buf, &[], &[&section]).is_ok());
 
         // Read
         let track_reader = TrackReader::new(&buf).unwrap();
@@ -117,7 +117,7 @@ mod tests {
                 }
             }
         }
-        assert!(write_track(&mut buf, &[], &[section]).is_ok());
+        assert!(write_track(&mut buf, &[], &[&section]).is_ok());
 
         // Read
         let track_reader = TrackReader::new(&buf).unwrap();
@@ -164,7 +164,7 @@ mod tests {
                 }
             }
         }
-        assert!(write_track(&mut buf, &[], &[section]).is_ok());
+        assert!(write_track(&mut buf, &[], &[&section]).is_ok());
 
         // Read
         let track_reader = TrackReader::new(&buf).unwrap();

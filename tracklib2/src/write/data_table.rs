@@ -13,7 +13,7 @@ impl SectionEncoding {
 }
 
 #[rustfmt::skip]
-pub(crate) fn write_data_table<W: Write>(out: &mut W, sections: &[Section]) -> Result<()> {
+pub(crate) fn write_data_table<W: Write>(out: &mut W, sections: &[&Section]) -> Result<()> {
     let mut crcwriter = CrcWriter::new16(out);
 
     crcwriter.write_all(&u8::try_from(sections.len())?.to_le_bytes())?;                // 1 byte  - number of sections
@@ -67,7 +67,7 @@ mod tests {
         );
 
         let mut buf = Vec::new();
-        assert_matches!(write_data_table(&mut buf, &[section1, section2]), Ok(()) => {
+        assert_matches!(write_data_table(&mut buf, &[&section1, &section2]), Ok(()) => {
             #[rustfmt::skip]
             assert_eq!(buf,
                        &[0x02, // number of sections
@@ -135,7 +135,7 @@ mod tests {
         );
 
         let mut buf = Vec::new();
-        assert_matches!(write_data_table(&mut buf, &[section]), Ok(()) => {
+        assert_matches!(write_data_table(&mut buf, &[&section]), Ok(()) => {
             #[rustfmt::skip]
             assert_eq!(buf,
                        &[0x01, // number of sections

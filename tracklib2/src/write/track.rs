@@ -9,7 +9,7 @@ use std::io::{self, Write};
 pub fn write_track<W: Write>(
     out: &mut W,
     metadata_entries: &[MetadataEntry],
-    sections: &[Section],
+    sections: &[&Section],
 ) -> Result<()> {
     // write metadata to a buffer so we can measure its size to use in the file header
     let mut metadata_buf = Vec::new();
@@ -26,7 +26,7 @@ pub fn write_track<W: Write>(
     io::copy(&mut io::Cursor::new(metadata_buf), out)?;
 
     // write the data table
-    write_data_table(out, &sections)?;
+    write_data_table(out, sections)?;
 
     // now write out all the data sections
     for section in sections {

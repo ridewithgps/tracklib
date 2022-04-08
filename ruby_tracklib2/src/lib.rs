@@ -20,6 +20,7 @@ pub extern "C" fn Init_Tracklib() {
                 class.def("section_schema", read::trackreader_section_schema);
                 class.def("section_rows", read::trackreader_section_rows);
                 class.def("section_data", read::trackreader_section_data);
+                class.def("section_column", read::trackreader_section_column);
             });
 
         module.define_nested_class("Section", None).define(|class| {

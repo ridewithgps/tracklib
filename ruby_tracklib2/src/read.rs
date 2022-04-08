@@ -1,7 +1,7 @@
 use ouroboros::self_referencing;
 use rutie::{
     class, methods, wrappable_struct, AnyObject, Array, Boolean, Class, Float, Hash, Integer,
-    Module, Object, RString, Symbol, VM,
+    Module, NilClass, Object, RString, Symbol, VM,
 };
 use tracklib2;
 
@@ -187,7 +187,7 @@ methods!(
                 .unwrap(),
         )
     },
-    fn trackreader_section_data(index: Integer, schema: Array) -> Array {
+    fn trackreader_section_data(index: Integer) -> Array {
         let ruby_index = index.map_err(|e| VM::raise_ex(e)).unwrap();
         let rust_index = usize::try_from(ruby_index.to_u64())
             .map_err(|e| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
@@ -196,22 +196,12 @@ methods!(
             .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
             .with_track_reader(|track_reader| {
                 track_reader.section(rust_index).map(|section| {
-                    let mut section_reader = if let Ok(ruby_schema) = schema {
-                        let tracklib_schema = crate::schema::create_schema(ruby_schema);
-                        section
-                            .reader_for_schema(&tracklib_schema)
-                            .map_err(|e| {
-                                VM::raise(Class::from_existing("Exception"), &format!("{}", e))
-                            })
-                            .unwrap()
-                    } else {
-                        section
-                            .reader()
-                            .map_err(|e| {
-                                VM::raise(Class::from_existing("Exception"), &format!("{}", e))
-                            })
-                            .unwrap()
-                    };
+                    let mut section_reader = section
+                        .reader()
+                        .map_err(|e| {
+                            VM::raise(Class::from_existing("Exception"), &format!("{}", e))
+                        })
+                        .unwrap();
 
                     let mut data_array = Array::new();
                     while let Some(columniter) = section_reader.open_column_iter() {
@@ -247,6 +237,80 @@ methods!(
                     }
 
                     data_array
+                })
+            })
+            .ok_or_else(|| VM::raise(Class::from_existing("Exception"), "Section does not exist"))
+            .unwrap();
+
+        data
+    },
+    fn trackreader_section_column(index: Integer, column_name: RString) -> AnyObject {
+        let ruby_index = index.map_err(|e| VM::raise_ex(e)).unwrap();
+        let rust_index = usize::try_from(ruby_index.to_u64())
+            .map_err(|e| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
+            .unwrap();
+        let data = rtself
+            .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
+            .with_track_reader(|track_reader| {
+                track_reader.section(rust_index).map(|section| {
+                    let ruby_field_name = column_name.map_err(|e| VM::raise_ex(e)).unwrap();
+                    let field_name = ruby_field_name.to_str();
+
+                    let schema = section.schema();
+                    let maybe_field_def = schema
+                        .fields()
+                        .into_iter()
+                        .find(|field_def| field_def.name() == field_name);
+
+                    if let Some(field_def) = maybe_field_def {
+                        let schema =
+                            tracklib2::schema::Schema::with_fields(vec![field_def.clone()]);
+                        let mut section_reader = section
+                            .reader_for_schema(&schema)
+                            .map_err(|e| {
+                                VM::raise(Class::from_existing("Exception"), &format!("{}", e))
+                            })
+                            .unwrap();
+
+                        let mut data_array = Array::new();
+                        while let Some(mut columniter) = section_reader.open_column_iter() {
+                            let (_field_def, maybe_value) = columniter
+                                .nth(0)
+                                .ok_or_else(|| {
+                                    VM::raise(
+                                        Class::from_existing("Exception"),
+                                        "Missing field inside iterator",
+                                    )
+                                })
+                                .unwrap()
+                                .map_err(|e| {
+                                    VM::raise(Class::from_existing("Exception"), &format!("{}", e))
+                                })
+                                .unwrap();
+
+                            let ruby_value = match maybe_value {
+                                Some(tracklib2::types::FieldValue::I64(v)) => {
+                                    Integer::new(v).to_any_object()
+                                }
+                                Some(tracklib2::types::FieldValue::F64(v)) => {
+                                    Float::new(v).to_any_object()
+                                }
+                                Some(tracklib2::types::FieldValue::Bool(v)) => {
+                                    Boolean::new(v).to_any_object()
+                                }
+                                Some(tracklib2::types::FieldValue::String(v)) => {
+                                    RString::from(String::from(v)).to_any_object()
+                                }
+                                None => NilClass::new().to_any_object(),
+                            };
+
+                            data_array.push(ruby_value);
+                        }
+
+                        data_array.to_any_object()
+                    } else {
+                        NilClass::new().to_any_object()
+                    }
                 })
             })
             .ok_or_else(|| VM::raise(Class::from_existing("Exception"), "Section does not exist"))

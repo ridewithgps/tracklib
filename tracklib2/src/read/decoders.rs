@@ -3,6 +3,7 @@ use super::crc::CRC;
 use super::presence_column::PresenceColumnView;
 use crate::error::Result;
 use crate::error::TracklibError;
+use nom_leb128::leb128_u64;
 
 pub(crate) trait Decoder {
     type T;
@@ -48,10 +49,17 @@ impl<'a> Decoder for I64Decoder<'a> {
     type T = i64;
 
     fn decode(&mut self) -> Result<Option<Self::T>> {
-        let (rest, value) =
-            bitstream::read_i64(self.presence_column_view.next(), self.data, &mut self.prev)?;
-        self.data = rest;
-        Ok(value)
+        match self.presence_column_view.next() {
+            Some(true) => {
+                let (rest, value) = bitstream::read_i64(self.data, &mut self.prev)?;
+                self.data = rest;
+                Ok(Some(value))
+            }
+            Some(false) => Ok(None),
+            None => Err(TracklibError::ParseIncompleteError {
+                needed: nom::Needed::Unknown,
+            }),
+        }
     }
 }
 
@@ -81,10 +89,17 @@ impl<'a> Decoder for F64Decoder<'a> {
     type T = f64;
 
     fn decode(&mut self) -> Result<Option<Self::T>> {
-        let (rest, value) =
-            bitstream::read_i64(self.presence_column_view.next(), self.data, &mut self.prev)?;
-        self.data = rest;
-        Ok(value.map(|v| (v as f64) / 10e6))
+        match self.presence_column_view.next() {
+            Some(true) => {
+                let (rest, value) = bitstream::read_i64(self.data, &mut self.prev)?;
+                self.data = rest;
+                Ok(Some((value as f64) / 10e6))
+            }
+            Some(false) => Ok(None),
+            None => Err(TracklibError::ParseIncompleteError {
+                needed: nom::Needed::Unknown,
+            }),
+        }
     }
 }
 
@@ -112,9 +127,17 @@ impl<'a> Decoder for BoolDecoder<'a> {
     type T = bool;
 
     fn decode(&mut self) -> Result<Option<Self::T>> {
-        let (rest, value) = bitstream::read_bool(self.presence_column_view.next(), self.data)?;
-        self.data = rest;
-        Ok(value)
+        match self.presence_column_view.next() {
+            Some(true) => {
+                let (rest, value) = bitstream::read_bool(self.data)?;
+                self.data = rest;
+                Ok(Some(value))
+            }
+            Some(false) => Ok(None),
+            None => Err(TracklibError::ParseIncompleteError {
+                needed: nom::Needed::Unknown,
+            }),
+        }
     }
 }
 
@@ -142,9 +165,63 @@ impl<'a> Decoder for StringDecoder<'a> {
     type T = String;
 
     fn decode(&mut self) -> Result<Option<Self::T>> {
-        let (rest, value) = bitstream::read_bytes(self.presence_column_view.next(), self.data)?;
-        self.data = rest;
-        Ok(value.map(|bytes| String::from_utf8_lossy(bytes).into_owned()))
+        match self.presence_column_view.next() {
+            Some(true) => {
+                let (rest, value) = bitstream::read_bytes(self.data)?;
+                self.data = rest;
+                Ok(Some(String::from_utf8_lossy(value).into_owned()))
+            }
+            Some(false) => Ok(None),
+            None => Err(TracklibError::ParseIncompleteError {
+                needed: nom::Needed::Unknown,
+            }),
+        }
+    }
+}
+
+#[cfg_attr(test, derive(Debug))]
+pub(crate) struct BoolArrayDecoder<'a> {
+    data: &'a [u8],
+    presence_column_view: PresenceColumnView<'a>,
+}
+
+impl<'a> BoolArrayDecoder<'a> {
+    pub(crate) fn new(
+        data: &'a [u8],
+        presence_column_view: PresenceColumnView<'a>,
+    ) -> Result<Self> {
+        let column_data = validate_column(data)?;
+
+        Ok(Self {
+            data: column_data,
+            presence_column_view,
+        })
+    }
+}
+
+impl<'a> Decoder for BoolArrayDecoder<'a> {
+    type T = Vec<bool>;
+
+    fn decode(&mut self) -> Result<Option<Self::T>> {
+        match self.presence_column_view.next() {
+            Some(true) => {
+                let (mut data, array_len) = leb128_u64(self.data)?;
+                let mut array =
+                    Vec::with_capacity(usize::try_from(array_len).expect("usize != u64"));
+                for _ in 0..array_len {
+                    let (rest, value) = bitstream::read_bool(data)?;
+                    data = rest;
+                    array.push(value);
+                }
+                self.data = data;
+
+                Ok(Some(array))
+            }
+            Some(false) => Ok(None),
+            None => Err(TracklibError::ParseIncompleteError {
+                needed: nom::Needed::Unknown,
+            }),
+        }
     }
 }
 
@@ -341,6 +418,40 @@ mod tests {
         assert_matches!(StringDecoder::new(buf, presence_column_view), Ok(mut decoder) => {
             assert_matches!(decoder.decode(), Ok(Some(s)) => {
                 assert_eq!(s, "a�b");
+            });
+        });
+    }
+
+    #[test]
+    fn test_decode_bool_array() {
+        #[rustfmt::skip]
+        let presence_buf = &[0b00000001,
+                             0b00000001,
+                             0xE9, // crc
+                             0x47,
+                             0x90,
+                             0x29];
+        let presence_column =
+            assert_matches!(parse_presence_column(1, 2)(presence_buf), Ok((&[], pc)) => pc);
+        let presence_column_view = assert_matches!(presence_column.view(0), Some(v) => v);
+        #[rustfmt::skip]
+        let buf = &[0x05, // array len 5
+                    0x00, // false
+                    0x01, // true
+                    0x01, // true
+                    0x01, // true
+                    0x00, // false
+                    0x00, // array len 0
+                    0xE6, // crc
+                    0xB2,
+                    0x88,
+                    0x9C];
+        assert_matches!(BoolArrayDecoder::new(buf, presence_column_view), Ok(mut decoder) => {
+            assert_matches!(decoder.decode(), Ok(Some(v)) => {
+                assert_eq!(v, &[false, true, true, true, false]);
+            });
+            assert_matches!(decoder.decode(), Ok(Some(v)) => {
+                assert_eq!(v, &[]);
             });
         });
     }

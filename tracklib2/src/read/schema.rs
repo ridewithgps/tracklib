@@ -46,15 +46,25 @@ fn parse_schema_entry<'a>(
     offset: usize,
 ) -> impl Fn(&[u8]) -> IResult<&[u8], SchemaEntry, TracklibError> {
     move |input: &[u8]| {
-        let (input, type_tag) = le_u8(input)?;
-        let (input, field_name) = length_data(le_u8)(input)?;
-        let (input, data_size) = leb128_u64(input)?;
+        let (mut input, type_tag) = le_u8(input)?;
 
         let data_type = match type_tag {
             0x00 => DataType::I64,
             0x01 => DataType::F64,
             0x04 => DataType::String,
             0x05 => DataType::Bool,
+            0x06 => {
+                let (rest, subtype) = le_u8(input)?;
+                input = rest;
+                match subtype {
+                    0x05 => DataType::BoolArray,
+                    _ => {
+                        return Err(nom::Err::Error(TracklibError::ParseError {
+                            error_kind: nom::error::ErrorKind::Tag,
+                        }))
+                    }
+                }
+            }
             _ => {
                 return Err(nom::Err::Error(TracklibError::ParseError {
                     error_kind: nom::error::ErrorKind::Tag,
@@ -62,6 +72,8 @@ fn parse_schema_entry<'a>(
             }
         };
 
+        let (input, field_name) = length_data(le_u8)(input)?;
+        let (input, data_size) = leb128_u64(input)?;
         let name = String::from_utf8_lossy(field_name);
 
         Ok((
@@ -98,7 +110,7 @@ mod tests {
     fn test_test_parse_schema() {
         #[rustfmt::skip]
         let buf = &[0x00, // schema version
-                    0x04, // entry count = 4
+                    0x05, // entry count
                     0x00, // first entry type: i64 = 0
                     0x01, // name len = 1
                     b'm', // name = "m"
@@ -123,12 +135,21 @@ mod tests {
                     0x01, // fourth entry type: f64 = 0
                     0x01, // name len = 1
                     b'i', // name = "i"
-                    0x02]; // data size = 2
+                    0x02, // data size = 2
+                    0x06, // fifth entry type: array = 6
+                    0x05, // array subtype = bool
+                    0x02, // name len = 2
+                    b'a', // name
+                    b'b',
+                    0x11, // data size
+        ];
         assert_matches!(parse_schema(buf), Ok((&[], entries)) => {
             assert_eq!(entries, vec![SchemaEntry::new_for_tests("m", DataType::I64, 2, 0),
                                      SchemaEntry::new_for_tests("k", DataType::Bool, 1, 2),
                                      SchemaEntry::new_for_tests("long name!", DataType::String, 7, 3),
-                                     SchemaEntry::new_for_tests("i", DataType::F64, 2, 10)]);
+                                     SchemaEntry::new_for_tests("i", DataType::F64, 2, 10),
+                                     SchemaEntry::new_for_tests("ab", DataType::BoolArray, 17, 12),
+            ]);
         });
     }
 
@@ -157,6 +178,22 @@ mod tests {
                     0x02]; // data size = 2
         assert_matches!(parse_schema(buf), Ok((&[], entries)) => {
             assert_eq!(entries, vec![SchemaEntry::new_for_tests("�", DataType::I64, 2, 0)])
+        });
+    }
+
+    #[test]
+    fn test_schema_invalid_array_subtype() {
+        #[rustfmt::skip]
+        let buf = &[0x00, // schema version
+                    0x01, // entry count
+                    0x06, // first entry type: Array
+                    0xFF, // invalid array subtype!
+                    0x01, // name len = 1
+                    b'a', // name
+                    0x00, // data size
+        ];
+        assert_matches!(parse_schema(buf), Err(nom::Err::Error(TracklibError::ParseError{error_kind})) => {
+            assert_eq!(error_kind, nom::error::ErrorKind::Tag);
         });
     }
 }

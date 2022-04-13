@@ -115,6 +115,7 @@ mod tests {
                         assert!(cwi.write(Some(&"hey".to_string())).is_ok());
                     }
                     ColumnWriter::F64ColumnWriter(_) => {}
+                    ColumnWriter::BoolArrayColumnWriter(_) => {}
                 }
             }
         }
@@ -192,6 +193,7 @@ mod tests {
                             ).is_ok());
                         }
                         ColumnWriter::F64ColumnWriter(_) => {}
+                        ColumnWriter::BoolArrayColumnWriter(_) => {}
                     }
                 });
             }

@@ -37,28 +37,11 @@ impl FieldDefinition {
     }
 }
 
-#[derive(Debug)]
-pub enum BitstreamType {
-    Bytes,
-    I64,
-    Bool,
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub enum DataType {
     I64,
     Bool,
     String,
     F64,
-}
-
-impl DataType {
-    pub fn bitstream_type(&self) -> BitstreamType {
-        match self {
-            Self::I64 => BitstreamType::I64,
-            Self::Bool => BitstreamType::Bool,
-            Self::String => BitstreamType::Bytes,
-            Self::F64 => BitstreamType::I64,
-        }
-    }
+    BoolArray,
 }

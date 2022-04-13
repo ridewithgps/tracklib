@@ -6,18 +6,20 @@ use crate::schema::*;
 use crate::types::SectionEncoding;
 use std::io::{self, Write};
 
-impl DataType {
-    fn type_tag(&self) -> u8 {
-        match self {
-            Self::I64 => 0x00,
-            Self::F64 => 0x01,
-            Self::String => 0x04,
-            Self::Bool => 0x05,
-        }
-    }
+fn write_data_type_tag<W: Write>(out: &mut W, data_type: &DataType) -> Result<()> {
+    let bytes: &[u8] = match data_type {
+        DataType::I64 => &[0x00],
+        DataType::F64 => &[0x01],
+        DataType::String => &[0x04],
+        DataType::Bool => &[0x05],
+        DataType::BoolArray => &[0x06, 0x05],
+    };
+
+    out.write_all(&bytes)?;
+    Ok(())
 }
 
-#[derive(Default, Debug)]
+#[derive(Debug)]
 struct BufferImpl<E: Encoder> {
     buf: Vec<u8>,
     presence: Vec<bool>,
@@ -25,6 +27,14 @@ struct BufferImpl<E: Encoder> {
 }
 
 impl<E: Encoder> BufferImpl<E> {
+    fn new(encoder: E) -> Self {
+        Self {
+            encoder,
+            presence: vec![],
+            buf: vec![],
+        }
+    }
+
     fn write_data<W: Write>(&self, out: &mut W) -> Result<()> {
         let mut crcwriter = CrcWriter::new32(out);
         io::copy(&mut io::Cursor::new(&self.buf), &mut crcwriter)?;
@@ -44,15 +54,17 @@ enum Buffer {
     F64(BufferImpl<F64Encoder>),
     Bool(BufferImpl<BoolEncoder>),
     String(BufferImpl<StringEncoder>),
+    BoolArray(BufferImpl<BoolArrayEncoder>),
 }
 
 impl Buffer {
     fn new(data_type: &DataType) -> Self {
         match data_type {
-            DataType::I64 => Buffer::I64(BufferImpl::default()),
-            DataType::Bool => Buffer::Bool(BufferImpl::default()),
-            DataType::String => Buffer::String(BufferImpl::default()),
-            DataType::F64 => Buffer::F64(BufferImpl::default()),
+            DataType::I64 => Buffer::I64(BufferImpl::new(I64Encoder::default())),
+            DataType::Bool => Buffer::Bool(BufferImpl::new(BoolEncoder::default())),
+            DataType::String => Buffer::String(BufferImpl::new(StringEncoder::default())),
+            DataType::F64 => Buffer::F64(BufferImpl::new(F64Encoder::default())),
+            DataType::BoolArray => Buffer::BoolArray(BufferImpl::new(BoolArrayEncoder::default())),
         }
     }
 
@@ -62,6 +74,7 @@ impl Buffer {
             Self::F64(buffer_impl) => buffer_impl.buf.len(),
             Self::Bool(buffer_impl) => buffer_impl.buf.len(),
             Self::String(buffer_impl) => buffer_impl.buf.len(),
+            Self::BoolArray(buffer_impl) => buffer_impl.buf.len(),
         }
     }
 }
@@ -134,6 +147,7 @@ impl Section {
                     Buffer::F64(buffer_impl) => buffer_impl.presence.get(row_i),
                     Buffer::Bool(buffer_impl) => buffer_impl.presence.get(row_i),
                     Buffer::String(buffer_impl) => buffer_impl.presence.get(row_i),
+                    Buffer::BoolArray(buffer_impl) => buffer_impl.presence.get(row_i),
                 };
 
                 if let Some(true) = is_present {
@@ -166,10 +180,11 @@ impl Section {
                     Buffer::F64(buffer_impl) => buffer_impl.data_size(),
                     Buffer::Bool(buffer_impl) => buffer_impl.data_size(),
                     Buffer::String(buffer_impl) => buffer_impl.data_size(),
+                    Buffer::BoolArray(buffer_impl) => buffer_impl.data_size(),
                 })
                 .unwrap_or(0);
 
-            out.write_all(&field_def.data_type().type_tag().to_le_bytes())?;      // 1 byte  - field type tag
+            write_data_type_tag(out, field_def.data_type())?;                     // ? bytes - type tag
             out.write_all(&u8::try_from(field_def.name().len())?.to_le_bytes())?; // 1 byte  - field name length
             out.write_all(field_def.name().as_bytes())?;                          // ? bytes - the name of this field
             leb128::write::unsigned(out, u64::try_from(data_column_size)?)?;      // ? bytes - leb128 column data size
@@ -186,7 +201,8 @@ impl Section {
                 Buffer::I64(buffer_impl) => buffer_impl.write_data(out)?,         // |
                 Buffer::F64(buffer_impl) => buffer_impl.write_data(out)?,         // |
                 Buffer::Bool(buffer_impl) => buffer_impl.write_data(out)?,        // |
-                Buffer::String(buffer_impl) => buffer_impl.write_data(out)?,      //  - > ? bytes - data column with crc
+                Buffer::String(buffer_impl) => buffer_impl.write_data(out)?,      // |
+                Buffer::BoolArray(buffer_impl) => buffer_impl.write_data(out)?,   //  - > ? bytes - data column with crc
             };
         }
 
@@ -230,6 +246,9 @@ impl<'a> RowBuilder<'a> {
             (Some(field_def), Some(Buffer::String(ref mut buffer_impl))) => Some(
                 ColumnWriter::StringColumnWriter(ColumnWriterImpl::new(&field_def, buffer_impl)),
             ),
+            (Some(field_def), Some(Buffer::BoolArray(ref mut buffer_impl))) => Some(
+                ColumnWriter::BoolArrayColumnWriter(ColumnWriterImpl::new(&field_def, buffer_impl)),
+            ),
             _ => None,
         }
     }
@@ -241,6 +260,7 @@ pub enum ColumnWriter<'a> {
     F64ColumnWriter(ColumnWriterImpl<'a, F64Encoder>),
     BoolColumnWriter(ColumnWriterImpl<'a, BoolEncoder>),
     StringColumnWriter(ColumnWriterImpl<'a, StringEncoder>),
+    BoolArrayColumnWriter(ColumnWriterImpl<'a, BoolArrayEncoder>),
 }
 
 #[derive(Debug)]
@@ -323,6 +343,7 @@ mod tests {
                         assert!(cwi.write(c_vals[i].as_ref()).is_ok());
                     }
                     ColumnWriter::F64ColumnWriter(_) => {}
+                    ColumnWriter::BoolArrayColumnWriter(_) => {}
                 }
             }
         }
@@ -442,6 +463,7 @@ mod tests {
                 FieldDefinition::new("long name!", DataType::String),
                 FieldDefinition::new("i", DataType::I64),
                 FieldDefinition::new("f", DataType::F64),
+                FieldDefinition::new("ab", DataType::BoolArray),
             ]),
         );
 
@@ -460,6 +482,9 @@ mod tests {
                 ColumnWriter::F64ColumnWriter(cwi) => {
                     assert!(cwi.write(Some(&0.0042)).is_ok());
                 }
+                ColumnWriter::BoolArrayColumnWriter(cwi) => {
+                    assert!(cwi.write(Some(&[true, false, true])).is_ok());
+                }
             }
         }
 
@@ -468,7 +493,7 @@ mod tests {
             #[rustfmt::skip]
             assert_eq!(buf,
                        &[0x00, // schema version
-                         0x05, // entry count = 5
+                         0x06, // entry count
                          0x00, // first entry type: i64 = 0
                          0x01, // name len = 1
                          b'm', // name = "m"
@@ -498,6 +523,12 @@ mod tests {
                          0x01, // name len = 1
                          b'f', // name = "f"
                          0x07, // data size = 7
+                         0x06, // sixth entry type: array = 6
+                         0x05, // array subtype = bool
+                         0x02, // name len = 3
+                         b'a', // name = "ids"
+                         b'b',
+                         0x08, // data size = 8
                        ]);
         });
     }
@@ -509,6 +540,7 @@ mod tests {
             F64(f64),
             Bool(bool),
             String(String),
+            Array(Vec<bool>),
         }
 
         let mut v = Vec::new();
@@ -521,6 +553,7 @@ mod tests {
         let mut h = HashMap::new();
         h.insert("a", V::I64(2));
         h.insert("c", V::String("with".to_string()));
+        h.insert("e", V::Array(vec![true, false]));
         v.push(h);
         let mut h = HashMap::new();
         h.insert("a", V::I64(4));
@@ -536,6 +569,7 @@ mod tests {
                 FieldDefinition::new("b", DataType::Bool),
                 FieldDefinition::new("c", DataType::String),
                 FieldDefinition::new("d", DataType::F64),
+                FieldDefinition::new("e", DataType::BoolArray),
             ]),
         );
 
@@ -591,6 +625,17 @@ mod tests {
                                     .flatten(),
                             ).is_ok());
                         }
+                        ColumnWriter::BoolArrayColumnWriter(cwi) => {
+                            assert!(cwi.write(
+                                entry
+                                    .get(field_def.name())
+                                    .map(|v| match v {
+                                        V::Array(v) => Some(v.as_slice()),
+                                        _ => None,
+                                    })
+                                    .flatten(),
+                            ).is_ok());
+                        }
                     }
                 });
             }
@@ -602,12 +647,12 @@ mod tests {
             assert_eq!(buf, &[
                 // Presence Column
                 0b00001111,
-                0b00000101,
+                0b00010101,
                 0b00001111,
-                0x9A, // crc
+                0x89, // crc
+                0x67,
+                0x76,
                 0xFC,
-                0x27,
-                0xEC,
 
                 // Data Column 1 = I64
                 0x01, // 1
@@ -659,7 +704,17 @@ mod tests {
                 0xF0, // crc
                 0xA4,
                 0x8A,
-                0xDD]);
+                0xDD,
+
+                // Data Column 5 = Array
+                0x02, // two entries
+                0x01, // true
+                0x00, // false
+                0x2D, // crc
+                0x1A,
+                0x33,
+                0x99,
+            ]);
         });
     }
 }

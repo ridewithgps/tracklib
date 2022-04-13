@@ -258,6 +258,7 @@ fn format_val(value: Option<FieldValue>) -> String {
             FieldValue::F64(v) => format!("{v}"),
             FieldValue::Bool(v) => format!("{v}"),
             FieldValue::String(v) => v.clone(),
+            FieldValue::BoolArray(v) => format!("{v:?}"),
         }
     } else {
         String::from(strikethrough("None"))

@@ -1,8 +1,8 @@
 use super::bitstream;
 use crate::error::Result;
 
-pub trait Encoder: Default {
-    type T;
+pub trait Encoder {
+    type T: ?Sized;
     fn encode(
         &mut self,
         value: Option<&Self::T>,
@@ -84,6 +84,29 @@ impl Encoder for StringEncoder {
     ) -> Result<()> {
         presence.push(value.is_some());
         bitstream::write_bytes(value.map(|v| v.as_bytes()), buf)
+    }
+}
+
+#[derive(Debug, Default)]
+pub struct BoolArrayEncoder;
+
+impl Encoder for BoolArrayEncoder {
+    type T = [bool];
+
+    fn encode(
+        &mut self,
+        value: Option<&Self::T>,
+        buf: &mut Vec<u8>,
+        presence: &mut Vec<bool>,
+    ) -> Result<()> {
+        presence.push(value.is_some());
+        if let Some(array) = value {
+            leb128::write::unsigned(buf, u64::try_from(array.len()).expect("usize != u64"))?;
+            for b in array {
+                bitstream::write_bool(Some(b), buf)?;
+            }
+        }
+        Ok(())
     }
 }
 
@@ -323,5 +346,54 @@ mod tests {
                                    false,
                                    true,
                                    false]);
+    }
+
+    #[test]
+    fn test_bool_array_encoder() {
+        let mut data_buf = vec![];
+        let mut presence_buf = vec![];
+        let mut encoder = BoolArrayEncoder::default();
+
+        assert!(encoder
+            .encode(
+                Some(&[true, false, false]),
+                &mut data_buf,
+                &mut presence_buf
+            )
+            .is_ok());
+        assert!(encoder
+            .encode(None, &mut data_buf, &mut presence_buf)
+            .is_ok());
+        assert!(encoder
+            .encode(
+                Some(&[false, false, false, false, true, true]),
+                &mut data_buf,
+                &mut presence_buf
+            )
+            .is_ok());
+        assert!(encoder
+            .encode(Some(&[true]), &mut data_buf, &mut presence_buf)
+            .is_ok());
+
+        #[rustfmt::skip]
+        assert_eq!(data_buf, &[0x03, // array len three
+                               0x01, // true
+                               0x00, // false
+                               0x00, // false
+                               0x06, // array len six
+                               0x00, // false
+                               0x00, // false
+                               0x00, // false
+                               0x00, // false
+                               0x01, // true
+                               0x01, // true
+                               0x01, // array len one
+                               0x01]); // true
+
+        #[rustfmt::skip]
+        assert_eq!(presence_buf, &[true,
+                                   false,
+                                   true,
+                                   true]);
     }
 }

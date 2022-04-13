@@ -163,4 +163,35 @@ mod tests {
                          0x13]);
         });
     }
+
+    #[test]
+    fn test_array_types() {
+        let section = Section::new(
+            SectionEncoding::Standard,
+            Schema::with_fields(vec![FieldDefinition::new("a", DataType::BoolArray)]),
+        );
+
+        let mut buf = Vec::new();
+        assert_matches!(write_data_table(&mut buf, &[&section]), Ok(()) => {
+            #[rustfmt::skip]
+            assert_eq!(buf,
+                       &[0x01, // number of sections
+
+                         // Section 1
+                         0x00, // section encoding = standard
+                         0x00, // leb128 section point count
+                         0x08, // leb128 section data size
+                         // Schema
+                         0x00, // schema version
+                         0x01, // field count
+                         0x06, // first field type = Array
+                         0x05, // array subtype = Bool
+                         0x01, // name length
+                         b'a', // name
+                         0x04, // leb128 data size
+
+                         0x0C, // crc
+                         0xCF]);
+        });
+    }
 }

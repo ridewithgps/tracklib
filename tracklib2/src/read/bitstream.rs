@@ -9,9 +9,9 @@ pub fn read_i64<'a>(data: &'a [u8], prev: &mut i64) -> Result<(&'a [u8], i64)> {
     Ok((rest, new))
 }
 
-pub fn read_bool(data: &[u8]) -> Result<(&[u8], bool)> {
+pub fn read_byte(data: &[u8]) -> Result<(&[u8], u8)> {
     let (rest, value) = le_u8(data)?;
-    Ok((rest, value != 0))
+    Ok((rest, value))
 }
 
 pub fn read_bytes<'a>(data: &'a [u8]) -> Result<(&'a [u8], &'a [u8])> {
@@ -44,20 +44,27 @@ mod tests {
     }
 
     #[test]
-    fn test_read_bool() {
+    fn test_read_byte() {
         #[rustfmt::skip]
         let mut buf: &[u8] = &[0x00,
-                               0x01];
+                               0x01,
+                               0xFF];
 
-        assert_matches!(read_bool(buf), Ok((rest, value)) => {
+        assert_matches!(read_byte(buf), Ok((rest, value)) => {
             assert_eq!(rest, &buf[1..]);
-            assert_eq!(value, false);
+            assert_eq!(value, 0);
             buf = rest;
         });
 
-        assert_matches!(read_bool(buf), Ok((rest, value)) => {
+        assert_matches!(read_byte(buf), Ok((rest, value)) => {
             assert_eq!(rest, &buf[1..]);
-            assert_eq!(value, true);
+            assert_eq!(value, 1);
+            buf = rest;
+        });
+
+        assert_matches!(read_byte(buf), Ok((rest, value)) => {
+            assert_eq!(rest, &buf[1..]);
+            assert_eq!(value, 255);
         });
     }
 

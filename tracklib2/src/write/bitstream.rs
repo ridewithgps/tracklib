@@ -12,10 +12,9 @@ pub fn write_i64(value: Option<&i64>, buf: &mut Vec<u8>, prev: &mut i64) -> Resu
     Ok(())
 }
 
-pub fn write_bool(value: Option<&bool>, buf: &mut Vec<u8>) -> Result<()> {
+pub fn write_byte(value: Option<&u8>, buf: &mut Vec<u8>) -> Result<()> {
     if let Some(val) = value {
-        let v = *val as u8;
-        buf.write_all(&v.to_le_bytes())?;
+        buf.write_all(std::slice::from_ref(val))?;
     }
     Ok(())
 }
@@ -49,14 +48,16 @@ mod tests {
     }
 
     #[test]
-    fn test_write_bool() {
+    fn test_write_byte() {
         let mut buf = vec![];
-        assert_matches!(write_bool(Some(&false), &mut buf), Ok(()));
-        assert_matches!(write_bool(None, &mut buf), Ok(()));
-        assert_matches!(write_bool(Some(&true), &mut buf), Ok(()));
+        assert_matches!(write_byte(Some(&0), &mut buf), Ok(()));
+        assert_matches!(write_byte(None, &mut buf), Ok(()));
+        assert_matches!(write_byte(Some(&1), &mut buf), Ok(()));
+        assert_matches!(write_byte(Some(&255), &mut buf), Ok(()));
         #[rustfmt::skip]
         assert_eq!(buf, &[0x00,
-                          0x01]);
+                          0x01,
+                          0xFF]);
     }
 
     #[test]

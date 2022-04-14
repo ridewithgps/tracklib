@@ -172,9 +172,9 @@ impl<'a> Decoder for BoolDecoder<'a> {
     fn decode(&mut self) -> Result<Option<Self::T>> {
         match self.presence_column_view.next() {
             Some(true) => {
-                let (rest, value) = bitstream::read_bool(self.data)?;
+                let (rest, value) = bitstream::read_byte(self.data)?;
                 self.data = rest;
-                Ok(Some(value))
+                Ok(Some(value != 0))
             }
             Some(false) => Ok(None),
             None => Err(TracklibError::ParseIncompleteError {
@@ -252,9 +252,9 @@ impl<'a> Decoder for BoolArrayDecoder<'a> {
                 let mut array =
                     Vec::with_capacity(usize::try_from(array_len).expect("usize != u64"));
                 for _ in 0..array_len {
-                    let (rest, value) = bitstream::read_bool(data)?;
+                    let (rest, value) = bitstream::read_byte(data)?;
                     data = rest;
-                    array.push(value);
+                    array.push(value != 0);
                 }
                 self.data = data;
 

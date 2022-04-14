@@ -95,7 +95,7 @@ impl Encoder for BoolEncoder {
         presence: &mut Vec<bool>,
     ) -> Result<()> {
         presence.push(value.is_some());
-        bitstream::write_bool(value, buf)
+        bitstream::write_byte(value.map(|v| u8::from(*v)).as_ref(), buf)
     }
 }
 
@@ -132,7 +132,7 @@ impl Encoder for BoolArrayEncoder {
         if let Some(array) = value {
             leb128::write::unsigned(buf, u64::try_from(array.len()).expect("usize != u64"))?;
             for b in array {
-                bitstream::write_bool(Some(b), buf)?;
+                bitstream::write_byte(Some(u8::from(*b)).as_ref(), buf)?;
             }
         }
         Ok(())

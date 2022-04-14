@@ -139,6 +139,31 @@ impl Encoder for BoolArrayEncoder {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct U64ArrayEncoder;
+
+impl Encoder for U64ArrayEncoder {
+    type T = [u64];
+
+    fn encode(
+        &mut self,
+        value: Option<&Self::T>,
+        buf: &mut Vec<u8>,
+        presence: &mut Vec<bool>,
+    ) -> Result<()> {
+        presence.push(value.is_some());
+        if let Some(array) = value {
+            leb128::write::unsigned(buf, u64::try_from(array.len()).expect("usize != u64"))?;
+
+            let mut prev = 0;
+            for val in array {
+                bitstream::write_i64(Some(*val as i64).as_ref(), buf, &mut prev)?;
+            }
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -492,6 +517,46 @@ mod tests {
                                0x01, // true
                                0x01, // array len one
                                0x01]); // true
+
+        #[rustfmt::skip]
+        assert_eq!(presence_buf, &[true,
+                                   false,
+                                   true,
+                                   true]);
+    }
+
+    #[test]
+    fn test_u64_array_encoder() {
+        let mut data_buf = vec![];
+        let mut presence_buf = vec![];
+        let mut encoder = U64ArrayEncoder::default();
+
+        assert!(encoder
+            .encode(Some(&[0, 17, 15]), &mut data_buf, &mut presence_buf)
+            .is_ok());
+        assert!(encoder
+            .encode(None, &mut data_buf, &mut presence_buf)
+            .is_ok());
+        assert!(encoder
+            .encode(Some(&[8_000, 1]), &mut data_buf, &mut presence_buf)
+            .is_ok());
+        assert!(encoder
+            .encode(Some(&[50]), &mut data_buf, &mut presence_buf)
+            .is_ok());
+
+        #[rustfmt::skip]
+        assert_eq!(data_buf, &[0x03, // array len three
+                               0x00, // zero
+                               0x11, // 17
+                               0x7E, // -2
+                               0x02, // array len 2
+                               0xC0, // 8,000
+                               0x3E,
+                               0xC1, // -7,999
+                               0x41,
+                               0x01, // array len 1
+                               0x32, // 50
+        ]);
 
         #[rustfmt::skip]
         assert_eq!(presence_buf, &[true,

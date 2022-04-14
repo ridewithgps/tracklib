@@ -281,4 +281,48 @@ mod tests {
         // Compare
         assert_eq!(write_values, read_values.as_slice());
     }
+
+    #[test]
+    fn roundtrip_u64_array() {
+        let mut buf = vec![];
+        let write_values = &[
+            vec![1, 2, 3, 4, 1_000],
+            vec![1000, 5, 2000, 0, 9000, 8000, 2],
+            vec![128; 1_000_000],
+        ];
+
+        // Write
+        let mut section = Section::new(
+            SectionEncoding::Standard,
+            Schema::with_fields(vec![FieldDefinition::new("v", DataType::U64Array)]),
+        );
+        for v in write_values.iter() {
+            let mut rowbuilder = section.open_row_builder();
+
+            while let Some(cw) = rowbuilder.next_column_writer() {
+                if let ColumnWriter::U64ArrayColumnWriter(cwi) = cw {
+                    assert!(cwi.write(Some(v)).is_ok());
+                }
+            }
+        }
+        assert!(write_track(&mut buf, &[], &[&section]).is_ok());
+
+        // Read
+        let track_reader = TrackReader::new(&buf).unwrap();
+        let mut read_values: Vec<Vec<u64>> = vec![];
+        for section in track_reader.sections() {
+            let mut section_reader = section.reader().unwrap();
+            while let Some(columniter) = section_reader.open_column_iter() {
+                let vals = columniter.collect::<Vec<_>>();
+                assert_eq!(vals.len(), 1);
+                let (_field_desc, field_value) = vals[0].as_ref().unwrap();
+                if let Some(FieldValue::U64Array(v)) = field_value {
+                    read_values.push(v.clone());
+                }
+            }
+        }
+
+        // Compare
+        assert_eq!(write_values, read_values.as_slice());
+    }
 }

@@ -45,4 +45,5 @@ pub enum DataType {
     String,
     F64 { scale: u8 },
     BoolArray,
+    U64Array,
 }

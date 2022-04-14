@@ -84,7 +84,7 @@ impl Encoder for BoolEncoder {
 pub struct StringEncoder;
 
 impl Encoder for StringEncoder {
-    type T = String;
+    type T = str;
 
     fn encode(
         &mut self,
@@ -327,29 +327,25 @@ mod tests {
         let mut encoder = StringEncoder::default();
 
         assert!(encoder
-            .encode(Some(&"A".to_string()), &mut data_buf, &mut presence_buf)
+            .encode(Some("A"), &mut data_buf, &mut presence_buf)
             .is_ok());
         assert!(encoder
             .encode(None, &mut data_buf, &mut presence_buf)
             .is_ok());
         assert!(encoder
-            .encode(Some(&"B".to_string()), &mut data_buf, &mut presence_buf)
+            .encode(Some("B"), &mut data_buf, &mut presence_buf)
             .is_ok());
         assert!(encoder
             .encode(None, &mut data_buf, &mut presence_buf)
             .is_ok());
         assert!(encoder
-            .encode(Some(&"C".to_string()), &mut data_buf, &mut presence_buf)
+            .encode(Some("C"), &mut data_buf, &mut presence_buf)
             .is_ok());
         assert!(encoder
             .encode(None, &mut data_buf, &mut presence_buf)
             .is_ok());
         assert!(encoder
-            .encode(
-                Some(&"Hello, World!".to_string()),
-                &mut data_buf,
-                &mut presence_buf
-            )
+            .encode(Some("Hello, World!"), &mut data_buf, &mut presence_buf)
             .is_ok());
         assert!(encoder
             .encode(None, &mut data_buf, &mut presence_buf)

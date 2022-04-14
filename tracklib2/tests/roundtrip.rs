@@ -142,12 +142,11 @@ mod tests {
     fn roundtrip_string() {
         let mut buf = vec![];
         let write_values = &[
-            "".to_string(),
-            "longer string".to_string(),
+            "",
+            "longer string",
             r"reallllllllllllllllllllllllllllllllllllllyyyyyyyyyyyyyyyyyyyyyyy
               longggggggggggggggggggggggggggggggggggggggggggggggggggggggggg
-              stringgggggggggggggggggggggggggggggggggg"
-                .to_string(),
+              stringgggggggggggggggggggggggggggggggggg",
         ];
 
         // Write

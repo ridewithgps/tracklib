@@ -321,12 +321,7 @@ mod tests {
 
         let a_vals = vec![Some(&42), Some(&0), None, Some(&-20)];
         let b_vals = vec![Some(&true), None, Some(&false), Some(&false)];
-        let c_vals = vec![
-            None,
-            Some("hi".to_string()),
-            Some("tracklib".to_string()),
-            Some("!".to_string()),
-        ];
+        let c_vals = vec![None, Some("hi"), Some("tracklib"), Some("!")];
 
         for i in 0..4 {
             let mut rowbuilder = section.open_row_builder();
@@ -339,7 +334,7 @@ mod tests {
                         assert!(cwi.write(b_vals[i]).is_ok());
                     }
                     ColumnWriter::StringColumnWriter(cwi) => {
-                        assert!(cwi.write(c_vals[i].as_ref()).is_ok());
+                        assert!(cwi.write(c_vals[i]).is_ok());
                     }
                     ColumnWriter::F64ColumnWriter(_) => {}
                     ColumnWriter::BoolArrayColumnWriter(_) => {}
@@ -476,7 +471,7 @@ mod tests {
                     assert!(cwi.write(Some(&false)).is_ok());
                 }
                 ColumnWriter::StringColumnWriter(cwi) => {
-                    assert!(cwi.write(Some(&"Hello!".to_string())).is_ok());
+                    assert!(cwi.write(Some("Hello!")).is_ok());
                 }
                 ColumnWriter::F64ColumnWriter(cwi) => {
                     assert!(cwi.write(Some(&0.0042)).is_ok());
@@ -608,7 +603,7 @@ mod tests {
                                 entry
                                     .get(field_def.name())
                                     .map(|v| match v {
-                                        V::String(v) => Some(v),
+                                        V::String(v) => Some(v.as_str()),
                                         _ => None,
                                     })
                                     .flatten(),

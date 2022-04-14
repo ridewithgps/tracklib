@@ -112,7 +112,7 @@ mod tests {
                         assert!(cwi.write(Some(&true)).is_ok());
                     }
                     ColumnWriter::StringColumnWriter(cwi) => {
-                        assert!(cwi.write(Some(&"hey".to_string())).is_ok());
+                        assert!(cwi.write(Some("hey")).is_ok());
                     }
                     ColumnWriter::F64ColumnWriter(_) => {}
                     ColumnWriter::BoolArrayColumnWriter(_) => {}
@@ -186,7 +186,7 @@ mod tests {
                                 entry
                                     .get(field_def.name())
                                     .map(|v| match v {
-                                        V::String(v) => Some(v),
+                                        V::String(v) => Some(v.as_str()),
                                         _ => None,
                                     })
                                     .flatten(),

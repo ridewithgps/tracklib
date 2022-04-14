@@ -40,6 +40,7 @@ impl FieldDefinition {
 #[derive(Clone, Debug, PartialEq)]
 pub enum DataType {
     I64,
+    U64,
     Bool,
     String,
     F64 { scale: u8 },

@@ -79,6 +79,10 @@ enum ColumnDecoder<'a> {
         field_definition: &'a FieldDefinition,
         decoder: I64Decoder<'a>,
     },
+    U64 {
+        field_definition: &'a FieldDefinition,
+        decoder: U64Decoder<'a>,
+    },
     F64 {
         field_definition: &'a FieldDefinition,
         decoder: F64Decoder<'a>,
@@ -128,6 +132,10 @@ impl<'a> SectionReader<'a> {
                     DataType::I64 => ColumnDecoder::I64 {
                         field_definition,
                         decoder: I64Decoder::new(column_data, presence_column_view)?,
+                    },
+                    DataType::U64 => ColumnDecoder::U64 {
+                        field_definition,
+                        decoder: U64Decoder::new(column_data, presence_column_view)?,
                     },
                     DataType::F64 { scale } => ColumnDecoder::F64 {
                         field_definition,
@@ -195,6 +203,15 @@ impl<'a, 'b> Iterator for ColumnIter<'a, 'b> {
                         .map(|maybe_v| (*field_definition, maybe_v.map(|v| FieldValue::I64(v))))
                         .map_err(|e| e),
                 ),
+                ColumnDecoder::U64 {
+                    ref field_definition,
+                    ref mut decoder,
+                } => Some(
+                    decoder
+                        .decode()
+                        .map(|maybe_v| (*field_definition, maybe_v.map(|v| FieldValue::U64(v))))
+                        .map_err(|e| e),
+                ),
                 ColumnDecoder::F64 {
                     ref field_definition,
                     ref mut decoder,
@@ -257,7 +274,7 @@ mod tests {
                                0x26, // leb128 section data size
                                // Schema
                                0x00, // schema version
-                               0x05, // field count
+                               0x06, // field count
                                0x00, // first field type = I64
                                0x01, // name length
                                b'a', // name
@@ -281,9 +298,13 @@ mod tests {
                                b'b', // name
                                b'a',
                                0x0C, // data size
+                               0x07, // sixth field type = U64
+                               0x01, // name length
+                               b'u', // name
+                               0x06, // data size
 
-                               0x43, // crc
-                               0xA0,
+                               0x1A, // crc
+                               0x9B,
         ];
 
         assert_matches!(parse_data_table(data_table_buf), Ok((&[], data_table_entries)) => {
@@ -293,12 +314,12 @@ mod tests {
             let buf = &[
                 // Presence Column
                 0b00010111,
-                0b00011101,
-                0b00011111,
-                0xE3, // crc
-                0x53,
-                0x60,
-                0x29,
+                0b00111101,
+                0b00111111,
+                0x25, // crc
+                0xD3,
+                0xE0,
+                0x91,
 
                 // Data Column 1 = I64
                 0x01, // 1
@@ -366,6 +387,14 @@ mod tests {
                 0x04,
                 0xB4,
                 0x3C,
+
+                // Data Column 6 = U64
+                0x16, // 22
+                0x7E, // -2
+                0xDA, // crc
+                0x02,
+                0xF5,
+                0xD6,
             ];
 
             let section = Section::new(buf, &data_table_entries[0]);
@@ -378,6 +407,7 @@ mod tests {
                 FieldDefinition::new("c", DataType::String),
                 FieldDefinition::new("f", DataType::F64{scale: 7}),
                 FieldDefinition::new("ba", DataType::BoolArray),
+                FieldDefinition::new("u", DataType::U64),
             ]));
 
             assert_matches!(section.reader(), Ok(mut section_reader) => {
@@ -385,7 +415,7 @@ mod tests {
                 assert_eq!(section_reader.rows_remaining(), 3);
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
                     let values = column_iter.collect::<Vec<_>>();
-                    assert_eq!(values.len(), 5);
+                    assert_eq!(values.len(), 6);
                     assert_matches!(&values[0], Ok((field_definition, field_value)) => {
                         assert_eq!(*field_definition, data_table_entries[0].schema_entries()[0].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("a", DataType::I64));
@@ -411,13 +441,18 @@ mod tests {
                         assert_eq!(*field_definition, &FieldDefinition::new("ba", DataType::BoolArray));
                         assert_eq!(field_value, &Some(FieldValue::BoolArray(vec![true])));
                     });
+                    assert_matches!(&values[5], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[5].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("u", DataType::U64));
+                        assert_eq!(field_value, &None);
+                    });
                 });
 
                 // Row 2
                 assert_eq!(section_reader.rows_remaining(), 2);
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
                     let values = column_iter.collect::<Vec<_>>();
-                    assert_eq!(values.len(), 5);
+                    assert_eq!(values.len(), 6);
                     assert_matches!(&values[0], Ok((field_definition, field_value)) => {
                         assert_eq!(*field_definition, data_table_entries[0].schema_entries()[0].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("a", DataType::I64));
@@ -443,13 +478,18 @@ mod tests {
                         assert_eq!(*field_definition, &FieldDefinition::new("ba", DataType::BoolArray));
                         assert_eq!(field_value, &Some(FieldValue::BoolArray(vec![false, false, false, true])));
                     });
+                    assert_matches!(&values[5], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[5].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("u", DataType::U64));
+                        assert_eq!(field_value, &Some(FieldValue::U64(22)));
+                    });
                 });
 
                 // Row 3
                 assert_eq!(section_reader.rows_remaining(), 1);
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
                     let values = column_iter.collect::<Vec<_>>();
-                    assert_eq!(values.len(), 5);
+                    assert_eq!(values.len(), 6);
                     assert_matches!(&values[0], Ok((field_definition, field_value)) => {
                         assert_eq!(*field_definition, data_table_entries[0].schema_entries()[0].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("a", DataType::I64));
@@ -474,6 +514,11 @@ mod tests {
                         assert_eq!(*field_definition, data_table_entries[0].schema_entries()[4].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("ba", DataType::BoolArray));
                         assert_eq!(field_value, &Some(FieldValue::BoolArray(vec![])));
+                    });
+                    assert_matches!(&values[5], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[5].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("u", DataType::U64));
+                        assert_eq!(field_value, &Some(FieldValue::U64(20)));
                     });
                 });
 

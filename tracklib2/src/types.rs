@@ -2,6 +2,7 @@
 #[cfg_attr(test, derive(PartialEq))]
 pub enum FieldValue {
     I64(i64),
+    U64(u64),
     F64(f64),
     Bool(bool),
     String(String),

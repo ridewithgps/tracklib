@@ -13,6 +13,7 @@ fn write_data_type_tag<W: Write>(out: &mut W, data_type: &DataType) -> Result<()
         DataType::String => out.write_all(&[0x04])?,
         DataType::Bool => out.write_all(&[0x05])?,
         DataType::BoolArray => out.write_all(&[0x06, 0x05])?,
+        DataType::U64 => out.write_all(&[0x07])?,
     }
 
     Ok(())
@@ -50,6 +51,7 @@ impl<E: Encoder> BufferImpl<E> {
 #[derive(Debug)]
 enum Buffer {
     I64(BufferImpl<I64Encoder>),
+    U64(BufferImpl<U64Encoder>),
     F64(BufferImpl<F64Encoder>),
     Bool(BufferImpl<BoolEncoder>),
     String(BufferImpl<StringEncoder>),
@@ -60,6 +62,7 @@ impl Buffer {
     fn new(data_type: &DataType) -> Self {
         match data_type {
             DataType::I64 => Buffer::I64(BufferImpl::new(I64Encoder::default())),
+            DataType::U64 => Buffer::U64(BufferImpl::new(U64Encoder::default())),
             DataType::Bool => Buffer::Bool(BufferImpl::new(BoolEncoder::default())),
             DataType::String => Buffer::String(BufferImpl::new(StringEncoder::default())),
             DataType::F64 { scale } => Buffer::F64(BufferImpl::new(F64Encoder::new(*scale))),
@@ -70,6 +73,7 @@ impl Buffer {
     fn len(&self) -> usize {
         match self {
             Self::I64(buffer_impl) => buffer_impl.buf.len(),
+            Self::U64(buffer_impl) => buffer_impl.buf.len(),
             Self::F64(buffer_impl) => buffer_impl.buf.len(),
             Self::Bool(buffer_impl) => buffer_impl.buf.len(),
             Self::String(buffer_impl) => buffer_impl.buf.len(),
@@ -143,6 +147,7 @@ impl Section {
             for buffer in self.column_data.iter() {
                 let is_present = match buffer {
                     Buffer::I64(buffer_impl) => buffer_impl.presence.get(row_i),
+                    Buffer::U64(buffer_impl) => buffer_impl.presence.get(row_i),
                     Buffer::F64(buffer_impl) => buffer_impl.presence.get(row_i),
                     Buffer::Bool(buffer_impl) => buffer_impl.presence.get(row_i),
                     Buffer::String(buffer_impl) => buffer_impl.presence.get(row_i),
@@ -176,6 +181,7 @@ impl Section {
                 .get(i)
                 .map(|buffer| match buffer {
                     Buffer::I64(buffer_impl) => buffer_impl.data_size(),
+                    Buffer::U64(buffer_impl) => buffer_impl.data_size(),
                     Buffer::F64(buffer_impl) => buffer_impl.data_size(),
                     Buffer::Bool(buffer_impl) => buffer_impl.data_size(),
                     Buffer::String(buffer_impl) => buffer_impl.data_size(),
@@ -198,6 +204,7 @@ impl Section {
         for buffer in self.column_data.iter() {
             match buffer {
                 Buffer::I64(buffer_impl) => buffer_impl.write_data(out)?,         // |
+                Buffer::U64(buffer_impl) => buffer_impl.write_data(out)?,         // |
                 Buffer::F64(buffer_impl) => buffer_impl.write_data(out)?,         // |
                 Buffer::Bool(buffer_impl) => buffer_impl.write_data(out)?,        // |
                 Buffer::String(buffer_impl) => buffer_impl.write_data(out)?,      // |
@@ -236,6 +243,9 @@ impl<'a> RowBuilder<'a> {
             (Some(field_def), Some(Buffer::I64(ref mut buffer_impl))) => Some(
                 ColumnWriter::I64ColumnWriter(ColumnWriterImpl::new(&field_def, buffer_impl)),
             ),
+            (Some(field_def), Some(Buffer::U64(ref mut buffer_impl))) => Some(
+                ColumnWriter::U64ColumnWriter(ColumnWriterImpl::new(&field_def, buffer_impl)),
+            ),
             (Some(field_def), Some(Buffer::F64(ref mut buffer_impl))) => Some(
                 ColumnWriter::F64ColumnWriter(ColumnWriterImpl::new(&field_def, buffer_impl)),
             ),
@@ -256,6 +266,7 @@ impl<'a> RowBuilder<'a> {
 #[derive(Debug)]
 pub enum ColumnWriter<'a> {
     I64ColumnWriter(ColumnWriterImpl<'a, I64Encoder>),
+    U64ColumnWriter(ColumnWriterImpl<'a, U64Encoder>),
     F64ColumnWriter(ColumnWriterImpl<'a, F64Encoder>),
     BoolColumnWriter(ColumnWriterImpl<'a, BoolEncoder>),
     StringColumnWriter(ColumnWriterImpl<'a, StringEncoder>),
@@ -336,6 +347,7 @@ mod tests {
                     ColumnWriter::StringColumnWriter(cwi) => {
                         assert!(cwi.write(c_vals[i]).is_ok());
                     }
+                    ColumnWriter::U64ColumnWriter(_) => {}
                     ColumnWriter::F64ColumnWriter(_) => {}
                     ColumnWriter::BoolArrayColumnWriter(_) => {}
                 }
@@ -458,6 +470,7 @@ mod tests {
                 FieldDefinition::new("i", DataType::I64),
                 FieldDefinition::new("f", DataType::F64 { scale: 7 }),
                 FieldDefinition::new("ab", DataType::BoolArray),
+                FieldDefinition::new("u", DataType::U64),
             ]),
         );
 
@@ -466,6 +479,9 @@ mod tests {
             match cw {
                 ColumnWriter::I64ColumnWriter(cwi) => {
                     assert!(cwi.write(Some(&500)).is_ok());
+                }
+                ColumnWriter::U64ColumnWriter(cwi) => {
+                    assert!(cwi.write(Some(&2112)).is_ok());
                 }
                 ColumnWriter::BoolColumnWriter(cwi) => {
                     assert!(cwi.write(Some(&false)).is_ok());
@@ -487,7 +503,7 @@ mod tests {
             #[rustfmt::skip]
             assert_eq!(buf,
                        &[0x00, // schema version
-                         0x06, // entry count
+                         0x07, // entry count
                          0x00, // first entry type: i64 = 0
                          0x01, // name len = 1
                          b'm', // name = "m"
@@ -520,10 +536,14 @@ mod tests {
                          0x07, // data size = 7
                          0x06, // sixth entry type: array = 6
                          0x05, // array subtype = bool
-                         0x02, // name len = 3
+                         0x02, // name len = 2
                          b'a', // name = "ids"
                          b'b',
                          0x08, // data size = 8
+                         0x07, // seventh entry type: u64 = 7
+                         0x01, // name len
+                         b'u', // name
+                         0x06, // data size
                        ]);
         });
     }
@@ -532,6 +552,7 @@ mod tests {
     fn test_writing_a_section() {
         enum V {
             I64(i64),
+            U64(u64),
             F64(f64),
             Bool(bool),
             String(String),
@@ -549,12 +570,14 @@ mod tests {
         h.insert("a", V::I64(2));
         h.insert("c", V::String("with".to_string()));
         h.insert("e", V::Array(vec![true, false]));
+        h.insert("f", V::U64(20));
         v.push(h);
         let mut h = HashMap::new();
         h.insert("a", V::I64(4));
         h.insert("b", V::Bool(true));
         h.insert("c", V::String("GPS".to_string()));
         h.insert("d", V::F64(2112.90125));
+        h.insert("f", V::U64(18));
         v.push(h);
 
         let mut section = Section::new(
@@ -565,6 +588,7 @@ mod tests {
                 FieldDefinition::new("c", DataType::String),
                 FieldDefinition::new("d", DataType::F64 { scale: 7 }),
                 FieldDefinition::new("e", DataType::BoolArray),
+                FieldDefinition::new("f", DataType::U64),
             ]),
         );
 
@@ -582,6 +606,17 @@ mod tests {
                                     .get(field_def.name())
                                     .map(|v| match v {
                                         V::I64(v) => Some(v),
+                                        _ => None,
+                                    })
+                                    .flatten(),
+                            ).is_ok());
+                        }
+                        ColumnWriter::U64ColumnWriter(cwi) => {
+                            assert!(cwi.write(
+                                entry
+                                    .get(field_def.name())
+                                    .map(|v| match v {
+                                        V::U64(v) => Some(v),
                                         _ => None,
                                     })
                                     .flatten(),
@@ -642,12 +677,12 @@ mod tests {
             assert_eq!(buf, &[
                 // Presence Column
                 0b00001111,
-                0b00010101,
-                0b00001111,
-                0x89, // crc
-                0x67,
-                0x76,
-                0xFC,
+                0b00110101,
+                0b00101111,
+                0x4F, // crc
+                0xE7,
+                0xF6,
+                0x44,
 
                 // Data Column 1 = I64
                 0x01, // 1
@@ -701,7 +736,7 @@ mod tests {
                 0x8A,
                 0xDD,
 
-                // Data Column 5 = Array
+                // Data Column 5 = Bool Array
                 0x02, // two entries
                 0x01, // true
                 0x00, // false
@@ -709,6 +744,14 @@ mod tests {
                 0x1A,
                 0x33,
                 0x99,
+
+                // Data Column 6 = U64
+                0x14, // 20
+                0x7E, // -2
+                0xD5, // crc
+                0x9C,
+                0x07,
+                0x76,
             ]);
         });
     }

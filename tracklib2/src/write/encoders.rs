@@ -30,6 +30,25 @@ impl Encoder for I64Encoder {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct U64Encoder {
+    prev: i64,
+}
+
+impl Encoder for U64Encoder {
+    type T = u64;
+
+    fn encode(
+        &mut self,
+        value: Option<&Self::T>,
+        buf: &mut Vec<u8>,
+        presence: &mut Vec<bool>,
+    ) -> Result<()> {
+        presence.push(value.is_some());
+        bitstream::write_i64(value.map(|val| *val as i64).as_ref(), buf, &mut self.prev)
+    }
+}
+
 #[derive(Debug)]
 pub struct F64Encoder {
     prev: i64,
@@ -174,6 +193,49 @@ mod tests {
                                    true,
                                    false,
                                    false,
+                                   true,
+                                   true]);
+    }
+
+    #[test]
+    fn test_u64_encoder() {
+        let mut data_buf = vec![];
+        let mut presence_buf = vec![];
+        let mut encoder = U64Encoder::default();
+
+        assert!(encoder
+            .encode(Some(&1), &mut data_buf, &mut presence_buf)
+            .is_ok());
+        assert!(encoder
+            .encode(Some(&2), &mut data_buf, &mut presence_buf)
+            .is_ok());
+        assert!(encoder
+            .encode(None, &mut data_buf, &mut presence_buf)
+            .is_ok());
+        assert!(encoder
+            .encode(Some(&100), &mut data_buf, &mut presence_buf)
+            .is_ok());
+        assert!(encoder
+            .encode(Some(&u64::MAX), &mut data_buf, &mut presence_buf)
+            .is_ok());
+        assert!(encoder
+            .encode(Some(&7), &mut data_buf, &mut presence_buf)
+            .is_ok());
+
+        #[rustfmt::skip]
+        assert_eq!(data_buf, &[0x01,
+                               0x01,
+                               0xE2,
+                               0x00,
+                               0x9B,
+                               0x7F,
+                               0x08]);
+
+        #[rustfmt::skip]
+        assert_eq!(presence_buf, &[true,
+                                   true,
+                                   false,
+                                   true,
                                    true,
                                    true]);
     }

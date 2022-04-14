@@ -7,15 +7,14 @@ use crate::types::SectionEncoding;
 use std::io::{self, Write};
 
 fn write_data_type_tag<W: Write>(out: &mut W, data_type: &DataType) -> Result<()> {
-    let bytes: &[u8] = match data_type {
-        DataType::I64 => &[0x00],
-        DataType::F64 => &[0x01],
-        DataType::String => &[0x04],
-        DataType::Bool => &[0x05],
-        DataType::BoolArray => &[0x06, 0x05],
-    };
+    match data_type {
+        DataType::I64 => out.write_all(&[0x00])?,
+        DataType::F64 { scale } => out.write_all(&[0x01, *scale])?,
+        DataType::String => out.write_all(&[0x04])?,
+        DataType::Bool => out.write_all(&[0x05])?,
+        DataType::BoolArray => out.write_all(&[0x06, 0x05])?,
+    }
 
-    out.write_all(&bytes)?;
     Ok(())
 }
 
@@ -63,7 +62,7 @@ impl Buffer {
             DataType::I64 => Buffer::I64(BufferImpl::new(I64Encoder::default())),
             DataType::Bool => Buffer::Bool(BufferImpl::new(BoolEncoder::default())),
             DataType::String => Buffer::String(BufferImpl::new(StringEncoder::default())),
-            DataType::F64 => Buffer::F64(BufferImpl::new(F64Encoder::default())),
+            DataType::F64 { scale } => Buffer::F64(BufferImpl::new(F64Encoder::new(*scale))),
             DataType::BoolArray => Buffer::BoolArray(BufferImpl::new(BoolArrayEncoder::default())),
         }
     }
@@ -462,7 +461,7 @@ mod tests {
                 FieldDefinition::new("k", DataType::Bool),
                 FieldDefinition::new("long name!", DataType::String),
                 FieldDefinition::new("i", DataType::I64),
-                FieldDefinition::new("f", DataType::F64),
+                FieldDefinition::new("f", DataType::F64 { scale: 7 }),
                 FieldDefinition::new("ab", DataType::BoolArray),
             ]),
         );
@@ -520,6 +519,7 @@ mod tests {
                          b'i', // name = "i"
                          0x06, // data size = 6
                          0x01, // fifth entry type: f64 = 1
+                         0x07, // scale
                          0x01, // name len = 1
                          b'f', // name = "f"
                          0x07, // data size = 7
@@ -568,7 +568,7 @@ mod tests {
                 FieldDefinition::new("a", DataType::I64),
                 FieldDefinition::new("b", DataType::Bool),
                 FieldDefinition::new("c", DataType::String),
-                FieldDefinition::new("d", DataType::F64),
+                FieldDefinition::new("d", DataType::F64 { scale: 7 }),
                 FieldDefinition::new("e", DataType::BoolArray),
             ]),
         );

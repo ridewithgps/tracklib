@@ -129,9 +129,9 @@ impl<'a> SectionReader<'a> {
                         field_definition,
                         decoder: I64Decoder::new(column_data, presence_column_view)?,
                     },
-                    DataType::F64 => ColumnDecoder::F64 {
+                    DataType::F64 { scale } => ColumnDecoder::F64 {
                         field_definition,
-                        decoder: F64Decoder::new(column_data, presence_column_view)?,
+                        decoder: F64Decoder::new(column_data, presence_column_view, *scale)?,
                     },
                     DataType::Bool => ColumnDecoder::Bool {
                         field_definition,
@@ -271,6 +271,7 @@ mod tests {
                                b'c', // name
                                0x12, // leb128 data size
                                0x01, // fourth field type = F64
+                               0x07, // scale
                                0x01, // name length
                                b'f', // name
                                0x0C, // leb128 data size
@@ -281,8 +282,8 @@ mod tests {
                                b'a',
                                0x0C, // data size
 
-                               0x05, // crc
-                               0xF6,
+                               0x43, // crc
+                               0xA0,
         ];
 
         assert_matches!(parse_data_table(data_table_buf), Ok((&[], data_table_entries)) => {
@@ -375,7 +376,7 @@ mod tests {
                 FieldDefinition::new("a", DataType::I64),
                 FieldDefinition::new("b", DataType::Bool),
                 FieldDefinition::new("c", DataType::String),
-                FieldDefinition::new("f", DataType::F64),
+                FieldDefinition::new("f", DataType::F64{scale: 7}),
                 FieldDefinition::new("ba", DataType::BoolArray),
             ]));
 
@@ -402,7 +403,7 @@ mod tests {
                     });
                     assert_matches!(&values[3], Ok((field_definition, field_value)) => {
                         assert_eq!(*field_definition, data_table_entries[0].schema_entries()[3].field_definition());
-                        assert_eq!(*field_definition, &FieldDefinition::new("f", DataType::F64));
+                        assert_eq!(*field_definition, &FieldDefinition::new("f", DataType::F64{scale: 7}));
                         assert_eq!(field_value, &None);
                     });
                     assert_matches!(&values[4], Ok((field_definition, field_value)) => {
@@ -434,7 +435,7 @@ mod tests {
                     });
                     assert_matches!(&values[3], Ok((field_definition, field_value)) => {
                         assert_eq!(*field_definition, data_table_entries[0].schema_entries()[3].field_definition());
-                        assert_eq!(*field_definition, &FieldDefinition::new("f", DataType::F64));
+                        assert_eq!(*field_definition, &FieldDefinition::new("f", DataType::F64{scale: 7}));
                         assert_eq!(field_value, &Some(FieldValue::F64(1.0)));
                     });
                     assert_matches!(&values[4], Ok((field_definition, field_value)) => {
@@ -466,7 +467,7 @@ mod tests {
                     });
                     assert_matches!(&values[3], Ok((field_definition, field_value)) => {
                         assert_eq!(*field_definition, data_table_entries[0].schema_entries()[3].field_definition());
-                        assert_eq!(*field_definition, &FieldDefinition::new("f", DataType::F64));
+                        assert_eq!(*field_definition, &FieldDefinition::new("f", DataType::F64{scale: 7}));
                         assert_eq!(field_value, &Some(FieldValue::F64(2.5)));
                     });
                     assert_matches!(&values[4], Ok((field_definition, field_value)) => {
@@ -508,12 +509,13 @@ mod tests {
                                b'c', // name
                                0x12, // leb128 data size
                                0x01, // fourth field type = F64
+                               0x07, // scale
                                0x01, // name length
                                b'f', // name
                                0x0C, // leb128 data size
 
-                               0x81, // crc
-                               0x7D];
+                               0x62, // crc
+                               0x2D];
 
         assert_matches!(parse_data_table(data_table_buf), Ok((&[], data_table_entries)) => {
             assert_eq!(data_table_entries.len(), 1);
@@ -591,7 +593,7 @@ mod tests {
                 FieldDefinition::new("a", DataType::I64),
                 FieldDefinition::new("b", DataType::Bool),
                 FieldDefinition::new("c", DataType::String),
-                FieldDefinition::new("f", DataType::F64),
+                FieldDefinition::new("f", DataType::F64{scale: 7}),
             ]));
 
             // Missing field
@@ -698,7 +700,7 @@ mod tests {
             // Both of these fields exist
             assert_matches!(section.reader_for_schema(&Schema::with_fields(vec![
                 FieldDefinition::new("b", DataType::Bool),
-                FieldDefinition::new("f", DataType::F64),
+                FieldDefinition::new("f", DataType::F64{scale: 7}),
             ])), Ok(mut section_reader) => {
                 // Row 1
                 assert_eq!(section_reader.rows_remaining(), 3);
@@ -712,7 +714,7 @@ mod tests {
                     });
                     assert_matches!(&values[1], Ok((field_definition, field_value)) => {
                         assert_eq!(*field_definition, data_table_entries[0].schema_entries()[3].field_definition());
-                        assert_eq!(*field_definition, &FieldDefinition::new("f", DataType::F64));
+                        assert_eq!(*field_definition, &FieldDefinition::new("f", DataType::F64{scale: 7}));
                         assert_eq!(field_value, &None);
                     });
                 });
@@ -729,7 +731,7 @@ mod tests {
                     });
                     assert_matches!(&values[1], Ok((field_definition, field_value)) => {
                         assert_eq!(*field_definition, data_table_entries[0].schema_entries()[3].field_definition());
-                        assert_eq!(*field_definition, &FieldDefinition::new("f", DataType::F64));
+                        assert_eq!(*field_definition, &FieldDefinition::new("f", DataType::F64{scale: 7}));
                         assert_eq!(field_value, &Some(FieldValue::F64(1.0)));
                     });
                 });
@@ -746,7 +748,7 @@ mod tests {
                     });
                     assert_matches!(&values[1], Ok((field_definition, field_value)) => {
                         assert_eq!(*field_definition, data_table_entries[0].schema_entries()[3].field_definition());
-                        assert_eq!(*field_definition, &FieldDefinition::new("f", DataType::F64));
+                        assert_eq!(*field_definition, &FieldDefinition::new("f", DataType::F64{scale: 7}));
                         assert_eq!(field_value, &Some(FieldValue::F64(2.5)));
                     });
                 });

@@ -131,7 +131,10 @@ mod tests {
     fn test_data_table_with_multibyte_character() {
         let section = Section::new(
             SectionEncoding::Standard,
-            Schema::with_fields(vec![FieldDefinition::new("I ♥ NY", DataType::F64)]),
+            Schema::with_fields(vec![FieldDefinition::new(
+                "I ♥ NY",
+                DataType::F64 { scale: 7 },
+            )]),
         );
 
         let mut buf = Vec::new();
@@ -148,6 +151,7 @@ mod tests {
                          0x00, // schema version
                          0x01, // field count
                          0x01, // first field type = F64
+                         0x07, // scale
                          0x08, // name length
                          b'I', // name
                          b' ',
@@ -159,8 +163,8 @@ mod tests {
                          b'Y',
                          0x04, // leb128 data size
 
-                         0x35, // crc
-                         0x13]);
+                         0x29, // crc
+                         0x2C]);
         });
     }
 

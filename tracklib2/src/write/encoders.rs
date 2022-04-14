@@ -30,9 +30,19 @@ impl Encoder for I64Encoder {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct F64Encoder {
     prev: i64,
+    factor: f64,
+}
+
+impl F64Encoder {
+    pub fn new(scale: u8) -> Self {
+        Self {
+            prev: 0,
+            factor: 10_f64.powi(i32::from(scale)),
+        }
+    }
 }
 
 impl Encoder for F64Encoder {
@@ -46,7 +56,7 @@ impl Encoder for F64Encoder {
     ) -> Result<()> {
         presence.push(value.is_some());
         bitstream::write_i64(
-            value.map(|val| (*val * 10e6) as i64).as_ref(),
+            value.map(|val| (*val * self.factor) as i64).as_ref(),
             buf,
             &mut self.prev,
         )
@@ -172,7 +182,7 @@ mod tests {
     fn test_f64_encoder() {
         let mut data_buf = vec![];
         let mut presence_buf = vec![];
-        let mut encoder = F64Encoder::default();
+        let mut encoder = F64Encoder::new(7);
 
         assert!(encoder
             .encode(Some(&0.0), &mut data_buf, &mut presence_buf)
@@ -223,6 +233,41 @@ mod tests {
         assert_eq!(presence_buf, &[true,
                                    true,
                                    false,
+                                   true,
+                                   true,
+                                   true]);
+    }
+
+    #[test]
+    fn test_f64_encoder_smaller_scale_factor() {
+        let mut data_buf = vec![];
+        let mut presence_buf = vec![];
+        let mut encoder = F64Encoder::new(2);
+
+        assert!(encoder
+            .encode(Some(&0.0), &mut data_buf, &mut presence_buf)
+            .is_ok());
+        assert!(encoder
+            .encode(Some(&1.0), &mut data_buf, &mut presence_buf)
+            .is_ok());
+        assert!(encoder
+            .encode(Some(&-20.0), &mut data_buf, &mut presence_buf)
+            .is_ok());
+        assert!(encoder
+            .encode(Some(&-20.1234567), &mut data_buf, &mut presence_buf)
+            .is_ok());
+
+        #[rustfmt::skip]
+        assert_eq!(data_buf, &[0x00,
+                               0xE4,
+                               0x00,
+                               0xCC,
+                               0x6F,
+                               0x74,
+        ]);
+
+        #[rustfmt::skip]
+        assert_eq!(presence_buf, &[true,
                                    true,
                                    true,
                                    true]);

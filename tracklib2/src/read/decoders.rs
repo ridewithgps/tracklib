@@ -68,12 +68,14 @@ pub(crate) struct F64Decoder<'a> {
     data: &'a [u8],
     presence_column_view: PresenceColumnView<'a>,
     prev: i64,
+    factor: f64,
 }
 
 impl<'a> F64Decoder<'a> {
     pub(crate) fn new(
         data: &'a [u8],
         presence_column_view: PresenceColumnView<'a>,
+        scale: u8,
     ) -> Result<Self> {
         let column_data = validate_column(data)?;
 
@@ -81,6 +83,7 @@ impl<'a> F64Decoder<'a> {
             data: column_data,
             presence_column_view,
             prev: 0,
+            factor: 10_f64.powi(i32::from(scale)),
         })
     }
 }
@@ -93,7 +96,7 @@ impl<'a> Decoder for F64Decoder<'a> {
             Some(true) => {
                 let (rest, value) = bitstream::read_i64(self.data, &mut self.prev)?;
                 self.data = rest;
-                Ok(Some((value as f64) / 10e6))
+                Ok(Some((value as f64) / self.factor))
             }
             Some(false) => Ok(None),
             None => Err(TracklibError::ParseIncompleteError {
@@ -311,7 +314,7 @@ mod tests {
                     0xD3,
                     0xE9,
                     0x35];
-        assert_matches!(F64Decoder::new(buf, presence_column_view), Ok(mut decoder) => {
+        assert_matches!(F64Decoder::new(buf, presence_column_view, 7), Ok(mut decoder) => {
             assert_matches!(decoder.decode(), Ok(Some(v)) => {
                 assert_approx_eq!(f64, v, 0.0);
             });

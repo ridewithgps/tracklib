@@ -66,7 +66,7 @@ mod tests {
         // Write
         let mut section = Section::new(
             SectionEncoding::Standard,
-            Schema::with_fields(vec![FieldDefinition::new("v", DataType::F64)]),
+            Schema::with_fields(vec![FieldDefinition::new("v", DataType::F64 { scale: 7 })]),
         );
         for v in write_values.iter() {
             let mut rowbuilder = section.open_row_builder();

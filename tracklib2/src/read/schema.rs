@@ -50,7 +50,11 @@ fn parse_schema_entry<'a>(
 
         let data_type = match type_tag {
             0x00 => DataType::I64,
-            0x01 => DataType::F64,
+            0x01 => {
+                let (rest, scale) = le_u8(input)?;
+                input = rest;
+                DataType::F64 { scale }
+            }
             0x04 => DataType::String,
             0x05 => DataType::Bool,
             0x06 => {
@@ -132,7 +136,8 @@ mod tests {
                     b'e',
                     b'!',
                     0x07, // data size = 7 ("Hello!" + leb128 length prefix)
-                    0x01, // fourth entry type: f64 = 0
+                    0x01, // fourth entry type: f64 = 1
+                    0x07, // scale
                     0x01, // name len = 1
                     b'i', // name = "i"
                     0x02, // data size = 2
@@ -147,7 +152,7 @@ mod tests {
             assert_eq!(entries, vec![SchemaEntry::new_for_tests("m", DataType::I64, 2, 0),
                                      SchemaEntry::new_for_tests("k", DataType::Bool, 1, 2),
                                      SchemaEntry::new_for_tests("long name!", DataType::String, 7, 3),
-                                     SchemaEntry::new_for_tests("i", DataType::F64, 2, 10),
+                                     SchemaEntry::new_for_tests("i", DataType::F64{scale: 7}, 2, 10),
                                      SchemaEntry::new_for_tests("ab", DataType::BoolArray, 17, 12),
             ]);
         });

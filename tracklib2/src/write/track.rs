@@ -118,6 +118,7 @@ mod tests {
                     ColumnWriter::BoolArrayColumnWriter(_) => {}
                     ColumnWriter::U64ColumnWriter(_) => {}
                     ColumnWriter::U64ArrayColumnWriter(_) => {}
+                    ColumnWriter::ByteArrayColumnWriter(_) => {}
                 }
             }
         }
@@ -198,6 +199,7 @@ mod tests {
                         ColumnWriter::F64ColumnWriter(_) => {}
                         ColumnWriter::BoolArrayColumnWriter(_) => {}
                         ColumnWriter::U64ArrayColumnWriter(_) => {}
+                        ColumnWriter::ByteArrayColumnWriter(_) => {}
                     }
                 });
             }

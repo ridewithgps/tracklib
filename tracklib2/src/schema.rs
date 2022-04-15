@@ -48,4 +48,5 @@ pub enum DataType {
     String,
     BoolArray,
     U64Array,
+    ByteArray,
 }

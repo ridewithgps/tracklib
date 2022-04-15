@@ -17,6 +17,7 @@ fn write_data_type_tag<W: Write>(out: &mut W, data_type: &DataType) -> Result<()
         DataType::String => out.write_all(&[0x20])?,
         DataType::BoolArray => out.write_all(&[0x21])?,
         DataType::U64Array => out.write_all(&[0x22])?,
+        DataType::ByteArray => out.write_all(&[0x23])?,
     }
 
     Ok(())
@@ -60,6 +61,7 @@ enum Buffer {
     String(BufferImpl<StringEncoder>),
     BoolArray(BufferImpl<BoolArrayEncoder>),
     U64Array(BufferImpl<U64ArrayEncoder>),
+    ByteArray(BufferImpl<ByteArrayEncoder>),
 }
 
 impl Buffer {
@@ -72,6 +74,7 @@ impl Buffer {
             DataType::F64 { scale } => Buffer::F64(BufferImpl::new(F64Encoder::new(*scale))),
             DataType::BoolArray => Buffer::BoolArray(BufferImpl::new(BoolArrayEncoder::default())),
             DataType::U64Array => Buffer::U64Array(BufferImpl::new(U64ArrayEncoder::default())),
+            DataType::ByteArray => Buffer::ByteArray(BufferImpl::new(ByteArrayEncoder::default())),
         }
     }
 
@@ -84,6 +87,7 @@ impl Buffer {
             Self::String(buffer_impl) => buffer_impl.buf.len(),
             Self::BoolArray(buffer_impl) => buffer_impl.buf.len(),
             Self::U64Array(buffer_impl) => buffer_impl.buf.len(),
+            Self::ByteArray(buffer_impl) => buffer_impl.buf.len(),
         }
     }
 }
@@ -159,6 +163,7 @@ impl Section {
                     Buffer::String(buffer_impl) => buffer_impl.presence.get(row_i),
                     Buffer::BoolArray(buffer_impl) => buffer_impl.presence.get(row_i),
                     Buffer::U64Array(buffer_impl) => buffer_impl.presence.get(row_i),
+                    Buffer::ByteArray(buffer_impl) => buffer_impl.presence.get(row_i),
                 };
 
                 if let Some(true) = is_present {
@@ -194,6 +199,7 @@ impl Section {
                     Buffer::String(buffer_impl) => buffer_impl.data_size(),
                     Buffer::BoolArray(buffer_impl) => buffer_impl.data_size(),
                     Buffer::U64Array(buffer_impl) => buffer_impl.data_size(),
+                    Buffer::ByteArray(buffer_impl) => buffer_impl.data_size(),
                 })
                 .unwrap_or(0);
 
@@ -217,7 +223,8 @@ impl Section {
                 Buffer::Bool(buffer_impl) => buffer_impl.write_data(out)?,        // |
                 Buffer::String(buffer_impl) => buffer_impl.write_data(out)?,      // |
                 Buffer::BoolArray(buffer_impl) => buffer_impl.write_data(out)?,   // |
-                Buffer::U64Array(buffer_impl) => buffer_impl.write_data(out)?,    //  - > ? bytes - data column with crc
+                Buffer::U64Array(buffer_impl) => buffer_impl.write_data(out)?,    // |
+                Buffer::ByteArray(buffer_impl) => buffer_impl.write_data(out)?,   //  - > ? bytes - data column with crc
             };
         }
 
@@ -270,6 +277,9 @@ impl<'a> RowBuilder<'a> {
             (Some(field_def), Some(Buffer::U64Array(ref mut buffer_impl))) => Some(
                 ColumnWriter::U64ArrayColumnWriter(ColumnWriterImpl::new(&field_def, buffer_impl)),
             ),
+            (Some(field_def), Some(Buffer::ByteArray(ref mut buffer_impl))) => Some(
+                ColumnWriter::ByteArrayColumnWriter(ColumnWriterImpl::new(&field_def, buffer_impl)),
+            ),
             _ => None,
         }
     }
@@ -284,6 +294,7 @@ pub enum ColumnWriter<'a> {
     StringColumnWriter(ColumnWriterImpl<'a, StringEncoder>),
     BoolArrayColumnWriter(ColumnWriterImpl<'a, BoolArrayEncoder>),
     U64ArrayColumnWriter(ColumnWriterImpl<'a, U64ArrayEncoder>),
+    ByteArrayColumnWriter(ColumnWriterImpl<'a, ByteArrayEncoder>),
 }
 
 #[derive(Debug)]
@@ -364,6 +375,7 @@ mod tests {
                     ColumnWriter::F64ColumnWriter(_) => {}
                     ColumnWriter::BoolArrayColumnWriter(_) => {}
                     ColumnWriter::U64ArrayColumnWriter(_) => {}
+                    ColumnWriter::ByteArrayColumnWriter(_) => {}
                 }
             }
         }
@@ -485,6 +497,7 @@ mod tests {
                 FieldDefinition::new("ab", DataType::BoolArray),
                 FieldDefinition::new("u", DataType::U64),
                 FieldDefinition::new("au", DataType::U64Array),
+                FieldDefinition::new("abyte", DataType::ByteArray),
             ]),
         );
 
@@ -512,6 +525,9 @@ mod tests {
                 ColumnWriter::U64ArrayColumnWriter(cwi) => {
                     assert!(cwi.write(Some(&[1, 30, 12])).is_ok());
                 }
+                ColumnWriter::ByteArrayColumnWriter(cwi) => {
+                    assert!(cwi.write(Some(&[0xDE, 0xAD, 0xBE, 0xEF])).is_ok());
+                }
             }
         }
 
@@ -520,7 +536,7 @@ mod tests {
             #[rustfmt::skip]
             assert_eq!(buf,
                        &[0x00, // schema version
-                         0x07, // entry count
+                         0x08, // entry count
                          0x00, // first entry type: I64
                          0x01, // name len = 1
                          b'm', // name = "m"
@@ -561,6 +577,14 @@ mod tests {
                          b'a', // name
                          b'u',
                          0x08, // data size
+                         0x23, // eigth entry type: ByteArray
+                         0x05, // name len
+                         b'a', // name
+                         b'b',
+                         b'y',
+                         b't',
+                         b'e',
+                         0x09, // data size
                        ]);
         });
     }
@@ -575,6 +599,7 @@ mod tests {
             String(String),
             BoolArray(Vec<bool>),
             U64Array(Vec<u64>),
+            ByteArray(Vec<u8>),
         }
 
         let mut v = Vec::new();
@@ -598,6 +623,7 @@ mod tests {
         h.insert("d", V::F64(2112.90125));
         h.insert("f", V::U64(18));
         h.insert("g", V::U64Array(vec![1, 2, 3]));
+        h.insert("h", V::ByteArray(vec![0, 1]));
         v.push(h);
 
         let mut section = Section::new(
@@ -610,6 +636,7 @@ mod tests {
                 FieldDefinition::new("e", DataType::BoolArray),
                 FieldDefinition::new("f", DataType::U64),
                 FieldDefinition::new("g", DataType::U64Array),
+                FieldDefinition::new("h", DataType::ByteArray),
             ]),
         );
 
@@ -698,6 +725,17 @@ mod tests {
                                     .flatten(),
                             ).is_ok());
                         }
+                        ColumnWriter::ByteArrayColumnWriter(cwi) => {
+                            assert!(cwi.write(
+                                entry
+                                    .get(field_def.name())
+                                    .map(|v| match v {
+                                        V::ByteArray(v) => Some(v.as_slice()),
+                                        _ => None,
+                                    })
+                                    .flatten(),
+                            ).is_ok());
+                        }
                     }
                 });
             }
@@ -710,11 +748,11 @@ mod tests {
                 // Presence Column
                 0b01001111,
                 0b00110101,
-                0b01101111,
-                0xF8, // crc
-                0xB6,
-                0x5B,
-                0x06,
+                0b11101111,
+                0x16, // crc
+                0x56,
+                0x57,
+                0x6F,
 
                 // Data Column 1 = I64
                 0x01, // 1
@@ -797,6 +835,15 @@ mod tests {
                 0x5D,
                 0x06,
                 0x83,
+
+                // Data Column 8 = Byte Array
+                0x02, // array len 2
+                0x00,
+                0x01,
+                0x46, // crc
+                0xC6,
+                0xEB,
+                0x4F,
             ]);
         });
     }

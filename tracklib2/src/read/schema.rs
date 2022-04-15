@@ -62,6 +62,7 @@ fn parse_schema_entry<'a>(
             0x20 => DataType::String,
             0x21 => DataType::BoolArray,
             0x22 => DataType::U64Array,
+            0x23 => DataType::ByteArray,
 
             _ => {
                 return Err(nom::Err::Error(TracklibError::ParseError {

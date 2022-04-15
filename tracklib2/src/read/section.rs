@@ -103,6 +103,10 @@ enum ColumnDecoder<'a> {
         field_definition: &'a FieldDefinition,
         decoder: U64ArrayDecoder<'a>,
     },
+    ByteArray {
+        field_definition: &'a FieldDefinition,
+        decoder: ByteArrayDecoder<'a>,
+    },
 }
 
 #[cfg_attr(test, derive(Debug))]
@@ -160,6 +164,10 @@ impl<'a> SectionReader<'a> {
                     DataType::U64Array => ColumnDecoder::U64Array {
                         field_definition,
                         decoder: U64ArrayDecoder::new(column_data, presence_column_view)?,
+                    },
+                    DataType::ByteArray => ColumnDecoder::ByteArray {
+                        field_definition,
+                        decoder: ByteArrayDecoder::new(column_data, presence_column_view)?,
                     },
                 };
                 Ok(decoder)
@@ -269,6 +277,17 @@ impl<'a, 'b> Iterator for ColumnIter<'a, 'b> {
                         })
                         .map_err(|e| e),
                 ),
+                ColumnDecoder::ByteArray {
+                    ref field_definition,
+                    ref mut decoder,
+                } => Some(
+                    decoder
+                        .decode()
+                        .map(|maybe_v| {
+                            (*field_definition, maybe_v.map(|v| FieldValue::ByteArray(v)))
+                        })
+                        .map_err(|e| e),
+                ),
             }
         } else {
             None
@@ -293,7 +312,7 @@ mod tests {
                                0x26, // leb128 section data size
                                // Schema
                                0x00, // schema version
-                               0x07, // field count
+                               0x08, // field count
                                0x00, // first field type = I64
                                0x01, // name length
                                b'a', // name
@@ -325,9 +344,14 @@ mod tests {
                                b'b', // name
                                b'u',
                                0x08, // data size
+                               0x23, // eight field type = ByteArray
+                               0x02, // name length
+                               b'b', // name
+                               b'B',
+                               0x08, // data size
 
-                               0xEB, // crc
-                               0x55,
+                               0x04, // crc
+                               0x13,
         ];
 
         assert_matches!(parse_data_table(data_table_buf), Ok((&[], data_table_entries)) => {
@@ -338,11 +362,11 @@ mod tests {
                 // Presence Column
                 0b01010111,
                 0b01111101,
-                0b00111111,
-                0xA9, // crc
-                0x9E,
-                0x8D,
-                0xA6,
+                0b10111111,
+                0x47, // crc
+                0x7E,
+                0x81,
+                0xCF,
 
                 // Data Column 1 = I64
                 0x01, // 1
@@ -428,6 +452,16 @@ mod tests {
                 0x47,
                 0xAF,
                 0x7A,
+
+                // Data Column 8 = ByteArray
+                0x03,
+                0xDE,
+                0xAD,
+                0xFF,
+                0xDD, // crc
+                0xB8,
+                0xC0,
+                0xDB,
             ];
 
             let section = Section::new(buf, &data_table_entries[0]);
@@ -442,6 +476,7 @@ mod tests {
                 FieldDefinition::new("ba", DataType::BoolArray),
                 FieldDefinition::new("u", DataType::U64),
                 FieldDefinition::new("bu", DataType::U64Array),
+                FieldDefinition::new("bB", DataType::ByteArray),
             ]));
 
             assert_matches!(section.reader(), Ok(mut section_reader) => {
@@ -449,7 +484,7 @@ mod tests {
                 assert_eq!(section_reader.rows_remaining(), 3);
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
                     let values = column_iter.collect::<Vec<_>>();
-                    assert_eq!(values.len(), 7);
+                    assert_eq!(values.len(), 8);
                     assert_matches!(&values[0], Ok((field_definition, field_value)) => {
                         assert_eq!(*field_definition, data_table_entries[0].schema_entries()[0].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("a", DataType::I64));
@@ -485,13 +520,18 @@ mod tests {
                         assert_eq!(*field_definition, &FieldDefinition::new("bu", DataType::U64Array));
                         assert_eq!(field_value, &Some(FieldValue::U64Array(vec![])));
                     });
+                    assert_matches!(&values[7], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[7].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("bB", DataType::ByteArray));
+                        assert_eq!(field_value, &None);
+                    });
                 });
 
                 // Row 2
                 assert_eq!(section_reader.rows_remaining(), 2);
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
                     let values = column_iter.collect::<Vec<_>>();
-                    assert_eq!(values.len(), 7);
+                    assert_eq!(values.len(), 8);
                     assert_matches!(&values[0], Ok((field_definition, field_value)) => {
                         assert_eq!(*field_definition, data_table_entries[0].schema_entries()[0].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("a", DataType::I64));
@@ -527,13 +567,18 @@ mod tests {
                         assert_eq!(*field_definition, &FieldDefinition::new("bu", DataType::U64Array));
                         assert_eq!(field_value, &Some(FieldValue::U64Array(vec![4, 5])));
                     });
+                    assert_matches!(&values[7], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[7].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("bB", DataType::ByteArray));
+                        assert_eq!(field_value, &None);
+                    });
                 });
 
                 // Row 3
                 assert_eq!(section_reader.rows_remaining(), 1);
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
                     let values = column_iter.collect::<Vec<_>>();
-                    assert_eq!(values.len(), 7);
+                    assert_eq!(values.len(), 8);
                     assert_matches!(&values[0], Ok((field_definition, field_value)) => {
                         assert_eq!(*field_definition, data_table_entries[0].schema_entries()[0].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("a", DataType::I64));
@@ -568,6 +613,11 @@ mod tests {
                         assert_eq!(*field_definition, data_table_entries[0].schema_entries()[6].field_definition());
                         assert_eq!(*field_definition, &FieldDefinition::new("bu", DataType::U64Array));
                         assert_eq!(field_value, &None);
+                    });
+                    assert_matches!(&values[7], Ok((field_definition, field_value)) => {
+                        assert_eq!(*field_definition, data_table_entries[0].schema_entries()[7].field_definition());
+                        assert_eq!(*field_definition, &FieldDefinition::new("bB", DataType::ByteArray));
+                        assert_eq!(field_value, &Some(FieldValue::ByteArray(vec![0xDE, 0xAD, 0xFF])));
                     });
                 });
 

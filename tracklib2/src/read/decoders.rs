@@ -315,6 +315,52 @@ impl<'a> Decoder for U64ArrayDecoder<'a> {
     }
 }
 
+#[cfg_attr(test, derive(Debug))]
+pub(crate) struct ByteArrayDecoder<'a> {
+    data: &'a [u8],
+    presence_column_view: PresenceColumnView<'a>,
+}
+
+impl<'a> ByteArrayDecoder<'a> {
+    pub(crate) fn new(
+        data: &'a [u8],
+        presence_column_view: PresenceColumnView<'a>,
+    ) -> Result<Self> {
+        let column_data = validate_column(data)?;
+
+        Ok(Self {
+            data: column_data,
+            presence_column_view,
+        })
+    }
+}
+
+impl<'a> Decoder for ByteArrayDecoder<'a> {
+    type T = Vec<u8>;
+
+    fn decode(&mut self) -> Result<Option<Self::T>> {
+        match self.presence_column_view.next() {
+            Some(true) => {
+                let (mut data, array_len) = leb128_u64(self.data)?;
+                let mut array =
+                    Vec::with_capacity(usize::try_from(array_len).expect("usize != u64"));
+                for _ in 0..array_len {
+                    let (rest, value) = bitstream::read_byte(data)?;
+                    data = rest;
+                    array.push(value);
+                }
+                self.data = data;
+
+                Ok(Some(array))
+            }
+            Some(false) => Ok(None),
+            None => Err(TracklibError::ParseIncompleteError {
+                needed: nom::Needed::Unknown,
+            }),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -602,6 +648,37 @@ mod tests {
         assert_matches!(U64ArrayDecoder::new(buf, presence_column_view), Ok(mut decoder) => {
             assert_matches!(decoder.decode(), Ok(Some(v)) => {
                 assert_eq!(v, &[6, 7, 8, 8]);
+            });
+            assert_matches!(decoder.decode(), Ok(Some(v)) => {
+                assert_eq!(v, &[]);
+            });
+        });
+    }
+
+    #[test]
+    fn test_decode_byte_array() {
+        #[rustfmt::skip]
+        let presence_buf = &[0b00000001,
+                             0b00000001,
+                             0xE9, // crc
+                             0x47,
+                             0x90,
+                             0x29];
+        let presence_column =
+            assert_matches!(parse_presence_column(1, 2)(presence_buf), Ok((&[], pc)) => pc);
+        let presence_column_view = assert_matches!(presence_column.view(0), Some(v) => v);
+        #[rustfmt::skip]
+        let buf = &[0x02, // array len
+                    0x06,
+                    0xFF,
+                    0x00, // array len
+                    0x86, // crc
+                    0xC5,
+                    0x8D,
+                    0xCE];
+        assert_matches!(ByteArrayDecoder::new(buf, presence_column_view), Ok(mut decoder) => {
+            assert_matches!(decoder.decode(), Ok(Some(v)) => {
+                assert_eq!(v, &[6, 255]);
             });
             assert_matches!(decoder.decode(), Ok(Some(v)) => {
                 assert_eq!(v, &[]);

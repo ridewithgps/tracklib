@@ -8,6 +8,7 @@ pub enum FieldValue {
     String(String),
     BoolArray(Vec<bool>),
     U64Array(Vec<u64>),
+    ByteArray(Vec<u8>),
 }
 
 #[derive(Debug)]

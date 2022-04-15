@@ -164,6 +164,29 @@ impl Encoder for U64ArrayEncoder {
     }
 }
 
+#[derive(Debug, Default)]
+pub struct ByteArrayEncoder;
+
+impl Encoder for ByteArrayEncoder {
+    type T = [u8];
+
+    fn encode(
+        &mut self,
+        value: Option<&Self::T>,
+        buf: &mut Vec<u8>,
+        presence: &mut Vec<bool>,
+    ) -> Result<()> {
+        presence.push(value.is_some());
+        if let Some(array) = value {
+            leb128::write::unsigned(buf, u64::try_from(array.len()).expect("usize != u64"))?;
+            for b in array {
+                bitstream::write_byte(Some(b), buf)?;
+            }
+        }
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -556,6 +579,44 @@ mod tests {
                                0x41,
                                0x01, // array len 1
                                0x32, // 50
+        ]);
+
+        #[rustfmt::skip]
+        assert_eq!(presence_buf, &[true,
+                                   false,
+                                   true,
+                                   true]);
+    }
+
+    #[test]
+    fn test_byte_array_encoder() {
+        let mut data_buf = vec![];
+        let mut presence_buf = vec![];
+        let mut encoder = ByteArrayEncoder::default();
+
+        assert!(encoder
+            .encode(Some(&[0, 17, 15]), &mut data_buf, &mut presence_buf)
+            .is_ok());
+        assert!(encoder
+            .encode(None, &mut data_buf, &mut presence_buf)
+            .is_ok());
+        assert!(encoder
+            .encode(Some(&[255, 1]), &mut data_buf, &mut presence_buf)
+            .is_ok());
+        assert!(encoder
+            .encode(Some(&[127]), &mut data_buf, &mut presence_buf)
+            .is_ok());
+
+        #[rustfmt::skip]
+        assert_eq!(data_buf, &[0x03, // array len three
+                               0x00, // zero
+                               0x11, // 17
+                               0x0F, // 15
+                               0x02, // array len 2
+                               0xFF, // 255
+                               0x01, // 1
+                               0x01, // array len 1
+                               0x7F, // 127
         ]);
 
         #[rustfmt::skip]

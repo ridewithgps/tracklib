@@ -143,11 +143,11 @@ mod tests {
             0x01, // name len
             b'm', // name
             0x09, // leb128 data size
-            0x05, // second field type = Bool
+            0x10, // second field type = Bool
             0x01, // name len
             b'k', // name
             0x09, // leb128 data size
-            0x04, // third field type = String
+            0x20, // third field type = String
             0x01, // name len
             b'j', // name
             0x18, // leb128 data size
@@ -164,18 +164,18 @@ mod tests {
             0x01, // name length
             b'a', // name
             0x07, // leb128 data size
-            0x05, // second field type = Bool
+            0x10, // second field type = Bool
             0x01, // name length
             b'b', // name
             0x06, // leb128 data size
-            0x04, // third field type = String
+            0x20, // third field type = String
             0x01, // name length
             b'c', // name
             0x12, // leb128 data size
 
             // Data Table CRC
-            0xC8,
-            0x42,
+            0x34,
+            0x2E,
 
             // Data Section 1
 

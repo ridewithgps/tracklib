@@ -113,11 +113,11 @@ mod tests {
                     0x01, // name length
                     b'a', // name
                     0x00, // leb128 data size
-                    0x05, // second field type = Bool
+                    0x10, // second field type = Bool
                     0x01, // name length
                     b'b', // name
                     0x00, // leb128 data size
-                    0x04, // third field type = String
+                    0x20, // third field type = String
                     0x01, // name length
                     b'c', // name
                     0x00, // leb128 data size
@@ -138,23 +138,22 @@ mod tests {
                     b'd', // name
                     b'e', // name
                     0x00, // leb128 data size
-                    0x05, // second field type = Bool
+                    0x10, // second field type = Bool
                     0x04, // name length
                     b'w', // name
                     b'i', // name
                     b't', // name
                     b'h', // name
                     0x00, // leb128 data size
-                    0x04, // third field type = String
+                    0x20, // third field type = String
                     0x03, // name length
                     b'G', // name
                     b'P', // name
                     b'S', // name
                     0x00, // leb128 data size
 
-
-                    0xDA, // crc
-                    0x8E];
+                    0xF3, // crc
+                    0x07];
 
         assert_matches!(parse_data_table(buf), Ok((&[], entries)) => {
             assert_eq!(

@@ -83,11 +83,11 @@ mod tests {
                          0x01, // name length
                          b'a', // name
                          0x04, // leb128 data size
-                         0x05, // second field type = Bool
+                         0x10, // second field type = Bool
                          0x01, // name length
                          b'b', // name
                          0x04, // leb128 data size
-                         0x04, // third field type = String
+                         0x20, // third field type = String
                          0x01, // name length
                          b'c', // name
                          0x04, // leb128 data size
@@ -108,22 +108,22 @@ mod tests {
                          b'd', // name
                          b'e', // name
                          0x04, // leb128 data size
-                         0x05, // second field type = Bool
+                         0x10, // second field type = Bool
                          0x04, // name length
                          b'w', // name
                          b'i', // name
                          b't', // name
                          b'h', // name
                          0x04, // leb128 data size
-                         0x04, // third field type = String
+                         0x20, // third field type = String
                          0x03, // name length
                          b'G', // name
                          b'P', // name
                          b'S', // name
                          0x04, // leb128 data size
 
-                         0x74, // crc
-                         0xA4]);
+                         0x5D, // crc
+                         0x2D]);
         });
     }
 
@@ -165,37 +165,6 @@ mod tests {
 
                          0x29, // crc
                          0x2C]);
-        });
-    }
-
-    #[test]
-    fn test_array_types() {
-        let section = Section::new(
-            SectionEncoding::Standard,
-            Schema::with_fields(vec![FieldDefinition::new("a", DataType::BoolArray)]),
-        );
-
-        let mut buf = Vec::new();
-        assert_matches!(write_data_table(&mut buf, &[&section]), Ok(()) => {
-            #[rustfmt::skip]
-            assert_eq!(buf,
-                       &[0x01, // number of sections
-
-                         // Section 1
-                         0x00, // section encoding = standard
-                         0x00, // leb128 section point count
-                         0x08, // leb128 section data size
-                         // Schema
-                         0x00, // schema version
-                         0x01, // field count
-                         0x06, // first field type = Array
-                         0x05, // array subtype = Bool
-                         0x01, // name length
-                         b'a', // name
-                         0x04, // leb128 data size
-
-                         0x0C, // crc
-                         0xCF]);
         });
     }
 }

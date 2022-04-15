@@ -10,11 +10,13 @@ fn write_data_type_tag<W: Write>(out: &mut W, data_type: &DataType) -> Result<()
     match data_type {
         DataType::I64 => out.write_all(&[0x00])?,
         DataType::F64 { scale } => out.write_all(&[0x01, *scale])?,
-        DataType::String => out.write_all(&[0x04])?,
-        DataType::Bool => out.write_all(&[0x05])?,
-        DataType::BoolArray => out.write_all(&[0x06, 0x05])?,
-        DataType::U64Array => out.write_all(&[0x06, 0x07])?,
-        DataType::U64 => out.write_all(&[0x07])?,
+        DataType::U64 => out.write_all(&[0x02])?,
+
+        DataType::Bool => out.write_all(&[0x10])?,
+
+        DataType::String => out.write_all(&[0x20])?,
+        DataType::BoolArray => out.write_all(&[0x21])?,
+        DataType::U64Array => out.write_all(&[0x22])?,
     }
 
     Ok(())
@@ -519,15 +521,15 @@ mod tests {
             assert_eq!(buf,
                        &[0x00, // schema version
                          0x07, // entry count
-                         0x00, // first entry type: i64 = 0
+                         0x00, // first entry type: I64
                          0x01, // name len = 1
                          b'm', // name = "m"
                          0x06, // data size = 6
-                         0x05, // second entry type: bool = 5
+                         0x10, // second entry type: Bool
                          0x01, // name len = 1
                          b'k', // name = "k"
                          0x05, // data size = 5
-                         0x04, // third entry type: string = 4
+                         0x20, // third entry type: String
                          0x0A, // name len = 10
                          b'l', // name = "long name!"
                          b'o',
@@ -540,23 +542,21 @@ mod tests {
                          b'e',
                          b'!',
                          0x0B, // data size = 11
-                         0x01, // fourth entry type: f64 = 1
+                         0x01, // fourth entry type: F64
                          0x07, // scale
                          0x01, // name len = 1
                          b'f', // name = "f"
                          0x07, // data size = 7
-                         0x06, // fifth entry type: array = 6
-                         0x05, // array subtype = bool
+                         0x21, // fifth entry type: BoolArray
                          0x02, // name len = 2
                          b'a', // name = "ids"
                          b'b',
                          0x08, // data size = 8
-                         0x07, // sixth entry type: u64 = 7
+                         0x02, // sixth entry type: U64
                          0x01, // name len
                          b'u', // name
                          0x06, // data size
-                         0x06, // seventh entry type: array = 6
-                         0x07, // array subtype = u64
+                         0x22, // seventh entry type: U64Array
                          0x02, // name len
                          b'a', // name
                          b'u',

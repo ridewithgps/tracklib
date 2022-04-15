@@ -298,11 +298,11 @@ mod tests {
                                0x01, // name length
                                b'a', // name
                                0x07, // leb128 data size
-                               0x05, // second field type = Bool
+                               0x10, // second field type = Bool
                                0x01, // name length
                                b'b', // name
                                0x06, // leb128 data size
-                               0x04, // third field type = String
+                               0x20, // third field type = String
                                0x01, // name length
                                b'c', // name
                                0x12, // leb128 data size
@@ -311,25 +311,23 @@ mod tests {
                                0x01, // name length
                                b'f', // name
                                0x0C, // leb128 data size
-                               0x06, // fifth field type = Array
-                               0x05, // subtype Bool
+                               0x21, // fifth field type = BoolArray
                                0x02, // name length 2
                                b'b', // name
                                b'a',
                                0x0C, // data size
-                               0x07, // sixth field type = U64
+                               0x02, // sixth field type = U64
                                0x01, // name length
                                b'u', // name
                                0x06, // data size
-                               0x06, // seventh field type = Array
-                               0x07, // subtype U64
+                               0x22, // seventh field type = U64Array
                                0x02, // name length
                                b'b', // name
                                b'u',
                                0x08, // data size
 
-                               0xAB, //crc
-                               0x79,
+                               0xEB, // crc
+                               0x55,
         ];
 
         assert_matches!(parse_data_table(data_table_buf), Ok((&[], data_table_entries)) => {
@@ -596,11 +594,11 @@ mod tests {
                                0x01, // name length
                                b'a', // name
                                0x07, // leb128 data size
-                               0x05, // second field type = Bool
+                               0x10, // second field type = Bool
                                0x01, // name length
                                b'b', // name
                                0x06, // leb128 data size
-                               0x04, // third field type = String
+                               0x20, // third field type = String
                                0x01, // name length
                                b'c', // name
                                0x12, // leb128 data size
@@ -610,8 +608,8 @@ mod tests {
                                b'f', // name
                                0x0C, // leb128 data size
 
-                               0x62, // crc
-                               0x2D];
+                               0xFB, // crc
+                               0xB9];
 
         assert_matches!(parse_data_table(data_table_buf), Ok((&[], data_table_entries)) => {
             assert_eq!(data_table_entries.len(), 1);

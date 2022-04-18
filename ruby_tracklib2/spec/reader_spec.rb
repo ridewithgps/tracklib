@@ -28,19 +28,19 @@ data = [
   0x34,
 
   # Metadata Table
-  0x02, # two entries
+  0x02, # one entry
   0x00, # entry type: track_type = 0x00
   0x05, # two byte entry size = 5
   0x00,
-  0x00, # track type: trip = 0x00
-  0x14, # four byte trip ID = 20
+  0x02, # track type: segment = 0x02
+  0x05, # four byte segment ID
   0x00,
   0x00,
   0x00,
   0x01, # entry type: created_at = 0x01
   0x08, # two byte entry size = 8
   0x00,
-  0x00, # eight byte timestamp: zero seconds elapsed
+  0x19, # eight byte timestamp: zero seconds elapsed
   0x00,
   0x00,
   0x00,
@@ -48,8 +48,8 @@ data = [
   0x00,
   0x00,
   0x00,
-  0x23, # crc
-  0xD2,
+  0xB2, # crc
+  0xD9,
 
   # Data Table
   0x02, # two sections
@@ -57,23 +57,87 @@ data = [
   # Data Table Section 1
   0x00, # section encoding = standard
   0x05, # leb128 point count
-  0x33, # leb128 data size
+  0x84, # leb128 data size
+  0x01,
 
   # Schema for Section 1
   0x00, # schema version
-  0x03, # field count
+  0x08, # field count
   0x00, # first field type = I64
-  0x01, # name len
-  0x6D, # name = m
-  0x09, # leb128 data size
-  0x05, # second field type = Bool
-  0x01, # name len
-  0x6B, # name = k
-  0x09, # leb128 data size
-  0x04, # third field type = String
-  0x01, # name len
-  0x6A, # name = j
-  0x18, # leb128 data size
+  0x03, # name len
+  'i'.ord, # name
+  '6'.ord,
+  '4'.ord,
+  0x09, # data size
+  0x01, # second field type = F64
+  0x02, # scale
+  0x05, # name len
+  'f'.ord, # name
+  '6'.ord,
+  '4'.ord,
+  ':'.ord,
+  '2'.ord,
+  0x0A, # data len
+  0x02, # third field type = U64
+  0x03, # name len
+  'u'.ord, # name
+  '6'.ord,
+  '4'.ord,
+  0x09, # data len
+  0x10, # fourth field type = Bool
+  0x04, # name len
+  'b'.ord, # name
+  'o'.ord,
+  'o'.ord,
+  'l'.ord,
+  0x09, # data len
+  0x20, # fifth field type = String
+  0x06, # name len
+  's'.ord, # name
+  't'.ord,
+  'r'.ord,
+  'i'.ord,
+  'n'.ord,
+  'g'.ord,
+  0x18, # data len
+  0x21, # sixth field type = Bool Array
+  0x0A, # name len
+  'b'.ord, # name
+  'o'.ord,
+  'o'.ord,
+  'l'.ord,
+  ' '.ord,
+  'a'.ord,
+  'r'.ord,
+  'r'.ord,
+  'a'.ord,
+  'y'.ord,
+  0x0E, # data len
+  0x22, # seventh field type = U64 Array
+  0x09, # name len
+  'u'.ord, # name
+  '6'.ord,
+  '4'.ord,
+  ' '.ord,
+  'a'.ord,
+  'r'.ord,
+  'r'.ord,
+  'a'.ord,
+  'y'.ord,
+  0x18, # data len
+  0x23, # eigth field type = Byte Array
+  0x0A, # name len
+  'b'.ord, # name
+  'y'.ord,
+  't'.ord,
+  'e'.ord,
+  ' '.ord,
+  'a'.ord,
+  'r'.ord,
+  'r'.ord,
+  'a'.ord,
+  'y'.ord,
+  0x18, # data len
 
   # Data Table Section 2
   0x00, # section encoding = standard
@@ -85,33 +149,33 @@ data = [
   0x03, # field count
   0x00, # first field type = I64
   0x01, # name length
-  0x61, # name = a
+  'a'.ord, # name
   0x07, # leb128 data size
-  0x05, # second field type = Bool
+  0x10, # second field type = Bool
   0x01, # name length
-  0x62, # name = b
+  'b'.ord, # name
   0x06, # leb128 data size
-  0x04, # third field type = String
+  0x20, # third field type = String
   0x01, # name length
-  0x63, # name = c
+  'c'.ord, # name
   0x12, # leb128 data size
 
   # Data Table CRC
-  0xC8,
-  0x42,
+  0xCD,
+  0xB9,
 
   # Data Section 1
 
   # Presence Column
-  0b00000111,
-  0b00000111,
-  0b00000111,
-  0b00000111,
-  0b00000111,
-  0xF6, # crc
-  0xF8,
-  0x0D,
-  0x73,
+  0b11111111,
+  0b11111111,
+  0b11111111,
+  0b11111111,
+  0b11111111,
+  0x4B, # crc
+  0xBF,
+  0x08,
+  0x4E,
 
   # Data Column 1 = I64
   0x2A, # 42
@@ -124,7 +188,30 @@ data = [
   0x79,
   0x68,
 
-  # Data Column 2 = Bool
+  # Data Column 2 = F64
+  0xCE, # 0.78
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0x3C, # crc
+  0x2E,
+  0x7B,
+  0x33,
+
+  # Data Column 3 = U64
+  0x19, # 25
+  0x00,
+  0x00,
+  0x00,
+  0x00,
+  0xE4, # crc
+  0x2A,
+  0xD9,
+  0x33,
+
+  # Data Column 4 = Bool
   0x01, # true
   0x01, # true
   0x01, # true
@@ -135,31 +222,99 @@ data = [
   0x8F,
   0xFA,
 
-  # Data Column 3 = String
+  # Data Column 5 = String
   0x03, # length 3
-  0x68, # h
-  0x65, # e
-  0x79, # y
+  'h'.ord,
+  'e'.ord,
+  'y'.ord,
   0x03, # length 3
-  0x68, # h
-  0x65, # e
-  0x79, # y
+  'h'.ord,
+  'e'.ord,
+  'y'.ord,
   0x03, # length 3
-  0x68, # h
-  0x65, # e
-  0x79, # y
+  'h'.ord,
+  'e'.ord,
+  'y'.ord,
   0x03, # length 3
-  0x68, # h
-  0x65, # e
-  0x79, # y
+  'h'.ord,
+  'e'.ord,
+  'y'.ord,
   0x03, # length 3
-  0x68, # h
-  0x65, # e
-  0x79, # y
+  'h'.ord,
+  'e'.ord,
+  'y'.ord,
   0x36, # crc
   0x71,
   0x24,
   0x0B,
+
+  # Data Column 6 = Bool Array
+  0x01, # array len
+  0x01, # true
+  0x01, # array len
+  0x01, # true
+  0x01, # array len
+  0x01, # true
+  0x01, # array len
+  0x01, # true
+  0x01, # array len
+  0x01, # true
+  0xB3, # crc
+  0x6F,
+  0x38,
+  0x51,
+
+  # Data Column 7 = U64 Array
+  0x03, # array len
+  0x0C, # 12
+  0x7E, # -2
+  0x03, # +3
+  0x03, # array len
+  0x0C, # 12
+  0x7E, # -2
+  0x03, # +3
+  0x03, # array len
+  0x0C, # 12
+  0x7E, # -2
+  0x03, # +3
+  0x03, # array len
+  0x0C, # 12
+  0x7E, # -2
+  0x03, # +3
+  0x03, # array len
+  0x0C, # 12
+  0x7E, # -2
+  0x03, # +3
+  0xD1, # crc
+  0xB4,
+  0x14,
+  0x37,
+
+  # Data Column 8 = Byte Array
+  0x03, # array len
+  0x0C, # 12
+  0x0A, # 10
+  0x0D, # 13
+  0x03, # array len
+  0x0C, # 12
+  0x0A, # 10
+  0x0D, # 13
+  0x03, # array len
+  0x0C, # 12
+  0x0A, # 10
+  0x0D, # 13
+  0x03, # array len
+  0x0C, # 12
+  0x0A, # 10
+  0x0D, # 13
+  0x03, # array len
+  0x0C, # 12
+  0x0A, # 10
+  0x0D, # 13
+  0x94, # crc
+  0x1D,
+  0x88,
+  0xAB,
 
   # Data Section 2
 
@@ -192,19 +347,19 @@ data = [
 
   # Data Column 3 = String
   0x04, # length 4
-  0x52, # R
-  0x69, # i
-  0x64, # d
-  0x65, # e
+  'R'.ord,
+  'i'.ord,
+  'd'.ord,
+  'e'.ord,
   0x04, # length 4
-  0x77, # w
-  0x69, # i
-  0x74, # t
-  0x68, # h
+  'w'.ord,
+  'i'.ord,
+  't'.ord,
+  'h'.ord,
   0x03, # length 3
-  0x47, # G
-  0x50, # P
-  0x53, # S
+  'G'.ord,
+  'P'.ord,
+  'S'.ord,
   0xA3, # crc
   0x02,
   0xEC,
@@ -214,8 +369,8 @@ data = [
 describe Tracklib do
   it "can read metadata" do
     track_reader = Tracklib::TrackReader.new(data)
-    expect(track_reader.metadata()).to eq([[:track_type, :trip, 20],
-                                           [:created_at, Time.new(1970, 1, 1, 0, 0, 0, "UTC")]])
+    expect(track_reader.metadata()).to eq([[:track_type, :segment, 5],
+                                           [:created_at, Time.new(1970, 1, 1, 0, 0, 25, "UTC")]])
   end
 
   it "can read versions" do
@@ -229,13 +384,55 @@ describe Tracklib do
     expect(track_reader.section_count()).to eq(2)
 
     expect(track_reader.section_encoding(0)).to eq(:standard)
-    expect(track_reader.section_schema(0)).to eq([["m", :i64], ["k", :bool], ["j", :string]])
+    expect(track_reader.section_schema(0)).to eq([["i64", :i64],
+                                                  ["f64:2", :f64, 2],
+                                                  ["u64", :u64],
+                                                  ["bool", :bool],
+                                                  ["string", :string],
+                                                  ["bool array", :bool_array],
+                                                  ["u64 array", :u64_array],
+                                                  ["byte array", :byte_array]])
     expect(track_reader.section_rows(0)).to eq(5)
-    expect(track_reader.section_data(0)).to eq([{"m"=>42, "k"=>true, "j"=>"hey"},
-                                                {"m"=>42, "k"=>true, "j"=>"hey"},
-                                                {"m"=>42, "k"=>true, "j"=>"hey"},
-                                                {"m"=>42, "k"=>true, "j"=>"hey"},
-                                                {"m"=>42, "k"=>true, "j"=>"hey"}])
+    expect(track_reader.section_data(0)).to eq([{"bool" => true,
+                                                 "bool array" => [true],
+                                                 "byte array" => [12, 10, 13].pack("C*"),
+                                                 "f64:2" => 0.78,
+                                                 "i64" => 42,
+                                                 "string" => "hey",
+                                                 "u64" => 25,
+                                                 "u64 array" => [12, 10, 13]},
+                                                {"bool" => true,
+                                                 "bool array" => [true],
+                                                 "byte array" => [12, 10, 13].pack("C*"),
+                                                 "f64:2" => 0.78,
+                                                 "i64" => 42,
+                                                 "string" => "hey",
+                                                 "u64" => 25,
+                                                 "u64 array" => [12, 10, 13]},
+                                                {"bool" => true,
+                                                 "bool array" => [true],
+                                                 "byte array" => [12, 10, 13].pack("C*"),
+                                                 "f64:2" => 0.78,
+                                                 "i64" => 42,
+                                                 "string" => "hey",
+                                                 "u64" => 25,
+                                                 "u64 array" => [12, 10, 13]},
+                                                {"bool" => true,
+                                                 "bool array" => [true],
+                                                 "byte array" => [12, 10, 13].pack("C*"),
+                                                 "f64:2" => 0.78,
+                                                 "i64" => 42,
+                                                 "string" => "hey",
+                                                 "u64" => 25,
+                                                 "u64 array" => [12, 10, 13]},
+                                                {"bool" => true,
+                                                 "bool array" => [true],
+                                                 "byte array" => [12, 10, 13].pack("C*"),
+                                                 "f64:2" => 0.78,
+                                                 "i64" => 42,
+                                                 "string" => "hey",
+                                                 "u64" => 25,
+                                                 "u64 array" => [12, 10, 13]}])
 
     expect(track_reader.section_encoding(1)).to eq(:standard)
     expect(track_reader.section_schema(1)).to eq([["a", :i64], ["b", :bool], ["c", :string]])
@@ -253,10 +450,10 @@ describe Tracklib do
   it "can select a subset of fields" do
     track_reader = Tracklib::TrackReader.new(data)
     # field that doesn't exist
-    expect(track_reader.section_column(0, "z")).to eq(nil)
+    expect(track_reader.section_column(0, "missing column")).to eq(nil)
 
     # field that does exist
-    expect(track_reader.section_column(0, "m")).to eq([42, 42, 42, 42, 42])
+    expect(track_reader.section_column(0, "i64")).to eq([42, 42, 42, 42, 42])
 
     # missing values are nil
     expect(track_reader.section_column(1, "b")).to eq([false, nil, true])

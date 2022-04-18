@@ -1,7 +1,7 @@
 use ouroboros::self_referencing;
 use rutie::{
-    class, methods, wrappable_struct, AnyObject, Array, Boolean, Class, Float, Hash, Integer,
-    Module, NilClass, Object, RString, Symbol, VM,
+    class, methods, wrappable_struct, AnyObject, Array, Boolean, Class, Encoding, Float, Hash,
+    Integer, Module, NilClass, Object, RString, Symbol, VM,
 };
 use tracklib2;
 
@@ -112,14 +112,14 @@ methods!(
                     .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
                     .with_track_reader(|track_reader| track_reader.section_count()),
             )
-            .map_err(|e| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
+            .map_err(|_| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
             .unwrap(),
         )
     },
     fn trackreader_section_encoding(index: Integer) -> Symbol {
         let ruby_index = index.map_err(|e| VM::raise_ex(e)).unwrap();
         let rust_index = usize::try_from(ruby_index.to_u64())
-            .map_err(|e| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
+            .map_err(|_| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
             .unwrap();
         let encoding = rtself
             .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
@@ -138,7 +138,7 @@ methods!(
     fn trackreader_section_schema(index: Integer) -> Array {
         let ruby_index = index.map_err(|e| VM::raise_ex(e)).unwrap();
         let rust_index = usize::try_from(ruby_index.to_u64())
-            .map_err(|e| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
+            .map_err(|_| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
             .unwrap();
         let schema = rtself
             .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
@@ -155,12 +155,33 @@ methods!(
         for field_def in schema.fields() {
             let mut field_array = Array::new();
             field_array.push(RString::from(String::from(field_def.name())));
-            field_array.push(Symbol::new(match field_def.data_type() {
-                tracklib2::schema::DataType::I64 => "i64",
-                tracklib2::schema::DataType::Bool => "bool",
-                tracklib2::schema::DataType::String => "string",
-                tracklib2::schema::DataType::F64 => "f64",
-            }));
+            match field_def.data_type() {
+                tracklib2::schema::DataType::I64 => {
+                    field_array.push(Symbol::new("i64"));
+                }
+                tracklib2::schema::DataType::F64 { scale } => {
+                    field_array.push(Symbol::new("f64"));
+                    field_array.push(Integer::from(u32::from(*scale)));
+                }
+                tracklib2::schema::DataType::U64 => {
+                    field_array.push(Symbol::new("u64"));
+                }
+                tracklib2::schema::DataType::Bool => {
+                    field_array.push(Symbol::new("bool"));
+                }
+                tracklib2::schema::DataType::String => {
+                    field_array.push(Symbol::new("string"));
+                }
+                tracklib2::schema::DataType::BoolArray => {
+                    field_array.push(Symbol::new("bool_array"));
+                }
+                tracklib2::schema::DataType::U64Array => {
+                    field_array.push(Symbol::new("u64_array"));
+                }
+                tracklib2::schema::DataType::ByteArray => {
+                    field_array.push(Symbol::new("byte_array"));
+                }
+            };
             schema_array.push(field_array);
         }
 
@@ -169,7 +190,7 @@ methods!(
     fn trackreader_section_rows(index: Integer) -> Integer {
         let ruby_index = index.map_err(|e| VM::raise_ex(e)).unwrap();
         let rust_index = usize::try_from(ruby_index.to_u64())
-            .map_err(|e| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
+            .map_err(|_| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
             .unwrap();
         let rows = rtself
             .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
@@ -183,14 +204,14 @@ methods!(
 
         Integer::from(
             u64::try_from(rows)
-                .map_err(|e| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
+                .map_err(|_| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
                 .unwrap(),
         )
     },
     fn trackreader_section_data(index: Integer) -> Array {
         let ruby_index = index.map_err(|e| VM::raise_ex(e)).unwrap();
         let rust_index = usize::try_from(ruby_index.to_u64())
-            .map_err(|e| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
+            .map_err(|_| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
             .unwrap();
         let data = rtself
             .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
@@ -223,11 +244,35 @@ methods!(
                                         tracklib2::types::FieldValue::F64(v) => {
                                             Float::new(v).to_any_object()
                                         }
+                                        tracklib2::types::FieldValue::U64(v) => {
+                                            Integer::from(v).to_any_object()
+                                        }
                                         tracklib2::types::FieldValue::Bool(v) => {
                                             Boolean::new(v).to_any_object()
                                         }
                                         tracklib2::types::FieldValue::String(v) => {
                                             RString::from(String::from(v)).to_any_object()
+                                        }
+                                        tracklib2::types::FieldValue::BoolArray(v) => {
+                                            let mut a = Array::new();
+                                            for b in v {
+                                                a.push(Boolean::new(b).to_any_object());
+                                            }
+                                            a.to_any_object()
+                                        }
+                                        tracklib2::types::FieldValue::U64Array(v) => {
+                                            let mut a = Array::new();
+                                            for u in v {
+                                                a.push(Integer::from(u).to_any_object());
+                                            }
+                                            a.to_any_object()
+                                        }
+                                        tracklib2::types::FieldValue::ByteArray(v) => {
+                                            let encoding = Encoding::find("ASCII-8BIT")
+                                                .map_err(|e| VM::raise_ex(e))
+                                                .unwrap();
+
+                                            RString::from_bytes(&v, &encoding).to_any_object()
                                         }
                                     },
                                 );
@@ -247,7 +292,7 @@ methods!(
     fn trackreader_section_column(index: Integer, column_name: RString) -> AnyObject {
         let ruby_index = index.map_err(|e| VM::raise_ex(e)).unwrap();
         let rust_index = usize::try_from(ruby_index.to_u64())
-            .map_err(|e| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
+            .map_err(|_| VM::raise(Class::from_existing("Exception"), "u64 != usize"))
             .unwrap();
         let data = rtself
             .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
@@ -295,11 +340,35 @@ methods!(
                                 Some(tracklib2::types::FieldValue::F64(v)) => {
                                     Float::new(v).to_any_object()
                                 }
+                                Some(tracklib2::types::FieldValue::U64(v)) => {
+                                    Integer::from(v).to_any_object()
+                                }
                                 Some(tracklib2::types::FieldValue::Bool(v)) => {
                                     Boolean::new(v).to_any_object()
                                 }
                                 Some(tracklib2::types::FieldValue::String(v)) => {
                                     RString::from(String::from(v)).to_any_object()
+                                }
+                                Some(tracklib2::types::FieldValue::BoolArray(v)) => {
+                                    let mut a = Array::new();
+                                    for b in v {
+                                        a.push(Boolean::new(b).to_any_object());
+                                    }
+                                    a.to_any_object()
+                                }
+                                Some(tracklib2::types::FieldValue::U64Array(v)) => {
+                                    let mut a = Array::new();
+                                    for u in v {
+                                        a.push(Integer::from(u).to_any_object());
+                                    }
+                                    a.to_any_object()
+                                }
+                                Some(tracklib2::types::FieldValue::ByteArray(v)) => {
+                                    let encoding = Encoding::find("ASCII-8BIT")
+                                        .map_err(|e| VM::raise_ex(e))
+                                        .unwrap();
+
+                                    RString::from_bytes(&v, &encoding).to_any_object()
                                 }
                                 None => NilClass::new().to_any_object(),
                             };

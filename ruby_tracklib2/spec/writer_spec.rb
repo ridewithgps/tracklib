@@ -20,7 +20,7 @@ describe Tracklib do
                # Schema for Section 1
                0x00, # schema version
                0x01, # field count
-               0x00, # first field type = I64
+               0x00, # field type = I64
                0x01, # field name length
                0x61, # field name = "a"
                0x08, # leb128 data size
@@ -52,6 +52,110 @@ describe Tracklib do
                0x67])
   end
 
+  it "can write an F64 column" do
+    section = Tracklib::Section.new(:standard, [["a", :f64, 7]], [{"a" => 0.0003},
+                                                                  {},
+                                                                  {"a" => -27.2}])
+    expect(Tracklib::write_track([], [section])
+             .unpack("C*")[27..])
+      .to eq([# Data Table
+
+               0x01, # one data section
+
+               # Data Table Section 1
+               0x00, # data encoding = standard
+               0x03, # point count
+               0x12, # leb128 data size
+
+               # Schema for Section 1
+               0x00, # schema version
+               0x01, # field count
+               0x01, # field type = F64
+               0x07, # scale
+               0x01, # field name length
+               0x61, # field name = "a"
+               0x0B, # leb128 data size
+
+               # Data Table CRC
+               0x6D,
+               0x30,
+
+               # Data Section 1
+
+               # Presence Column
+               0b00000001,
+               0b00000000,
+               0b00000001,
+               0xCF, # crc
+               0x33,
+               0x82,
+               0x4D,
+
+               # Data Column 1 = "a"
+               0xB7, # first val
+               0x17,
+               0xC9, # second val
+               0xA0,
+               0xA6,
+               0xFE,
+               0x7E,
+
+               0xAF, # crc
+               0x4E,
+               0x38,
+               0xBE])
+  end
+
+  it "can write an U64 column" do
+    section = Tracklib::Section.new(:standard, [["a", :u64]], [{"a" => 0},
+                                                               {},
+                                                               {"a" => 40},
+                                                               {"a" => 10}])
+    expect(Tracklib::write_track([], [section])
+             .unpack("C*")[27..])
+      .to eq([# Data Table
+
+               0x01, # one data section
+
+               # Data Table Section 1
+               0x00, # data encoding = standard
+               0x04, # point count
+               0x0F, # leb128 data size
+
+               # Schema for Section 1
+               0x00, # schema version
+               0x01, # field count
+               0x02, # field type = U64
+               0x01, # field name length
+               0x61, # field name = "a"
+               0x07, # leb128 data size
+
+               # Data Table CRC
+               0x25,
+               0x24,
+
+               # Data Section 1
+
+               # Presence Column
+               0b00000001,
+               0b00000000,
+               0b00000001,
+               0b00000001,
+               0x58, # crc
+               0x64,
+               0x4E,
+               0x32,
+
+               # Data Column 1 = "a"
+               0x00, # 0
+               0x28, # 40
+               0x62, # -30
+               0x72, # crc
+               0x0A,
+               0x57,
+               0x47])
+  end
+
   it "can write a Bool column" do
     section = Tracklib::Section.new(:standard, [["a", :bool]], [{"a" => true},
                                                                 {},
@@ -70,14 +174,14 @@ describe Tracklib do
                # Schema for Section 1
                0x00, # schema version
                0x01, # field count
-               0x05, # first field type = Bool
+               0x10, # field type = Bool
                0x01, # field name length
                0x61, # field name = "a"
                0x06, # leb128 data size
 
                # Data Table CRC
-               0x87,
-               0xB6,
+               0x83,
+               0xBA,
 
                # Data Section 1
 
@@ -117,14 +221,14 @@ describe Tracklib do
                # Schema for Section 1
                0x00, # schema version
                0x01, # field count
-               0x04, # first field type = String
+               0x20, # field type = String
                0x01, # field name length
                0x61, # field name = "a"
                0x2D, # leb128 data size
 
                # Data Table CRC
-               0x6F,
-               0x56,
+               0x65,
+               0xA6,
 
                # Data Section 1
 
@@ -185,10 +289,60 @@ describe Tracklib do
                0xF3])
   end
 
-  it "can write an F64 column" do
-    section = Tracklib::Section.new(:standard, [["a", :f64]], [{"a" => 0.0003},
-                                                               {},
-                                                               {"a" => -27.2}])
+  it "can write a BoolArray column" do
+    section = Tracklib::Section.new(:standard, [["a", :bool_array]], [{"a" => [true, false, false]},
+                                                                      {},
+                                                                      {"a" => []}])
+    expect(Tracklib::write_track([], [section])
+             .unpack("C*")[27..])
+      .to eq([# Data Table
+
+               0x01, # one data section
+
+               # Data Table Section 1
+               0x00, # data encoding = standard
+               0x03, # point count
+               0x10, # leb128 data size
+
+               # Schema for Section 1
+               0x00, # schema version
+               0x01, # field count
+               0x21, # field type = BoolArray
+               0x01, # field name length
+               0x61, # field name = "a"
+               0x09, # leb128 data size
+
+               # Data Table CRC
+               0x00,
+               0x43,
+
+               # Data Section 1
+
+               # Presence Column
+               0b00000001,
+               0b00000000,
+               0b00000001,
+               0xCF, # crc
+               0x33,
+               0x82,
+               0x4D,
+
+               # Data Column 1 = "a"
+               0x03, # array len 3
+               0x01, # true
+               0x00, # false
+               0x00, # false
+               0x00, # array len 0,
+               0x43,
+               0x76,
+               0x95,
+               0xBF])
+  end
+
+  it "can write a U64Array column" do
+    section = Tracklib::Section.new(:standard, [["a", :u64_array]], [{"a" => [99, 98, 500]},
+                                                                     {},
+                                                                     {"a" => []}])
     expect(Tracklib::write_track([], [section])
              .unpack("C*")[27..])
       .to eq([# Data Table
@@ -203,14 +357,14 @@ describe Tracklib do
                # Schema for Section 1
                0x00, # schema version
                0x01, # field count
-               0x01, # first field type = F64
+               0x22, # field type = U64Array
                0x01, # field name length
                0x61, # field name = "a"
                0x0B, # leb128 data size
 
                # Data Table CRC
-               0xA9,
-               0x82,
+               0xA2,
+               0x06,
 
                # Data Section 1
 
@@ -224,25 +378,78 @@ describe Tracklib do
                0x4D,
 
                # Data Column 1 = "a"
-               0xB7, # first val
-               0x17,
-               0xC9, # second val
-               0xA0,
-               0xA6,
-               0xFE,
-               0x7E,
+               0x03, # array len 3
+               0xE3, # 99
+               0x00,
+               0x7F, # -1
+               0x92, # 98
+               0x03,
+               0x00, # array len 0
+               0xF1, # crc
+               0x29,
+               0x76,
+               0x36])
+  end
 
-               0xAF, # crc
-               0x4E,
-               0x38,
-               0xBE])
+  it "can write a ByteArray column" do
+    section = Tracklib::Section.new(:standard, [["a", :byte_array]], [{"a" => "RWGPS"},
+                                                                      {},
+                                                                      {"a" => ""}])
+    expect(Tracklib::write_track([], [section])
+             .unpack("C*")[27..])
+      .to eq([# Data Table
+
+               0x01, # one data section
+
+               # Data Table Section 1
+               0x00, # data encoding = standard
+               0x03, # point count
+               0x12, # leb128 data size
+
+               # Schema for Section 1
+               0x00, # schema version
+               0x01, # field count
+               0x23, # field type = ByteArray
+               0x01, # field name length
+               0x61, # field name = "a"
+               0x0B, # leb128 data size
+
+               # Data Table CRC
+               0xA3,
+               0xFA,
+
+               # Data Section 1
+
+               # Presence Column
+               0b00000001,
+               0b00000000,
+               0b00000001,
+               0xCF, # crc
+               0x33,
+               0x82,
+               0x4D,
+
+               # Data Column 1 = "a"
+               0x05, # array len 5
+               0x52, # R
+               0x57, # W
+               0x47, # G
+               0x50, # P
+               0x53, # S
+               0x00, # array len 0
+               0x6A, # crc
+               0x29,
+               0x93,
+               0xA3])
   end
 
   it "can convert floats and integers" do
-    section = Tracklib::Section.new(:standard, [["i", :i64], ["f", :f64]], [{"i" => 1, "f" => 0.0},
-                                                                            {"i" => 1.0, "f" => 5},
-                                                                            {},
-                                                                            {"i" => 2.6}])
+    section = Tracklib::Section.new(:standard,
+                                    [["i", :i64], ["u", :u64], ["f", :f64, 7], ["ua", :u64_array]],
+                                    [{"i" => -1, "u" => 1, "f" => 0.0, "ua" => [0, 1.0, 1.2, 1.9, 5]},
+                                     {"i" => 1.0, "u"=> 3.0, "f" => 5},
+                                     {},
+                                     {"i" => -2.6, "u" => 32.21}])
     expect(Tracklib::write_track([], [section])
              .unpack("C*")[27..])
       .to eq([# Data Table
@@ -252,57 +459,97 @@ describe Tracklib do
                # Data Table Section 1
                0x00, # data encoding = standard
                0x04, # point count
-               0x18, # leb128 data size
+               0x29, # leb128 data size
 
                # Schema for Section 1
                0x00, # schema version
-               0x02, # field count
+               0x04, # field count
                0x00, # first field type = I64
                0x01, # field name length
                0x69, # field name = "i"
                0x07, # leb128 data size
-               0x01, # second field type = F64
+               0x02, # second field type = U64
+               0x01, # field name length
+               0x75, # field name = "u"
+               0x07, # leb128 data size
+               0x01, # third field type = F64
+               0x07, # scale
                0x01, # field name length
                0x66, # field name = "f"
                0x09, # leb128 data size
+               0x22, # fourth field type = U64Array
+               0x02, # field name length
+               0x75, # field name = "ua"
+               0x61,
+               0x0A, # leb128 data size
 
                # Data Table CRC
-               0xD5,
-               0x93,
+               0x8D,
+               0x59,
 
                # Data Section 1
 
                # Presence Column
-               0b00000011,
-               0b00000011,
+               0b00001111,
+               0b00000111,
                0b00000000,
-               0b00000001,
-               0xD4, # crc
-               0x78,
-               0x24,
-               0x5E,
+               0b00000011,
+               0xA9, # crc
+               0x25,
+               0xDB,
+               0xD5,
 
                # Data Column 1 = "i"
-               0x01, # start at 1
-               0x00, # stay at 1
-               0x02, # increment by 2 to get 3
+               0x7F, # -1
+               0x02, # +2
+               0x7C, # -4
+               0x8E, # crc
+               0xC0,
+               0xAB,
+               0x66,
 
-               0x16, # crc
-               0x15,
-               0xC1,
-               0x40,
+               # Data Column 2 = "u"
+               0x01, # 1
+               0x02, # +2
+               0x1D, # +29
+               0xD4, # crc
+               0xED,
+               0x6D,
+               0x94,
 
-               # Data Column 2 = "f"
-               0x00, # 0
-               0x80, # 5
+               # Data Column 3 = "f"
+               0x00,
+               0x80,
                0xE1,
                0xEB,
                0x17,
-
                0x5F, # crc
                0x32,
                0x25,
-               0xF7])
+               0xF7,
+
+               # Data Column 4 = "ua"
+               0x05, # array len
+               0x00, # 0
+               0x01, # +1
+               0x00, # no change
+               0x01, # +1
+               0x03, # +3
+               0xA7, # crc
+               0x06,
+               0x3A,
+               0xB1])
+  end
+
+  it "raises errors for invalid F64 scale" do
+    expect { Tracklib::Section.new(:standard, [["a", :f64]], []) }.to raise_error
+    expect { Tracklib::Section.new(:standard, [["a", :f64, "2"]], []) }.to raise_error
+    expect { Tracklib::Section.new(:standard, [["a", :f64, 500]], []) }.to raise_error
+  end
+
+  it "raises errors for invalid array type elements" do
+    expect { Tracklib::Section.new(:standard, [["a", :bool_array]], [{"a" => [true, false, 0]}]) }.to raise_error
+    expect { Tracklib::Section.new(:standard, [["a", :u64_array]], [{"a" => [0, 1, 2, "3"]}]) }.to raise_error
   end
 
   it "can write metadata" do

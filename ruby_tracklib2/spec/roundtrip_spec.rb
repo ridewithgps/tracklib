@@ -110,35 +110,43 @@ describe Tracklib do
     expect(reader.section_data(0)).to eq(data)
   end
 
-  it "can roundtrip all types at once" do
-    data = [{"i64" => -200,
-             "f64" => 37.89,
-             "u64" => 80_000_000_000,
-             "bool" => true,
-             "string" => "RWGPS",
-             "boolarray" => [false, true, false],
-             "u64array" => [20, 10, 11],
-             "bytearray" => "RWGPS"}]
-
-    schema = Tracklib::Schema.new([["i64", :i64],
-                                   ["f64", :f64, 2],
-                                   ["u64", :u64],
-                                   ["bool", :bool],
-                                   ["string", :string],
-                                   ["boolarray", :bool_array],
-                                   ["u64array", :u64_array],
-                                   ["bytearray", :byte_array]])
-    section = Tracklib::Section.new(:standard, schema, data)
-    buf = Tracklib::write_track([], [section])
-    reader = Tracklib::TrackReader::new(buf)
-    expect(reader.section_data(0)).to eq(data)
-  end
-
-  it "can roundtrip metadata" do
+  it "can roundtrip all types and metadata" do
     metadata = [[:created_at, Time.new(1970, 1, 2, 11, 12, 13, "UTC")],
                 [:track_type, :route, 1000]]
-    buf = Tracklib::write_track(metadata, [])
+
+    schema = [["i64", :i64],
+              ["f64", :f64, 2],
+              ["u64", :u64],
+              ["bool", :bool],
+              ["string", :string],
+              ["boolarray", :bool_array],
+              ["u64array", :u64_array],
+              ["bytearray", :byte_array]]
+
+    data0 = [{"i64" => -200,
+              "f64" => 37.89,
+              "u64" => 80_000_000_000,
+              "bool" => true,
+              "string" => "RWGPS",
+              "boolarray" => [false, true, false],
+              "u64array" => [20, 10, 11],
+              "bytearray" => "RWGPS"}]
+    section0 = Tracklib::Section.new(:standard, Tracklib::Schema.new(schema), data0)
+
+    data1 = [{"i64" => 11,
+              "bool" => false,
+              "string" => "Hello"},
+             {"f64" => 21.12}]
+    section1 = Tracklib::Section.new(:standard, Tracklib::Schema.new(schema), data1)
+
+    buf = Tracklib::write_track(metadata, [section0, section1])
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.metadata()).to eq(metadata)
+
+    expect(reader.section_schema(0)).to eq(schema)
+    expect(reader.section_data(0)).to eq(data0)
+
+    expect(reader.section_schema(1)).to eq(schema)
+    expect(reader.section_data(1)).to eq(data1)
   end
 end

@@ -16,24 +16,22 @@ methods!(
     rtself,
     fn schema_new(ruby_schema: Array) -> AnyObject {
         let fields = ruby_schema
-            .map_err(|e| VM::raise_ex(e))
+            .map_err(VM::raise_ex)
             .unwrap()
             .into_iter()
             .map(|ele| {
-                let ruby_schema_entry = ele
-                    .try_convert_to::<Array>()
-                    .map_err(|e| VM::raise_ex(e))
-                    .unwrap();
+                let ruby_schema_entry =
+                    ele.try_convert_to::<Array>().map_err(VM::raise_ex).unwrap();
 
                 let ruby_field_name = ruby_schema_entry
                     .at(0)
                     .try_convert_to::<RString>()
-                    .map_err(|e| VM::raise_ex(e))
+                    .map_err(VM::raise_ex)
                     .unwrap();
                 let ruby_data_type = ruby_schema_entry
                     .at(1)
                     .try_convert_to::<Symbol>()
-                    .map_err(|e| VM::raise_ex(e))
+                    .map_err(VM::raise_ex)
                     .unwrap();
 
                 let data_type = match ruby_data_type.to_str() {
@@ -42,7 +40,7 @@ methods!(
                         let ruby_scale = ruby_schema_entry
                             .at(2)
                             .try_convert_to::<Integer>()
-                            .map_err(|e| VM::raise_ex(e))
+                            .map_err(VM::raise_ex)
                             .unwrap();
                         let scale = u8::try_from(ruby_scale.to_u64())
                             .map_err(|e| {
@@ -57,7 +55,7 @@ methods!(
                     "bool_array" => tracklib2::schema::DataType::BoolArray,
                     "u64_array" => tracklib2::schema::DataType::U64Array,
                     "byte_array" => tracklib2::schema::DataType::ByteArray,
-                    val @ _ => {
+                    val => {
                         VM::raise(
                             Class::from_existing("Exception"),
                             &format!("Schema Data Type '{val}' unknown"),

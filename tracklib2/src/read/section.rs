@@ -54,7 +54,7 @@ impl<'a> Section<'a> {
     pub fn reader_for_schema(&self, schema: &Schema) -> Result<SectionReader> {
         let schema_entries = schema
             .fields()
-            .into_iter()
+            .iter()
             .filter_map(|field| {
                 self.data_table_entry
                     .schema_entries()
@@ -129,12 +129,11 @@ impl<'a> SectionReader<'a> {
             .map(|(presence_column_index, schema_entry)| {
                 let column_data = &column_data
                     [schema_entry.offset()..schema_entry.offset() + schema_entry.size()];
-                let presence_column_view =
-                    presence_column.view(presence_column_index).ok_or_else(|| {
-                        TracklibError::ParseIncompleteError {
-                            needed: nom::Needed::Unknown,
-                        }
-                    })?;
+                let presence_column_view = presence_column.view(presence_column_index).ok_or(
+                    TracklibError::ParseIncompleteError {
+                        needed: nom::Needed::Unknown,
+                    },
+                )?;
                 let field_definition = schema_entry.field_definition();
                 let decoder = match field_definition.data_type() {
                     DataType::I64 => ColumnDecoder::I64 {
@@ -211,81 +210,75 @@ impl<'a, 'b> Iterator for ColumnIter<'a, 'b> {
             self.index += 1;
             match decoder_enum {
                 ColumnDecoder::I64 {
-                    ref field_definition,
+                    field_definition,
                     ref mut decoder,
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(|v| FieldValue::I64(v))))
+                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::I64)))
                         .map_err(|e| e),
                 ),
                 ColumnDecoder::U64 {
-                    ref field_definition,
+                    field_definition,
                     ref mut decoder,
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(|v| FieldValue::U64(v))))
+                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::U64)))
                         .map_err(|e| e),
                 ),
                 ColumnDecoder::F64 {
-                    ref field_definition,
+                    field_definition,
                     ref mut decoder,
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(|v| FieldValue::F64(v))))
+                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::F64)))
                         .map_err(|e| e),
                 ),
                 ColumnDecoder::Bool {
-                    ref field_definition,
+                    field_definition,
                     ref mut decoder,
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(|v| FieldValue::Bool(v))))
+                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::Bool)))
                         .map_err(|e| e),
                 ),
                 ColumnDecoder::String {
-                    ref field_definition,
+                    field_definition,
                     ref mut decoder,
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(|v| FieldValue::String(v))))
+                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::String)))
                         .map_err(|e| e),
                 ),
                 ColumnDecoder::BoolArray {
-                    ref field_definition,
+                    field_definition,
                     ref mut decoder,
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| {
-                            (*field_definition, maybe_v.map(|v| FieldValue::BoolArray(v)))
-                        })
+                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::BoolArray)))
                         .map_err(|e| e),
                 ),
                 ColumnDecoder::U64Array {
-                    ref field_definition,
+                    field_definition,
                     ref mut decoder,
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| {
-                            (*field_definition, maybe_v.map(|v| FieldValue::U64Array(v)))
-                        })
+                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::U64Array)))
                         .map_err(|e| e),
                 ),
                 ColumnDecoder::ByteArray {
-                    ref field_definition,
+                    field_definition,
                     ref mut decoder,
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| {
-                            (*field_definition, maybe_v.map(|v| FieldValue::ByteArray(v)))
-                        })
+                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::ByteArray)))
                         .map_err(|e| e),
                 ),
             }

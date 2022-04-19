@@ -14,7 +14,7 @@ pub fn read_byte(data: &[u8]) -> Result<(&[u8], u8)> {
     Ok((rest, value))
 }
 
-pub fn read_bytes<'a>(data: &'a [u8]) -> Result<(&'a [u8], &'a [u8])> {
+pub fn read_bytes(data: &[u8]) -> Result<(&[u8], &[u8])> {
     let (rest, bytes) = length_data(leb128_u64)(data)?;
     Ok((rest, bytes))
 }

@@ -257,28 +257,28 @@ impl<'a> RowBuilder<'a> {
 
         match (maybe_field_def, maybe_buffer) {
             (Some(field_def), Some(Buffer::I64(ref mut buffer_impl))) => Some(
-                ColumnWriter::I64ColumnWriter(ColumnWriterImpl::new(&field_def, buffer_impl)),
+                ColumnWriter::I64ColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
             ),
             (Some(field_def), Some(Buffer::U64(ref mut buffer_impl))) => Some(
-                ColumnWriter::U64ColumnWriter(ColumnWriterImpl::new(&field_def, buffer_impl)),
+                ColumnWriter::U64ColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
             ),
             (Some(field_def), Some(Buffer::F64(ref mut buffer_impl))) => Some(
-                ColumnWriter::F64ColumnWriter(ColumnWriterImpl::new(&field_def, buffer_impl)),
+                ColumnWriter::F64ColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
             ),
             (Some(field_def), Some(Buffer::Bool(ref mut buffer_impl))) => Some(
-                ColumnWriter::BoolColumnWriter(ColumnWriterImpl::new(&field_def, buffer_impl)),
+                ColumnWriter::BoolColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
             ),
             (Some(field_def), Some(Buffer::String(ref mut buffer_impl))) => Some(
-                ColumnWriter::StringColumnWriter(ColumnWriterImpl::new(&field_def, buffer_impl)),
+                ColumnWriter::StringColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
             ),
             (Some(field_def), Some(Buffer::BoolArray(ref mut buffer_impl))) => Some(
-                ColumnWriter::BoolArrayColumnWriter(ColumnWriterImpl::new(&field_def, buffer_impl)),
+                ColumnWriter::BoolArrayColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
             ),
             (Some(field_def), Some(Buffer::U64Array(ref mut buffer_impl))) => Some(
-                ColumnWriter::U64ArrayColumnWriter(ColumnWriterImpl::new(&field_def, buffer_impl)),
+                ColumnWriter::U64ArrayColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
             ),
             (Some(field_def), Some(Buffer::ByteArray(ref mut buffer_impl))) => Some(
-                ColumnWriter::ByteArrayColumnWriter(ColumnWriterImpl::new(&field_def, buffer_impl)),
+                ColumnWriter::ByteArrayColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
             ),
             _ => None,
         }
@@ -314,7 +314,7 @@ impl<'a, E: Encoder> ColumnWriterImpl<'a, E> {
     }
 
     pub fn field_definition(&self) -> &FieldDefinition {
-        &self.field_definition
+        self.field_definition
     }
 
     /// Takes `self` so that only one value per column can be written
@@ -332,9 +332,9 @@ impl<'a, E: Encoder> ColumnWriterImpl<'a, E> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::FieldValue;
     use assert_matches::assert_matches;
     use std::collections::HashMap;
-    use crate::types::FieldValue;
 
     #[test]
     fn test_write_presence_column() {

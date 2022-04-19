@@ -40,7 +40,7 @@ pub fn write_track<W: Write>(
 mod tests {
     use super::*;
     use crate::schema::*;
-    use crate::types::{SectionEncoding, TrackType, FieldValue};
+    use crate::types::{FieldValue, SectionEncoding, TrackType};
     use crate::write::section::ColumnWriter;
     use assert_matches::assert_matches;
     use std::collections::HashMap;

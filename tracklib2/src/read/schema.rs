@@ -42,7 +42,7 @@ impl SchemaEntry {
     }
 }
 
-fn parse_schema_entry<'a>(
+fn parse_schema_entry(
     offset: usize,
 ) -> impl Fn(&[u8]) -> IResult<&[u8], SchemaEntry, TracklibError> {
     move |input: &[u8]| {

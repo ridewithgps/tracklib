@@ -19,7 +19,7 @@ impl<'a> PresenceColumn<'a> {
             let byte_index = (x / 8) - 1;
 
             Some(PresenceColumnView::new(
-                &self.data,
+                self.data,
                 bit_index,
                 byte_index,
                 presence_bytes_required,

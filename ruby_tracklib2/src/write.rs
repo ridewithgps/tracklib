@@ -15,10 +15,10 @@ methods!(
     Section,
     rtself,
     fn section_new(encoding: Symbol, schema: crate::schema::Schema, data: Array) -> AnyObject {
-        let tracklib_schema = schema.map_err(|e| VM::raise_ex(e)).unwrap().inner().clone();
-        let tracklib_encoding = match encoding.map_err(|e| VM::raise_ex(e)).unwrap().to_str() {
+        let tracklib_schema = schema.map_err(VM::raise_ex).unwrap().inner().clone();
+        let tracklib_encoding = match encoding.map_err(VM::raise_ex).unwrap().to_str() {
             "standard" => tracklib2::types::SectionEncoding::Standard,
-            val @ _ => {
+            val => {
                 VM::raise(
                     Class::from_existing("Exception"),
                     &format!("SectionEncoding '{val}' unknown"),
@@ -29,10 +29,10 @@ methods!(
         let mut tracklib_section =
             tracklib2::write::section::Section::new(tracklib_encoding, tracklib_schema);
 
-        for ruby_row_obj in data.map_err(|e| VM::raise_ex(e)).unwrap() {
+        for ruby_row_obj in data.map_err(VM::raise_ex).unwrap() {
             let ruby_row = ruby_row_obj
                 .try_convert_to::<Hash>()
-                .map_err(|e| VM::raise_ex(e))
+                .map_err(VM::raise_ex)
                 .unwrap();
 
             let mut rowbuilder = tracklib_section.open_row_builder();
@@ -72,7 +72,7 @@ methods!(
                         } else {
                             cwi.write(Some(
                                 &Float::implicit_to_f(ruby_field)
-                                    .map_err(|e| VM::raise_ex(e))
+                                    .map_err(VM::raise_ex)
                                     .unwrap()
                                     .to_f64(),
                             ))
@@ -116,7 +116,7 @@ methods!(
                             cwi.write(Some(
                                 &ruby_field
                                     .try_convert_to::<Boolean>()
-                                    .map_err(|e| VM::raise_ex(e))
+                                    .map_err(VM::raise_ex)
                                     .unwrap()
                                     .to_bool(),
                             ))
@@ -137,7 +137,7 @@ methods!(
                             cwi.write(Some(
                                 ruby_field
                                     .try_convert_to::<RString>()
-                                    .map_err(|e| VM::raise_ex(e))
+                                    .map_err(VM::raise_ex)
                                     .unwrap()
                                     .to_str(),
                             ))
@@ -157,14 +157,14 @@ methods!(
                         } else {
                             let array = ruby_field
                                 .try_convert_to::<Array>()
-                                .map_err(|e| VM::raise_ex(e))
+                                .map_err(VM::raise_ex)
                                 .unwrap();
 
                             let bool_vec = array
                                 .into_iter()
                                 .map(|ele| {
                                     ele.try_convert_to::<Boolean>()
-                                        .map_err(|e| VM::raise_ex(e))
+                                        .map_err(VM::raise_ex)
                                         .unwrap()
                                         .to_bool()
                                 })
@@ -187,7 +187,7 @@ methods!(
                         } else {
                             let array = ruby_field
                                 .try_convert_to::<Array>()
-                                .map_err(|e| VM::raise_ex(e))
+                                .map_err(VM::raise_ex)
                                 .unwrap();
 
                             let u64_vec = array
@@ -222,7 +222,7 @@ methods!(
                             cwi.write(Some(
                                 ruby_field
                                     .try_convert_to::<RString>()
-                                    .map_err(|e| VM::raise_ex(e))
+                                    .map_err(VM::raise_ex)
                                     .unwrap()
                                     .to_bytes_unchecked(),
                             ))
@@ -274,20 +274,20 @@ methods!(
     Tracklib,
     rtself,
     fn write_track(metadata: Array, sections: Array) -> RString {
-        let metadata_array = metadata.map_err(|e| VM::raise_ex(e)).unwrap();
+        let metadata_array = metadata.map_err(VM::raise_ex).unwrap();
 
         let metadata_entries = metadata_array
             .into_iter()
             .map(|metadata_ele| {
                 let metadata_ele_array = metadata_ele
                     .try_convert_to::<Array>()
-                    .map_err(|e| VM::raise_ex(e))
+                    .map_err(VM::raise_ex)
                     .unwrap();
                 if metadata_ele_array.length() >= 1 {
                     let metadata_type = metadata_ele_array
                         .at(0)
                         .try_convert_to::<Symbol>()
-                        .map_err(|e| VM::raise_ex(e))
+                        .map_err(VM::raise_ex)
                         .unwrap();
                     match metadata_type.to_str() {
                         "track_type" => {
@@ -295,12 +295,12 @@ methods!(
                                 let track_type_symbol = metadata_ele_array
                                     .at(1)
                                     .try_convert_to::<Symbol>()
-                                    .map_err(|e| VM::raise_ex(e))
+                                    .map_err(VM::raise_ex)
                                     .unwrap();
                                 let track_id = metadata_ele_array
                                     .at(2)
                                     .try_convert_to::<Integer>()
-                                    .map_err(|e| VM::raise_ex(e))
+                                    .map_err(VM::raise_ex)
                                     .unwrap()
                                     .to_u64();
 
@@ -308,7 +308,7 @@ methods!(
                                     "route" => tracklib2::types::TrackType::Route(track_id),
                                     "trip" => tracklib2::types::TrackType::Trip(track_id),
                                     "segment" => tracklib2::types::TrackType::Segment(track_id),
-                                    val @ _ => {
+                                    val => {
                                         VM::raise(
                                             Class::from_existing("Exception"),
                                             &format!("Metadata Entry Track Type '{val}' unknown"),
@@ -331,17 +331,17 @@ methods!(
                                 let created_at_time_obj = metadata_ele_array
                                     .at(1)
                                     .try_convert_to::<Time>()
-                                    .map_err(|e| VM::raise_ex(e))
+                                    .map_err(VM::raise_ex)
                                     .unwrap();
                                 let created_at_val = created_at_time_obj
                                     .protect_send("utc", &[])
-                                    .map_err(|e| VM::raise_ex(e))
+                                    .map_err(VM::raise_ex)
                                     .unwrap()
                                     .protect_send("to_i", &[])
-                                    .map_err(|e| VM::raise_ex(e))
+                                    .map_err(VM::raise_ex)
                                     .unwrap()
                                     .try_convert_to::<Integer>()
-                                    .map_err(|e| VM::raise_ex(e))
+                                    .map_err(VM::raise_ex)
                                     .unwrap()
                                     .to_u64();
                                 tracklib2::types::MetadataEntry::CreatedAt(created_at_val)
@@ -353,7 +353,7 @@ methods!(
                                 unreachable!();
                             }
                         }
-                        val @ _ => {
+                        val => {
                             VM::raise(
                                 Class::from_existing("Exception"),
                                 &format!("Metadata Type '{val}' unknown"),
@@ -368,14 +368,14 @@ methods!(
             })
             .collect::<Vec<_>>();
 
-        let sections_array = sections.map_err(|e| VM::raise_ex(e)).unwrap();
+        let sections_array = sections.map_err(VM::raise_ex).unwrap();
 
         let section_wrappers = sections_array
             .into_iter()
             .map(|ruby_section| {
                 ruby_section
                     .try_convert_to::<Section>()
-                    .map_err(|e| VM::raise_ex(e))
+                    .map_err(VM::raise_ex)
                     .unwrap()
             })
             .collect::<Vec<_>>();
@@ -390,9 +390,7 @@ methods!(
             .map_err(|e| VM::raise(Class::from_existing("Exception"), &format!("{:?}", e)))
             .unwrap();
 
-        let encoding = Encoding::find("ASCII-8BIT")
-            .map_err(|e| VM::raise_ex(e))
-            .unwrap();
+        let encoding = Encoding::find("ASCII-8BIT").map_err(VM::raise_ex).unwrap();
 
         RString::from_bytes(&buf, &encoding)
     }

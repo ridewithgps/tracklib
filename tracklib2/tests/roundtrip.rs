@@ -403,11 +403,26 @@ mod tests {
         h.insert("u64".to_string(), FieldValue::U64(80_000_000_000_000));
         h.insert("bool".to_string(), FieldValue::Bool(true));
         h.insert("second i64".to_string(), FieldValue::I64(12));
-        h.insert("string".to_string(), FieldValue::String("RWGPS".to_string()));
-        h.insert("bool array".to_string(), FieldValue::BoolArray(vec![true, false, false, false, true, false]));
-        h.insert("u64 array".to_string(), FieldValue::U64Array(vec![100, 120, 140, 160]));
-        h.insert("second string".to_string(), FieldValue::String("This is a string".to_string()));
-        h.insert("byte array".to_string(), FieldValue::ByteArray(vec![3, 4, 255]));
+        h.insert(
+            "string".to_string(),
+            FieldValue::String("RWGPS".to_string()),
+        );
+        h.insert(
+            "bool array".to_string(),
+            FieldValue::BoolArray(vec![true, false, false, false, true, false]),
+        );
+        h.insert(
+            "u64 array".to_string(),
+            FieldValue::U64Array(vec![100, 120, 140, 160]),
+        );
+        h.insert(
+            "second string".to_string(),
+            FieldValue::String("This is a string".to_string()),
+        );
+        h.insert(
+            "byte array".to_string(),
+            FieldValue::ByteArray(vec![3, 4, 255]),
+        );
         write_values.push(h);
         write_values.push(HashMap::new());
         write_values.push(HashMap::new());
@@ -415,10 +430,16 @@ mod tests {
         let mut h = HashMap::new();
         h.insert("i64".to_string(), FieldValue::I64(200));
         h.insert("second i64".to_string(), FieldValue::I64(-600));
-        h.insert("string".to_string(), FieldValue::String("RWGPS 2".to_string()));
+        h.insert(
+            "string".to_string(),
+            FieldValue::String("RWGPS 2".to_string()),
+        );
         h.insert("bool array".to_string(), FieldValue::BoolArray(vec![]));
         h.insert("u64 array".to_string(), FieldValue::U64Array(vec![]));
-        h.insert("second string".to_string(), FieldValue::String("This is another string".to_string()));
+        h.insert(
+            "second string".to_string(),
+            FieldValue::String("This is another string".to_string()),
+        );
         h.insert("byte array".to_string(), FieldValue::ByteArray(vec![]));
         write_values.push(h);
 
@@ -449,92 +470,108 @@ mod tests {
                 if let Some(cw) = rowbuilder.next_column_writer() {
                     match cw {
                         ColumnWriter::I64ColumnWriter(cwi) => {
-                            assert!(cwi.write(
-                                entry
-                                    .get(field_def.name())
-                                    .map(|v| match v {
-                                        FieldValue::I64(v) => Some(v),
-                                        _ => None,
-                                    })
-                                    .flatten(),
-                            ).is_ok());
+                            assert!(cwi
+                                .write(
+                                    entry
+                                        .get(field_def.name())
+                                        .map(|v| match v {
+                                            FieldValue::I64(v) => Some(v),
+                                            _ => None,
+                                        })
+                                        .flatten(),
+                                )
+                                .is_ok());
                         }
                         ColumnWriter::BoolColumnWriter(cwi) => {
-                            assert!(cwi.write(
-                                entry
-                                    .get(field_def.name())
-                                    .map(|v| match v {
-                                        FieldValue::Bool(v) => Some(v),
-                                        _ => None,
-                                    })
-                                    .flatten(),
-                            ).is_ok());
+                            assert!(cwi
+                                .write(
+                                    entry
+                                        .get(field_def.name())
+                                        .map(|v| match v {
+                                            FieldValue::Bool(v) => Some(v),
+                                            _ => None,
+                                        })
+                                        .flatten(),
+                                )
+                                .is_ok());
                         }
                         ColumnWriter::StringColumnWriter(cwi) => {
-                            assert!(cwi.write(
-                                entry
-                                    .get(field_def.name())
-                                    .map(|v| match v {
-                                        FieldValue::String(v) => Some(v.as_str()),
-                                        _ => None,
-                                    })
-                                    .flatten(),
-                            ).is_ok());
+                            assert!(cwi
+                                .write(
+                                    entry
+                                        .get(field_def.name())
+                                        .map(|v| match v {
+                                            FieldValue::String(v) => Some(v.as_str()),
+                                            _ => None,
+                                        })
+                                        .flatten(),
+                                )
+                                .is_ok());
                         }
                         ColumnWriter::U64ColumnWriter(cwi) => {
-                            assert!(cwi.write(
-                                entry
-                                    .get(field_def.name())
-                                    .map(|v| match v {
-                                        FieldValue::U64(v) => Some(v),
-                                        _ => None,
-                                    })
-                                    .flatten(),
-                            ).is_ok());
+                            assert!(cwi
+                                .write(
+                                    entry
+                                        .get(field_def.name())
+                                        .map(|v| match v {
+                                            FieldValue::U64(v) => Some(v),
+                                            _ => None,
+                                        })
+                                        .flatten(),
+                                )
+                                .is_ok());
                         }
                         ColumnWriter::F64ColumnWriter(cwi) => {
-                            assert!(cwi.write(
-                                entry
-                                    .get(field_def.name())
-                                    .map(|v| match v {
-                                        FieldValue::F64(v) => Some(v),
-                                        _ => None,
-                                    })
-                                    .flatten(),
-                            ).is_ok());
+                            assert!(cwi
+                                .write(
+                                    entry
+                                        .get(field_def.name())
+                                        .map(|v| match v {
+                                            FieldValue::F64(v) => Some(v),
+                                            _ => None,
+                                        })
+                                        .flatten(),
+                                )
+                                .is_ok());
                         }
                         ColumnWriter::BoolArrayColumnWriter(cwi) => {
-                            assert!(cwi.write(
-                                entry
-                                    .get(field_def.name())
-                                    .map(|v| match v {
-                                        FieldValue::BoolArray(v) => Some(v.as_slice()),
-                                        _ => None,
-                                    })
-                                    .flatten(),
-                            ).is_ok());
+                            assert!(cwi
+                                .write(
+                                    entry
+                                        .get(field_def.name())
+                                        .map(|v| match v {
+                                            FieldValue::BoolArray(v) => Some(v.as_slice()),
+                                            _ => None,
+                                        })
+                                        .flatten(),
+                                )
+                                .is_ok());
                         }
                         ColumnWriter::U64ArrayColumnWriter(cwi) => {
-                            assert!(cwi.write(
-                                entry
-                                    .get(field_def.name())
-                                    .map(|v| match v {
-                                        FieldValue::U64Array(v) => Some(v.as_slice()),
-                                        _ => None,
-                                    })
-                                    .flatten(),
-                            ).is_ok());
+                            assert!(cwi
+                                .write(
+                                    entry
+                                        .get(field_def.name())
+                                        .map(|v| match v {
+                                            FieldValue::U64Array(v) => Some(v.as_slice()),
+                                            _ => None,
+                                        })
+                                        .flatten(),
+                                )
+                                .is_ok());
                         }
                         ColumnWriter::ByteArrayColumnWriter(cwi) => {
-                            assert!(cwi.write(
-                                entry
-                                    .get(field_def.name())
-                                    .map(|v| match v {
-                                        FieldValue::ByteArray(v) => Some(v.as_slice()),
-                                        _ => None,
-                                    })
-                                    .flatten(),
-                            ).is_ok());
+                            assert!(cwi
+                                .write(
+                                    entry
+                                        .get(field_def.name())
+                                        .map(|v| match v {
+                                            FieldValue::ByteArray(v) => Some(v.as_slice()),
+                                            _ => None,
+                                        })
+                                        .flatten(),
+                                )
+                                .is_ok());
                         }
                     }
                 }

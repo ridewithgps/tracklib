@@ -42,13 +42,13 @@ impl<'a> TrackReader<'a> {
 
     pub fn section(&self, index: usize) -> Option<Section> {
         let section = self.data_table.get(index)?;
-        let data = &self.data_start[usize::try_from(section.offset()).expect("usize != u64")..];
-        Some(Section::new(data, &section))
+        let data = &self.data_start[section.offset()..];
+        Some(Section::new(data, section))
     }
 
     pub fn sections(&self) -> SectionIter {
         SectionIter {
-            data: &self.data_start,
+            data: self.data_start,
             entries: &self.data_table,
         }
     }
@@ -70,8 +70,8 @@ impl<'a> Iterator for SectionIter<'a> {
         if let Some((section, rest)) = self.entries.split_first() {
             self.entries = rest;
 
-            let data = &self.data[usize::try_from(section.offset()).expect("usize != u64")..];
-            Some(Section::new(data, &section))
+            let data = &self.data[section.offset()..];
+            Some(Section::new(data, section))
         } else {
             None
         }

@@ -94,9 +94,14 @@ mod tests {
         let mut section1 = Section::new(
             SectionEncoding::Standard,
             Schema::with_fields(vec![
-                FieldDefinition::new("m", DataType::I64),
-                FieldDefinition::new("k", DataType::Bool),
-                FieldDefinition::new("j", DataType::String),
+                FieldDefinition::new("i64", DataType::I64),
+                FieldDefinition::new("f64:2", DataType::F64 { scale: 2 }),
+                FieldDefinition::new("u64", DataType::U64),
+                FieldDefinition::new("bool", DataType::Bool),
+                FieldDefinition::new("string", DataType::String),
+                FieldDefinition::new("bool array", DataType::BoolArray),
+                FieldDefinition::new("u64 array", DataType::U64Array),
+                FieldDefinition::new("byte array", DataType::ByteArray),
             ]),
         );
 
@@ -108,17 +113,27 @@ mod tests {
                     ColumnWriter::I64ColumnWriter(cwi) => {
                         assert!(cwi.write(Some(&42)).is_ok());
                     }
+                    ColumnWriter::U64ColumnWriter(cwi) => {
+                        assert!(cwi.write(Some(&25)).is_ok());
+                    }
                     ColumnWriter::BoolColumnWriter(cwi) => {
                         assert!(cwi.write(Some(&true)).is_ok());
                     }
                     ColumnWriter::StringColumnWriter(cwi) => {
                         assert!(cwi.write(Some("hey")).is_ok());
                     }
-                    ColumnWriter::F64ColumnWriter(_) => {}
-                    ColumnWriter::BoolArrayColumnWriter(_) => {}
-                    ColumnWriter::U64ColumnWriter(_) => {}
-                    ColumnWriter::U64ArrayColumnWriter(_) => {}
-                    ColumnWriter::ByteArrayColumnWriter(_) => {}
+                    ColumnWriter::F64ColumnWriter(cwi) => {
+                        assert!(cwi.write(Some(&0.7890123)).is_ok());
+                    }
+                    ColumnWriter::BoolArrayColumnWriter(cwi) => {
+                        assert!(cwi.write(Some(&[true])).is_ok());
+                    }
+                    ColumnWriter::U64ArrayColumnWriter(cwi) => {
+                        assert!(cwi.write(Some(&[12, 10, 13])).is_ok());
+                    }
+                    ColumnWriter::ByteArrayColumnWriter(cwi) => {
+                        assert!(cwi.write(Some(&[12, 10, 13])).is_ok());
+                    }
                 }
             }
         }
@@ -256,23 +271,87 @@ mod tests {
                 // Data Table Section 1
                 0x00, // section encoding = standard
                 0x05, // leb128 point count
-                0x33, // leb128 data size
+                0x84, // leb128 data size
+                0x01,
 
                 // Schema for Section 1
                 0x00, // schema version
-                0x03, // field count
+                0x08, // field count
                 0x00, // first field type = I64
-                0x01, // name len
-                b'm', // name
-                0x09, // leb128 data size
-                0x10, // second field type = Bool
-                0x01, // name len
-                b'k', // name
-                0x09, // leb128 data size
-                0x20, // third field type = String
-                0x01, // name len
-                b'j', // name
-                0x18, // leb128 data size
+                0x03, // name len
+                b'i', // name
+                b'6',
+                b'4',
+                0x09, // data size
+                0x01, // second field type = F64
+                0x02, // scale
+                0x05, // name len
+                b'f', // name
+                b'6',
+                b'4',
+                b':',
+                b'2',
+                0x0A, // data len
+                0x02, // third field type = U64
+                0x03, // name len
+                b'u', // name
+                b'6',
+                b'4',
+                0x09, // data len
+                0x10, // fourth field type = Bool
+                0x04, // name len
+                b'b', // name
+                b'o',
+                b'o',
+                b'l',
+                0x09, // data len
+                0x20, // fifth field type = String
+                0x06, // name len
+                b's', // name
+                b't',
+                b'r',
+                b'i',
+                b'n',
+                b'g',
+                0x18, // data len
+                0x21, // sixth field type = Bool Array
+                0x0A, // name len
+                b'b', // name
+                b'o',
+                b'o',
+                b'l',
+                b' ',
+                b'a',
+                b'r',
+                b'r',
+                b'a',
+                b'y',
+                0x0E, // data len
+                0x22, // seventh field type = U64 Array
+                0x09, // name len
+                b'u', // name
+                b'6',
+                b'4',
+                b' ',
+                b'a',
+                b'r',
+                b'r',
+                b'a',
+                b'y',
+                0x18, // data len
+                0x23, // eigth field type = Byte Array
+                0x0A, // name len
+                b'b', // name
+                b'y',
+                b't',
+                b'e',
+                b' ',
+                b'a',
+                b'r',
+                b'r',
+                b'a',
+                b'y',
+                0x18, // data len
 
                 // Data Table Section 2
                 0x00, // section encoding = standard
@@ -296,21 +375,21 @@ mod tests {
                 0x12, // leb128 data size
 
                 // Data Table CRC
-                0x34,
-                0x2E,
+                0xCD,
+                0xB9,
 
                 // Data Section 1
 
                 // Presence Column
-                0b00000111,
-                0b00000111,
-                0b00000111,
-                0b00000111,
-                0b00000111,
-                0xF6, // crc
-                0xF8,
-                0x0D,
-                0x73,
+                0b11111111,
+                0b11111111,
+                0b11111111,
+                0b11111111,
+                0b11111111,
+                0x4B, // crc
+                0xBF,
+                0x08,
+                0x4E,
 
                 // Data Column 1 = I64
                 0x2A, // 42
@@ -323,7 +402,30 @@ mod tests {
                 0x79,
                 0x68,
 
-                // Data Column 2 = Bool
+                // Data Column 2 = F64
+                0xCE, // 0.78
+                0x00,
+                0x00,
+                0x00,
+                0x00,
+                0x00,
+                0x3C, // crc
+                0x2E,
+                0x7B,
+                0x33,
+
+                // Data Column 3 = U64
+                0x19, // 25
+                0x00,
+                0x00,
+                0x00,
+                0x00,
+                0xE4, // crc
+                0x2A,
+                0xD9,
+                0x33,
+
+                // Data Column 4 = Bool
                 0x01, // true
                 0x01, // true
                 0x01, // true
@@ -334,7 +436,7 @@ mod tests {
                 0x8F,
                 0xFA,
 
-                // Data Column 3 = String
+                // Data Column 5 = String
                 0x03, // length 3
                 b'h',
                 b'e',
@@ -359,6 +461,74 @@ mod tests {
                 0x71,
                 0x24,
                 0x0B,
+
+                // Data Column 6 = Bool Array
+                0x01, // array len
+                0x01, // true
+                0x01, // array len
+                0x01, // true
+                0x01, // array len
+                0x01, // true
+                0x01, // array len
+                0x01, // true
+                0x01, // array len
+                0x01, // true
+                0xB3, // crc
+                0x6F,
+                0x38,
+                0x51,
+
+                // Data Column 7 = U64 Array
+                0x03, // array len
+                0x0C, // 12
+                0x7E, // -2
+                0x03, // +3
+                0x03, // array len
+                0x0C, // 12
+                0x7E, // -2
+                0x03, // +3
+                0x03, // array len
+                0x0C, // 12
+                0x7E, // -2
+                0x03, // +3
+                0x03, // array len
+                0x0C, // 12
+                0x7E, // -2
+                0x03, // +3
+                0x03, // array len
+                0x0C, // 12
+                0x7E, // -2
+                0x03, // +3
+                0xD1, // crc
+                0xB4,
+                0x14,
+                0x37,
+
+                // Data Column 8 = Byte Array
+                0x03, // array len
+                0x0C, // 12
+                0x0A, // 10
+                0x0D, // 13
+                0x03, // array len
+                0x0C, // 12
+                0x0A, // 10
+                0x0D, // 13
+                0x03, // array len
+                0x0C, // 12
+                0x0A, // 10
+                0x0D, // 13
+                0x03, // array len
+                0x0C, // 12
+                0x0A, // 10
+                0x0D, // 13
+                0x03, // array len
+                0x0C, // 12
+                0x0A, // 10
+                0x0D, // 13
+                0x94, // crc
+                0x1D,
+                0x88,
+                0xAB,
 
                 // Data Section 2
 

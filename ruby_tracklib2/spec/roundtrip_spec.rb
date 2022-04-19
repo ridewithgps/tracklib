@@ -8,7 +8,8 @@ describe Tracklib do
             {"a" => 40},
             {"a" => -40.0}]
 
-    section = Tracklib::Section.new(:standard, [["a", :i64]], data)
+    schema = Tracklib::Schema.new([["a", :i64]])
+    section = Tracklib::Section.new(:standard, schema, data)
     buf = Tracklib::write_track([], [section])
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.section_data(0)).to eq(data)
@@ -20,7 +21,8 @@ describe Tracklib do
             {"a" => 11.2},
             {"a" => -400.000003}]
 
-    section = Tracklib::Section.new(:standard, [["a", :f64, 7]], data)
+    schema = Tracklib::Schema.new([["a", :f64, 7]])
+    section = Tracklib::Section.new(:standard, schema, data)
     buf = Tracklib::write_track([], [section])
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.section_data(0)).to eq(data)
@@ -33,7 +35,8 @@ describe Tracklib do
             {"a" => 400},
             {"a" => 20}]
 
-    section = Tracklib::Section.new(:standard, [["a", :u64]], data)
+    schema = Tracklib::Schema.new([["a", :u64]])
+    section = Tracklib::Section.new(:standard, schema, data)
     buf = Tracklib::write_track([], [section])
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.section_data(0)).to eq(data)
@@ -46,7 +49,8 @@ describe Tracklib do
             {"a" => true},
             {}]
 
-    section = Tracklib::Section.new(:standard, [["a", :bool]], data)
+    schema = Tracklib::Schema.new([["a", :bool]])
+    section = Tracklib::Section.new(:standard, schema, data)
     buf = Tracklib::write_track([], [section])
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.section_data(0)).to eq(data)
@@ -58,7 +62,8 @@ describe Tracklib do
             {"a" => "Supercalifragilisticexpialidocious"},
             {"a" => ""}]
 
-    section = Tracklib::Section.new(:standard, [["a", :string]], data)
+    schema = Tracklib::Schema.new([["a", :string]])
+    section = Tracklib::Section.new(:standard, schema, data)
     buf = Tracklib::write_track([], [section])
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.section_data(0)).to eq(data)
@@ -70,7 +75,8 @@ describe Tracklib do
             {"a" => [false, false, false, false, false, false, false, false, false, false, false]},
             {"a" => []}]
 
-    section = Tracklib::Section.new(:standard, [["a", :bool_array]], data)
+    schema = Tracklib::Schema.new([["a", :bool_array]])
+    section = Tracklib::Section.new(:standard, schema, data)
     buf = Tracklib::write_track([], [section])
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.section_data(0)).to eq(data)
@@ -82,7 +88,8 @@ describe Tracklib do
             {"a" => []},
             {"a" => [80_000_000, 5]}]
 
-    section = Tracklib::Section.new(:standard, [["a", :u64_array]], data)
+    schema = Tracklib::Schema.new([["a", :u64_array]])
+    section = Tracklib::Section.new(:standard, schema, data)
     buf = Tracklib::write_track([], [section])
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.section_data(0)).to eq(data)
@@ -96,7 +103,8 @@ describe Tracklib do
             {"a" => ""},
             {"a" => example_string}]
 
-    section = Tracklib::Section.new(:standard, [["a", :byte_array]], data)
+    schema = Tracklib::Schema.new([["a", :byte_array]])
+    section = Tracklib::Section.new(:standard, schema, data)
     buf = Tracklib::write_track([], [section])
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.section_data(0)).to eq(data)
@@ -112,16 +120,15 @@ describe Tracklib do
              "u64array" => [20, 10, 11],
              "bytearray" => "RWGPS"}]
 
-    section = Tracklib::Section.new(:standard,
-                                    [["i64", :i64],
-                                     ["f64", :f64, 2],
-                                     ["u64", :u64],
-                                     ["bool", :bool],
-                                     ["string", :string],
-                                     ["boolarray", :bool_array],
-                                     ["u64array", :u64_array],
-                                     ["bytearray", :byte_array]],
-                                    data)
+    schema = Tracklib::Schema.new([["i64", :i64],
+                                   ["f64", :f64, 2],
+                                   ["u64", :u64],
+                                   ["bool", :bool],
+                                   ["string", :string],
+                                   ["boolarray", :bool_array],
+                                   ["u64array", :u64_array],
+                                   ["bytearray", :byte_array]])
+    section = Tracklib::Section.new(:standard, schema, data)
     buf = Tracklib::write_track([], [section])
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.section_data(0)).to eq(data)

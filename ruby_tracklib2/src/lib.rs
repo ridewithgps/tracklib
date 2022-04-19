@@ -23,6 +23,10 @@ pub extern "C" fn Init_Tracklib() {
                 class.def("section_column", read::trackreader_section_column);
             });
 
+        module.define_nested_class("Schema", None).define(|class| {
+            class.def_self("new", schema::schema_new);
+        });
+
         module.define_nested_class("Section", None).define(|class| {
             class.def_self("new", write::section_new);
         });

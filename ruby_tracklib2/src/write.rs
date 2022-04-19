@@ -14,9 +14,8 @@ class!(Section);
 methods!(
     Section,
     rtself,
-    fn section_new(encoding: Symbol, schema: Array, data: Array) -> AnyObject {
-        let tracklib_schema =
-            crate::schema::create_schema(schema.map_err(|e| VM::raise_ex(e)).unwrap());
+    fn section_new(encoding: Symbol, schema: crate::schema::Schema, data: Array) -> AnyObject {
+        let tracklib_schema = schema.map_err(|e| VM::raise_ex(e)).unwrap().inner().clone();
         let tracklib_encoding = match encoding.map_err(|e| VM::raise_ex(e)).unwrap().to_str() {
             "standard" => tracklib2::types::SectionEncoding::Standard,
             val @ _ => {

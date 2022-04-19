@@ -2,10 +2,11 @@ require "spec_helper"
 
 describe Tracklib do
   it "can write an I64 column" do
-    section = Tracklib::Section.new(:standard, [["a", :i64]], [{"a" => 0},
-                                                               {},
-                                                               {"a" => 40},
-                                                               {"a" => -40}])
+    schema = Tracklib::Schema.new([["a", :i64]])
+    section = Tracklib::Section.new(:standard, schema, [{"a" => 0},
+                                                        {},
+                                                        {"a" => 40},
+                                                        {"a" => -40}])
     expect(Tracklib::write_track([], [section])
              .unpack("C*")[27..])
       .to eq([# Data Table
@@ -53,9 +54,10 @@ describe Tracklib do
   end
 
   it "can write an F64 column" do
-    section = Tracklib::Section.new(:standard, [["a", :f64, 7]], [{"a" => 0.0003},
-                                                                  {},
-                                                                  {"a" => -27.2}])
+    schema = Tracklib::Schema.new([["a", :f64, 7]])
+    section = Tracklib::Section.new(:standard, schema, [{"a" => 0.0003},
+                                                        {},
+                                                        {"a" => -27.2}])
     expect(Tracklib::write_track([], [section])
              .unpack("C*")[27..])
       .to eq([# Data Table
@@ -107,10 +109,11 @@ describe Tracklib do
   end
 
   it "can write an U64 column" do
-    section = Tracklib::Section.new(:standard, [["a", :u64]], [{"a" => 0},
-                                                               {},
-                                                               {"a" => 40},
-                                                               {"a" => 10}])
+    schema = Tracklib::Schema.new([["a", :u64]])
+    section = Tracklib::Section.new(:standard, schema, [{"a" => 0},
+                                                        {},
+                                                        {"a" => 40},
+                                                        {"a" => 10}])
     expect(Tracklib::write_track([], [section])
              .unpack("C*")[27..])
       .to eq([# Data Table
@@ -157,9 +160,10 @@ describe Tracklib do
   end
 
   it "can write a Bool column" do
-    section = Tracklib::Section.new(:standard, [["a", :bool]], [{"a" => true},
-                                                                {},
-                                                                {"a" => false}])
+    schema = Tracklib::Schema.new([["a", :bool]])
+    section = Tracklib::Section.new(:standard, schema, [{"a" => true},
+                                                        {},
+                                                        {"a" => false}])
     expect(Tracklib::write_track([], [section])
              .unpack("C*")[27..])
       .to eq([# Data Table
@@ -204,9 +208,10 @@ describe Tracklib do
   end
 
   it "can write a String column" do
-    section = Tracklib::Section.new(:standard, [["a", :string]], [{"a" => "RWGPS"},
-                                                                  {},
-                                                                  {"a" => "Supercalifragilisticexpialidocious"}])
+    schema = Tracklib::Schema.new([["a", :string]])
+    section = Tracklib::Section.new(:standard, schema, [{"a" => "RWGPS"},
+                                                        {},
+                                                        {"a" => "Supercalifragilisticexpialidocious"}])
     expect(Tracklib::write_track([], [section])
              .unpack("C*")[27..])
       .to eq([# Data Table
@@ -290,9 +295,10 @@ describe Tracklib do
   end
 
   it "can write a BoolArray column" do
-    section = Tracklib::Section.new(:standard, [["a", :bool_array]], [{"a" => [true, false, false]},
-                                                                      {},
-                                                                      {"a" => []}])
+    schema = Tracklib::Schema.new([["a", :bool_array]])
+    section = Tracklib::Section.new(:standard, schema, [{"a" => [true, false, false]},
+                                                        {},
+                                                        {"a" => []}])
     expect(Tracklib::write_track([], [section])
              .unpack("C*")[27..])
       .to eq([# Data Table
@@ -340,9 +346,10 @@ describe Tracklib do
   end
 
   it "can write a U64Array column" do
-    section = Tracklib::Section.new(:standard, [["a", :u64_array]], [{"a" => [99, 98, 500]},
-                                                                     {},
-                                                                     {"a" => []}])
+    schema = Tracklib::Schema.new([["a", :u64_array]])
+    section = Tracklib::Section.new(:standard, schema, [{"a" => [99, 98, 500]},
+                                                        {},
+                                                        {"a" => []}])
     expect(Tracklib::write_track([], [section])
              .unpack("C*")[27..])
       .to eq([# Data Table
@@ -392,9 +399,10 @@ describe Tracklib do
   end
 
   it "can write a ByteArray column" do
-    section = Tracklib::Section.new(:standard, [["a", :byte_array]], [{"a" => "RWGPS"},
-                                                                      {},
-                                                                      {"a" => ""}])
+    schema = Tracklib::Schema.new([["a", :byte_array]])
+    section = Tracklib::Section.new(:standard, schema, [{"a" => "RWGPS"},
+                                                        {},
+                                                        {"a" => ""}])
     expect(Tracklib::write_track([], [section])
              .unpack("C*")[27..])
       .to eq([# Data Table
@@ -444,8 +452,12 @@ describe Tracklib do
   end
 
   it "can convert floats and integers" do
+    schema = Tracklib::Schema.new([["i", :i64],
+                                   ["u", :u64],
+                                   ["f", :f64, 7],
+                                   ["ua", :u64_array]])
     section = Tracklib::Section.new(:standard,
-                                    [["i", :i64], ["u", :u64], ["f", :f64, 7], ["ua", :u64_array]],
+                                    schema,
                                     [{"i" => -1, "u" => 1, "f" => 0.0, "ua" => [0, 1.0, 1.2, 1.9, 5]},
                                      {"i" => 1.0, "u"=> 3.0, "f" => 5},
                                      {},
@@ -542,14 +554,23 @@ describe Tracklib do
   end
 
   it "raises errors for invalid F64 scale" do
-    expect { Tracklib::Section.new(:standard, [["a", :f64]], []) }.to raise_error
-    expect { Tracklib::Section.new(:standard, [["a", :f64, "2"]], []) }.to raise_error
-    expect { Tracklib::Section.new(:standard, [["a", :f64, 500]], []) }.to raise_error
+    expect { Tracklib::Schema.new([["a", :f64]]) }.to raise_error
+    expect { Tracklib::Schema.new([["a", :f64, "2"]]) }.to raise_error
+    expect { Tracklib::Schema.new([["a", :f64, 500]]) }.to raise_error
   end
 
   it "raises errors for invalid array type elements" do
-    expect { Tracklib::Section.new(:standard, [["a", :bool_array]], [{"a" => [true, false, 0]}]) }.to raise_error
-    expect { Tracklib::Section.new(:standard, [["a", :u64_array]], [{"a" => [0, 1, 2, "3"]}]) }.to raise_error
+    expect {
+      Tracklib::Section.new(:standard,
+                            Tracklib::Schema.new([["a", :bool_array]]),
+                            [{"a" => [true, false, 0]}])
+    }.to raise_error
+
+    expect {
+      Tracklib::Section.new(:standard,
+                            Tracklib::Schema.new([["a", :u64_array]]),
+                            [{"a" => [0, 1, 2, "3"]}])
+    }.to raise_error
   end
 
   it "can write metadata" do

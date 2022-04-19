@@ -303,7 +303,7 @@ methods!(
                                     .try_convert_to::<Integer>()
                                     .map_err(|e| VM::raise_ex(e))
                                     .unwrap()
-                                    .to_u32();
+                                    .to_u64();
 
                                 let track_type = match track_type_symbol.to_str() {
                                     "route" => tracklib2::types::TrackType::Route(track_id),

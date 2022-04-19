@@ -3,7 +3,7 @@
 mod tests {
     use tracklib2::read::track::TrackReader;
     use tracklib2::schema::*;
-    use tracklib2::types::{FieldValue, SectionEncoding};
+    use tracklib2::types::{FieldValue, MetadataEntry, SectionEncoding, TrackType};
     use tracklib2::write::section::{ColumnWriter, Section};
     use tracklib2::write::track::write_track;
 
@@ -72,6 +72,7 @@ mod tests {
             u64::MAX,
             u64::MAX - 100,
             0,
+            i64::MAX as u64 + 1,
         ];
 
         // Write
@@ -369,5 +370,24 @@ mod tests {
 
         // Compare
         assert_eq!(write_values, read_values.as_slice());
+    }
+
+    #[test]
+    fn roundtrip_metadata() {
+        let mut buf = vec![];
+        let metadata_entries = vec![
+            MetadataEntry::TrackType(TrackType::Trip(u64::MAX)),
+            MetadataEntry::CreatedAt(u64::MAX),
+        ];
+
+        // Write
+        let section = Section::new(SectionEncoding::Standard, Schema::with_fields(vec![]));
+        assert!(write_track(&mut buf, &metadata_entries, &[&section]).is_ok());
+
+        // Read
+        let track_reader = TrackReader::new(&buf).unwrap();
+
+        // Compare
+        assert_eq!(metadata_entries.as_slice(), track_reader.metadata());
     }
 }

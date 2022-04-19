@@ -5,22 +5,18 @@ authors = ["Dan Larkin <dan@danlarkin.org>"]
 edition = "2021"
 
 [dependencies]
+chrono = {version = "0.4", optional = true}
 crc = "2.1"
 leb128 = "0.2"
 nom = {version = "7.1", default_features = false, features = []}
 nom-leb128 = "0.2"
-thiserror = "1.0"
 term-table = {version = "1.3", optional = true}
+thiserror = "1.0"
 
 [dev-dependencies]
 assert_matches = "1.5"
-criterion = "0.3"
 float-cmp = "0.9"
 
 [features]
 default = []
-inspect = ["term-table"]
-
-[[bench]]
-name = "parsing"
-harness = false
+inspect = ["chrono", "term-table"]

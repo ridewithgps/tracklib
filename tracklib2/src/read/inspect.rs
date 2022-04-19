@@ -2,7 +2,9 @@ use super::data_table::{parse_data_table, DataTableEntry};
 use super::header::{parse_header, Header};
 use super::metadata::parse_metadata;
 use super::section::Section;
-use crate::types::FieldValue;
+use crate::types::{FieldValue, MetadataEntry, TrackType};
+use chrono::offset::TimeZone;
+use chrono::Utc;
 use nom::Offset;
 use term_table::row::Row;
 use term_table::table_cell::{Alignment, TableCell};
@@ -69,18 +71,42 @@ fn try_format_metadata(input: &[u8]) -> String {
 
     table.add_row(Row::new(vec![TableCell::new_with_alignment(
         bold("Metadata"),
-        1,
+        2,
         Alignment::Center,
     )]));
 
     match parse_metadata(input) {
         Ok((_, metadata_entries)) => {
             for entry in metadata_entries {
-                table.add_row(Row::new(vec![TableCell::new_with_alignment(
-                    format!("{:?}", entry),
-                    1,
-                    Alignment::Left,
-                )]));
+                let (entry_type, s) = match entry {
+                    MetadataEntry::TrackType(track_type) => {
+                        let (type_name, id) = match track_type {
+                            TrackType::Trip(id) => ("Trip", id),
+                            TrackType::Route(id) => ("Route", id),
+                            TrackType::Segment(id) => ("Segment", id),
+                        };
+                        ("Track Type", format!("{type_name} {id}"))
+                    }
+                    MetadataEntry::CreatedAt(created_at) => {
+                        let s = match i64::try_from(created_at) {
+                            Ok(secs) => {
+                                format!(
+                                    "{} ({})",
+                                    Utc.timestamp(secs, 0).to_rfc3339(),
+                                    italic(&secs.to_string())
+                                )
+                            }
+                            Err(_) => {
+                                format!("Invalid Timestamp ({})", italic(&created_at.to_string()))
+                            }
+                        };
+                        ("Created At", s)
+                    }
+                };
+                table.add_row(Row::new(vec![
+                    TableCell::new_with_alignment(entry_type, 1, Alignment::Left),
+                    TableCell::new_with_alignment(s, 1, Alignment::Right),
+                ]));
             }
         }
         Err(e) => {
@@ -236,7 +262,7 @@ fn try_format_data_table(
         Err(e) => {
             let mut table = Table::new();
             table.add_row(Row::new(vec![TableCell::new_with_alignment(
-                bold(&format!("Data Table")),
+                bold("Data Table"),
                 1,
                 Alignment::Center,
             )]));
@@ -256,20 +282,23 @@ fn format_val(value: Option<FieldValue>) -> String {
         match val {
             FieldValue::I64(v) => format!("{v}"),
             FieldValue::F64(v) => format!("{v}"),
+            FieldValue::U64(v) => format!("{v}"),
             FieldValue::Bool(v) => format!("{v}"),
-            FieldValue::String(v) => v.clone(),
+            FieldValue::String(v) => v,
             FieldValue::BoolArray(v) => format!("{v:?}"),
+            FieldValue::U64Array(v) => format!("{v:?}"),
+            FieldValue::ByteArray(v) => format!("{v:#04X?}"),
         }
     } else {
-        String::from(strikethrough("None"))
+        strikethrough("None")
     }
 }
 
 fn try_format_section(data_start: &[u8], entry_num: usize, entry: &DataTableEntry) -> String {
     let mut table = Table::new();
 
-    let data = &data_start[usize::try_from(entry.offset()).expect("usize != u64")..];
-    let section = Section::new(data, &entry);
+    let data = &data_start[entry.offset()..];
+    let section = Section::new(data, entry);
 
     match section.reader() {
         Ok(mut section_reader) => {
@@ -340,7 +369,7 @@ pub fn inspect(input: &[u8]) -> Result<String, String> {
     // Data
     if let Some((data_start, data_table_entries)) = maybe_data_table {
         for (i, data_table_entry) in data_table_entries.iter().enumerate() {
-            out.push_str(&try_format_section(data_start, i, &data_table_entry));
+            out.push_str(&try_format_section(data_start, i, data_table_entry));
             out.push_str("\n\n");
         }
     }

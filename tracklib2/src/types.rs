@@ -1,5 +1,4 @@
-#[derive(Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(Debug, PartialEq)]
 pub enum FieldValue {
     I64(i64),
     U64(u64),
@@ -24,8 +23,7 @@ pub enum MetadataEntry {
     CreatedAt(u64),
 }
 
-#[derive(Clone, Copy, Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SectionEncoding {
     Standard,
     // Encrypted,

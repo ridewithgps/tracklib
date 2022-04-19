@@ -40,7 +40,7 @@ pub fn write_track<W: Write>(
 mod tests {
     use super::*;
     use crate::schema::*;
-    use crate::types::{SectionEncoding, TrackType};
+    use crate::types::{SectionEncoding, TrackType, FieldValue};
     use crate::write::section::ColumnWriter;
     use assert_matches::assert_matches;
     use std::collections::HashMap;
@@ -138,26 +138,20 @@ mod tests {
             }
         }
 
-        enum V {
-            I64(i64),
-            Bool(bool),
-            String(String),
-        }
-
         let mut v = Vec::new();
         let mut h = HashMap::new();
-        h.insert("a", V::I64(1));
-        h.insert("b", V::Bool(false));
-        h.insert("c", V::String("Ride".to_string()));
+        h.insert("a", FieldValue::I64(1));
+        h.insert("b", FieldValue::Bool(false));
+        h.insert("c", FieldValue::String("Ride".to_string()));
         v.push(h);
         let mut h = HashMap::new();
-        h.insert("a", V::I64(2));
-        h.insert("c", V::String("with".to_string()));
+        h.insert("a", FieldValue::I64(2));
+        h.insert("c", FieldValue::String("with".to_string()));
         v.push(h);
         let mut h = HashMap::new();
-        h.insert("a", V::I64(4));
-        h.insert("b", V::Bool(true));
-        h.insert("c", V::String("GPS".to_string()));
+        h.insert("a", FieldValue::I64(4));
+        h.insert("b", FieldValue::Bool(true));
+        h.insert("c", FieldValue::String("GPS".to_string()));
         v.push(h);
 
         let mut section2 = Section::new(
@@ -182,7 +176,7 @@ mod tests {
                                 entry
                                     .get(field_def.name())
                                     .map(|v| match v {
-                                        V::I64(v) => Some(v),
+                                        FieldValue::I64(v) => Some(v),
                                         _ => None,
                                     })
                                     .flatten(),
@@ -193,7 +187,7 @@ mod tests {
                                 entry
                                     .get(field_def.name())
                                     .map(|v| match v {
-                                        V::Bool(v) => Some(v),
+                                        FieldValue::Bool(v) => Some(v),
                                         _ => None,
                                     })
                                     .flatten(),
@@ -204,7 +198,7 @@ mod tests {
                                 entry
                                     .get(field_def.name())
                                     .map(|v| match v {
-                                        V::String(v) => Some(v.as_str()),
+                                        FieldValue::String(v) => Some(v.as_str()),
                                         _ => None,
                                     })
                                     .flatten(),

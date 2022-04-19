@@ -334,6 +334,7 @@ mod tests {
     use super::*;
     use assert_matches::assert_matches;
     use std::collections::HashMap;
+    use crate::types::FieldValue;
 
     #[test]
     fn test_write_presence_column() {
@@ -591,39 +592,28 @@ mod tests {
 
     #[test]
     fn test_writing_a_section() {
-        enum V {
-            I64(i64),
-            U64(u64),
-            F64(f64),
-            Bool(bool),
-            String(String),
-            BoolArray(Vec<bool>),
-            U64Array(Vec<u64>),
-            ByteArray(Vec<u8>),
-        }
-
         let mut v = Vec::new();
         let mut h = HashMap::new();
-        h.insert("a", V::I64(1));
-        h.insert("b", V::Bool(false));
-        h.insert("c", V::String("Ride".to_string()));
-        h.insert("d", V::F64(0.0));
-        h.insert("g", V::U64Array(vec![50, 49]));
+        h.insert("a", FieldValue::I64(1));
+        h.insert("b", FieldValue::Bool(false));
+        h.insert("c", FieldValue::String("Ride".to_string()));
+        h.insert("d", FieldValue::F64(0.0));
+        h.insert("g", FieldValue::U64Array(vec![50, 49]));
         v.push(h);
         let mut h = HashMap::new();
-        h.insert("a", V::I64(2));
-        h.insert("c", V::String("with".to_string()));
-        h.insert("e", V::BoolArray(vec![true, false]));
-        h.insert("f", V::U64(20));
+        h.insert("a", FieldValue::I64(2));
+        h.insert("c", FieldValue::String("with".to_string()));
+        h.insert("e", FieldValue::BoolArray(vec![true, false]));
+        h.insert("f", FieldValue::U64(20));
         v.push(h);
         let mut h = HashMap::new();
-        h.insert("a", V::I64(4));
-        h.insert("b", V::Bool(true));
-        h.insert("c", V::String("GPS".to_string()));
-        h.insert("d", V::F64(2112.90125));
-        h.insert("f", V::U64(18));
-        h.insert("g", V::U64Array(vec![1, 2, 3]));
-        h.insert("h", V::ByteArray(vec![0, 1]));
+        h.insert("a", FieldValue::I64(4));
+        h.insert("b", FieldValue::Bool(true));
+        h.insert("c", FieldValue::String("GPS".to_string()));
+        h.insert("d", FieldValue::F64(2112.90125));
+        h.insert("f", FieldValue::U64(18));
+        h.insert("g", FieldValue::U64Array(vec![1, 2, 3]));
+        h.insert("h", FieldValue::ByteArray(vec![0, 1]));
         v.push(h);
 
         let mut section = Section::new(
@@ -653,7 +643,7 @@ mod tests {
                                 entry
                                     .get(field_def.name())
                                     .map(|v| match v {
-                                        V::I64(v) => Some(v),
+                                        FieldValue::I64(v) => Some(v),
                                         _ => None,
                                     })
                                     .flatten(),
@@ -664,7 +654,7 @@ mod tests {
                                 entry
                                     .get(field_def.name())
                                     .map(|v| match v {
-                                        V::U64(v) => Some(v),
+                                        FieldValue::U64(v) => Some(v),
                                         _ => None,
                                     })
                                     .flatten(),
@@ -675,7 +665,7 @@ mod tests {
                                 entry
                                     .get(field_def.name())
                                     .map(|v| match v {
-                                        V::Bool(v) => Some(v),
+                                        FieldValue::Bool(v) => Some(v),
                                         _ => None,
                                     })
                                     .flatten(),
@@ -686,7 +676,7 @@ mod tests {
                                 entry
                                     .get(field_def.name())
                                     .map(|v| match v {
-                                        V::String(v) => Some(v.as_str()),
+                                        FieldValue::String(v) => Some(v.as_str()),
                                         _ => None,
                                     })
                                     .flatten(),
@@ -697,7 +687,7 @@ mod tests {
                                 entry
                                     .get(field_def.name())
                                     .map(|v| match v {
-                                        V::F64(v) => Some(v),
+                                        FieldValue::F64(v) => Some(v),
                                         _ => None,
                                     })
                                     .flatten(),
@@ -708,7 +698,7 @@ mod tests {
                                 entry
                                     .get(field_def.name())
                                     .map(|v| match v {
-                                        V::BoolArray(v) => Some(v.as_slice()),
+                                        FieldValue::BoolArray(v) => Some(v.as_slice()),
                                         _ => None,
                                     })
                                     .flatten(),
@@ -719,7 +709,7 @@ mod tests {
                                 entry
                                     .get(field_def.name())
                                     .map(|v| match v {
-                                        V::U64Array(v) => Some(v.as_slice()),
+                                        FieldValue::U64Array(v) => Some(v.as_slice()),
                                         _ => None,
                                     })
                                     .flatten(),
@@ -730,7 +720,7 @@ mod tests {
                                 entry
                                     .get(field_def.name())
                                     .map(|v| match v {
-                                        V::ByteArray(v) => Some(v.as_slice()),
+                                        FieldValue::ByteArray(v) => Some(v.as_slice()),
                                         _ => None,
                                     })
                                     .flatten(),

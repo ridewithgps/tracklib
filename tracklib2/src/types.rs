@@ -11,16 +11,14 @@ pub enum FieldValue {
     ByteArray(Vec<u8>),
 }
 
-#[derive(Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(Debug, PartialEq)]
 pub enum TrackType {
-    Trip(u32),
-    Route(u32),
-    Segment(u32),
+    Trip(u64),
+    Route(u64),
+    Segment(u64),
 }
 
-#[derive(Debug)]
-#[cfg_attr(test, derive(PartialEq))]
+#[derive(Debug, PartialEq)]
 pub enum MetadataEntry {
     TrackType(TrackType),
     CreatedAt(u64),

@@ -222,8 +222,10 @@ mod tests {
 
         let mut buf = Vec::new();
         assert_matches!(write_track(&mut buf,
-                                    &[MetadataEntry::TrackType(TrackType::Segment(5))],
-                                    &[section1, section2]), Ok(()) => {
+                                    &[MetadataEntry::TrackType(TrackType::Segment(5)),
+                                      MetadataEntry::CreatedAt(25)],
+                                    &[&section1, &section2]), Ok(()) => {
+            // std::fs::write("example.rwtf", &buf).unwrap();
             #[rustfmt::skip]
             assert_eq!(buf, &[
                 // Header
@@ -245,25 +247,24 @@ mod tests {
                 0x00,
                 0x18, // metadata table offset
                 0x00,
-                0x23, // data offset
+                0x22, // data offset
                 0x00,
                 0x00, // e reserve
                 0x00,
-                0x89, // header crc
-                0x98,
+                0x88, // header crc
+                0x64,
 
                 // Metadata Table
-                0x01, // one entry
-                0x00, // entry type: track_type = 0x00
-                0x05, // two byte entry size = 5
-                0x00,
-                0x02, // track type: segment = 0x02
-                0x05, // four byte segment ID
-                0x00,
-                0x00,
-                0x00,
-                0xD4, // crc
-                0x93,
+                0x02, // one entry
+                0x00, // entry type: track_type
+                0x02, // entry size
+                0x02, // track type: segment
+                0x05, // segment id
+                0x01, // entry type: created_at
+                0x01, // entry size
+                0x19, // timestamp
+                0xD7, // crc
+                0x59,
 
                 // Data Table
                 0x02, // two sections

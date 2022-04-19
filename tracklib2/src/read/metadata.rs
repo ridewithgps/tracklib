@@ -1,19 +1,15 @@
 use super::crc::CRC;
 use crate::error::TracklibError;
 use crate::types::{MetadataEntry, TrackType};
-use nom::{
-    bytes::complete::tag,
-    multi::length_data,
-    number::complete::{le_u16, le_u32, le_u64, le_u8},
-    IResult,
-};
+use nom::{multi::length_data, number::complete::le_u8, IResult};
+use nom_leb128::leb128_u64;
 
 fn parse_metadata_entry_track_type(
     input: &[u8],
 ) -> IResult<&[u8], Option<MetadataEntry>, TracklibError> {
-    let (input, _size) = tag([0x05, 0x00])(input)?;
+    let (input, _size) = leb128_u64(input)?;
     let (input, type_tag) = le_u8(input)?;
-    let (input, id) = le_u32(input)?;
+    let (input, id) = leb128_u64(input)?;
 
     match type_tag {
         0x00 => Ok((input, Some(MetadataEntry::TrackType(TrackType::Trip(id))))),
@@ -31,8 +27,8 @@ fn parse_metadata_entry_track_type(
 fn parse_metadata_entry_created_at(
     input: &[u8],
 ) -> IResult<&[u8], Option<MetadataEntry>, TracklibError> {
-    let (input, _size) = tag([0x08, 0x00])(input)?;
-    let (input, seconds_since_epoch) = le_u64(input)?;
+    let (input, _size) = leb128_u64(input)?;
+    let (input, seconds_since_epoch) = leb128_u64(input)?;
 
     Ok((input, Some(MetadataEntry::CreatedAt(seconds_since_epoch))))
 }
@@ -40,7 +36,7 @@ fn parse_metadata_entry_created_at(
 fn parse_metadata_entry_unknown(
     input: &[u8],
 ) -> IResult<&[u8], Option<MetadataEntry>, TracklibError> {
-    let (input, _data) = length_data(le_u16)(input)?;
+    let (input, _data) = length_data(leb128_u64)(input)?;
     Ok((input, None))
 }
 
@@ -100,27 +96,15 @@ mod tests {
     fn test_metadata_both() {
         #[rustfmt::skip]
         let buf = &[0x02, // two metadata entries
-                    0x00, // entry type: track_type = 0x00
-                    0x05, // two byte entry size = 5
-                    0x00,
-                    0x00, // track type: trip = 0x00
-                    0x14, // four byte trip ID = 20
-                    0x00,
-                    0x00,
-                    0x00,
-                    0x01, // entry type: created_at = 0x01
-                    0x08, // two byte entry size = 8
-                    0x00,
-                    0x00, // eight byte timestamp: zero seconds elapsed
-                    0x00,
-                    0x00,
-                    0x00,
-                    0x00,
-                    0x00,
-                    0x00,
-                    0x00,
-                    0x23, // crc
-                    0xD2];
+                    0x00, // entry type: track_type
+                    0x02, // entry size
+                    0x00, // track type: trip
+                    0x14, // trip id
+                    0x01, // entry type: created_at
+                    0x01, // entry size
+                    0x00, // timestamp
+                    0x6A, // crc
+                    0x6F];
         assert_matches!(parse_metadata(buf), Ok((&[], entries)) => {
             assert_eq!(entries, vec![MetadataEntry::TrackType(TrackType::Trip(20)),
                                      MetadataEntry::CreatedAt(0)]);
@@ -131,17 +115,12 @@ mod tests {
     fn test_unknown_inbetween_known_entries() {
         #[rustfmt::skip]
         let buf = &[0x03, // two metadata entries
-                    0x00, // entry type: track_type = 0x00
-                    0x05, // two byte entry size = 5
-                    0x00,
-                    0x00, // track type: trip = 0x00
-                    0x14, // four byte trip ID = 20
-                    0x00,
-                    0x00,
-                    0x00,
+                    0x00, // entry type: track_type
+                    0x02, // entry size
+                    0x00, // track type: trip
+                    0x14, // trip id
                     0xEF, // entry type: unknown!
-                    0x14, // two byte entry size = 20
-                    0x00,
+                    0x14, // entry size
                     0x00, // 20 byte payload
                     0x00,
                     0x00,
@@ -162,19 +141,11 @@ mod tests {
                     0x00,
                     0x00,
                     0x00,
-                    0x01, // entry type: created_at = 0x01
-                    0x08, // two byte entry size = 8
-                    0x00,
-                    0x00, // eight byte timestamp: zero seconds elapsed
-                    0x00,
-                    0x00,
-                    0x00,
-                    0x00,
-                    0x00,
-                    0x00,
-                    0x00,
-                    0x71, // crc
-                    0x85];
+                    0x01, // entry type: created_at
+                    0x01, // entry size
+                    0x00, // timestamp
+                    0xCB, // crc
+                    0xA1];
         assert_matches!(parse_metadata(buf), Ok((&[], entries)) => {
             assert_eq!(entries, vec![MetadataEntry::TrackType(TrackType::Trip(20)),
                                      MetadataEntry::CreatedAt(0)]);
@@ -185,31 +156,19 @@ mod tests {
     fn test_invalid_crc() {
         #[rustfmt::skip]
         let buf = &[0x02, // two metadata entries
-                    0x00, // entry type: track_type = 0x00
-                    0x05, // two byte entry size = 5
-                    0x00,
-                    0x00, // track type: trip = 0x00
-                    0x14, // four byte trip ID = 20
-                    0x00,
-                    0x00,
-                    0x00,
-                    0x01, // entry type: created_at = 0x01
-                    0x08, // two byte entry size = 8
-                    0x00,
-                    0x00, // eight byte timestamp: zero seconds elapsed
-                    0x00,
-                    0x00,
-                    0x00,
-                    0x00,
-                    0x00,
-                    0x00,
-                    0x00,
+                    0x00, // entry type: track_type
+                    0x02, // entry size
+                    0x00, // track type: trip
+                    0x14, // trip id
+                    0x01, // entry type: created_at
+                    0x01, // entry size
+                    0x00, // timestamp
                     0x12, // crc
                     0x34];
         assert_matches!(parse_metadata(buf), Err(nom::Err::Error(TracklibError::CRC16Error{expected,
                                                                                            computed})) => {
             assert_eq!(expected, u16::from_le_bytes([0x12, 0x34]));
-            assert_eq!(computed, u16::from_le_bytes([0x23, 0xD2]));
+            assert_eq!(computed, u16::from_le_bytes([0x6A, 0x6F]));
         });
     }
 }

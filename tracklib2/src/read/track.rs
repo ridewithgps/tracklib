@@ -108,25 +108,21 @@ mod tests {
             0x00,
             0x18, // metadata table offset
             0x00,
-            0x23, // data offset
+            0x1F, // data offset
             0x00,
             0x00, // e reserve
             0x00,
-            0x89, // header crc
-            0x98,
+            0x85, // header crc
+            0xC8,
 
             // Metadata Table
             0x01, // one entry
-            0x00, // entry type: track_type = 0x00
-            0x05, // two byte entry size = 5
-            0x00,
-            0x02, // track type: segment = 0x02
-            0x05, // four byte segment ID
-            0x00,
-            0x00,
-            0x00,
-            0xD4, // crc
-            0x93,
+            0x00, // entry type: track_type
+            0x02, // entry size
+            0x02, // track type: segment
+            0x05, // segment id
+            0x86, // crc
+            0x9C,
 
             // Data Table
             0x02, // two sections

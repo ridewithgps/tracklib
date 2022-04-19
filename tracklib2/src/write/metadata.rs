@@ -6,26 +6,30 @@ use std::io::Write;
 impl MetadataEntry {
     #[rustfmt::skip]
     fn write<W: Write>(&self, out: &mut W) -> Result<()> {
-        match self {
+        let (entry_type, entry_buf) = match self {
             Self::TrackType(track_type) => {
-                let (type_tag, id): (u8, &u32) = match track_type {
+                let mut entry_contents_buf = vec![];
+                let (type_tag, id): (u8, &u64) = match track_type {
                     TrackType::Trip(id) => (0x00, id),
                     TrackType::Route(id) => (0x01, id),
                     TrackType::Segment(id) => (0x02, id),
                 };
-                out.write_all(&[0x00])?;                            // 1 byte  - entry type
-                out.write_all(&[0x05, 0x00])?;                      // 2 bytes - entry size
-                out.write_all(&type_tag.to_le_bytes())?;            // 1 byte  - TrackType type tag
-                out.write_all(&id.to_le_bytes())?;                  // 4 bytes - TrackType id
-                Ok(())
+                entry_contents_buf.write_all(&type_tag.to_le_bytes())?;
+                leb128::write::unsigned(&mut entry_contents_buf, *id)?;
+                (0x00, entry_contents_buf)
             }
             Self::CreatedAt(seconds_since_epoch) => {
-                out.write_all(&[0x01])?;                            // 1 byte  - entry type
-                out.write_all(&[0x08, 0x00])?;                      // 2 bytes - entry size
-                out.write_all(&seconds_since_epoch.to_le_bytes())?; // 8 bytes - created_at
-                Ok(())
+                let mut entry_contents_buf = vec![];
+                leb128::write::unsigned(&mut entry_contents_buf, *seconds_since_epoch)?;
+                (0x01, entry_contents_buf)
             }
-        }
+        };
+
+        out.write_all(&[entry_type])?;                                                             // 1 byte  - entry type
+        leb128::write::unsigned(out, u64::try_from(entry_buf.len()).expect("usize != u64"))?;      // ? bytes - entry size
+        out.write_all(&entry_buf)?;                                                                // ? bytes - entry data
+
+        Ok(())
     }
 }
 
@@ -67,16 +71,13 @@ mod tests {
             #[rustfmt::skip]
             assert_eq!(buf,
                        &[0x01, // one metadata entry
-                         0x00, // entry type: track_type = 0x00
-                         0x05, // two byte entry size = 5
-                         0x00,
-                         0x00, // track type: trip = 0x00
-                         0x90, // four byte trip ID = 400
-                         0x01,
-                         0x00,
-                         0x00,
-                         0xD1, // crc
-                         0x5F]);
+                         0x00, // entry type: track_type
+                         0x03, // entry size
+                         0x00, // track type: trip
+                         0x90, // trip id
+                         0x03,
+                         0xD2, // crc
+                         0x70]);
         });
     }
 
@@ -87,15 +88,11 @@ mod tests {
             #[rustfmt::skip]
             assert_eq!(buf,
                        &[0x01, // one metadata entry
-                         0x00, // entry type: track_type = 0x00
-                         0x05, // two byte entry size = 5
-                         0x00,
-                         0x01, // track type: route = 0x01
-                         0x40, // four byte route ID = 64
-                         0x00,
-                         0x00,
-                         0x00,
-                         0x85, // crc
+                         0x00, // entry type: track_type
+                         0x02, // entry size
+                         0x01, // track type: route
+                         0x40, // route id
+                         0x47, // crc
                          0x9F]);
         });
     }
@@ -103,19 +100,24 @@ mod tests {
     #[test]
     fn test_only_track_type_segment() {
         let mut buf = vec![];
-        assert_matches!(write_metadata(&mut buf, &[MetadataEntry::TrackType(TrackType::Segment(u32::MAX))]), Ok(()) => {
+        assert_matches!(write_metadata(&mut buf, &[MetadataEntry::TrackType(TrackType::Segment(u64::MAX))]), Ok(()) => {
             #[rustfmt::skip]
             assert_eq!(buf, &[0x01, // one metadata entry
-                              0x00, // entry type: track_type = 0x00
-                              0x05, // two byte entry size = 5
-                              0x00,
-                              0x02, // track type: segment = 0x02
-                              0xFF, // four byte segment ID = 4,294,967,295
+                              0x00, // entry type: track_type
+                              0x0B, // entry size
+                              0x02, // track type: segment
+                              0xFF, // segment id
                               0xFF,
                               0xFF,
                               0xFF,
-                              0xD5, // crc
-                              0xCB]);
+                              0xFF,
+                              0xFF,
+                              0xFF,
+                              0xFF,
+                              0xFF,
+                              0x01,
+                              0x0A, // crc
+                              0x5F]);
         });
     }
 
@@ -126,19 +128,11 @@ mod tests {
             #[rustfmt::skip]
             assert_eq!(buf,
                        &[0x01, // one metadata entry
-                         0x01, // entry type: created_at = 0x01
-                         0x08, // two byte entry size = 8
-                         0x00,
-                         0x00, // eight byte timestamp: zero seconds elapsed
-                         0x00,
-                         0x00,
-                         0x00,
-                         0x00,
-                         0x00,
-                         0x00,
-                         0x00,
-                         0xE3, // crc
-                         0x28]);
+                         0x01, // entry type: created_at
+                         0x01, // entry size
+                         0x00, // timestamp
+                         0xAE, // crc
+                         0x77]);
         });
     }
 
@@ -150,19 +144,18 @@ mod tests {
             #[rustfmt::skip]
             assert_eq!(buf,
                        &[0x01, // one metadata entry
-                         0x01, // entry type: created_at = 0x01
-                         0x08, // two byte entry size = 8
-                         0x00,
-                         0xEF, // eight byte timestamp: lots of seconds elapsed
-                         0xA7,
-                         0xC6,
-                         0x4B,
-                         0x37,
-                         0x89,
-                         0x41,
-                         0x00,
-                         0x21, // crc
-                         0x4C]);
+                         0x01, // entry type: created_at
+                         0x08, // entry size
+                         0xEF, // timestamp
+                         0xCF,
+                         0x9A,
+                         0xDE,
+                         0xF4,
+                         0xA6,
+                         0xE2,
+                         0x20,
+                         0x94, // crc
+                         0x64]);
         });
     }
 
@@ -173,27 +166,15 @@ mod tests {
                                                    MetadataEntry::CreatedAt(0)]), Ok(()) => {
             #[rustfmt::skip]
             assert_eq!(buf, &[0x02, // two metadata entries
-                              0x00, // entry type: track_type = 0x00
-                              0x05, // two byte entry size = 5
-                              0x00,
-                              0x00, // track type: trip = 0x00
-                              0x14, // four byte trip ID = 20
-                              0x00,
-                              0x00,
-                              0x00,
-                              0x01, // entry type: created_at = 0x01
-                              0x08, // two byte entry size = 8
-                              0x00,
-                              0x00, // eight byte timestamp: zero seconds elapsed
-                              0x00,
-                              0x00,
-                              0x00,
-                              0x00,
-                              0x00,
-                              0x00,
-                              0x00,
-                              0x23, // crc
-                              0xD2]);
+                              0x00, // entry type: track_type
+                              0x02, // entry size
+                              0x00, // track type: trip
+                              0x14, // trip id
+                              0x01, // entry type: created_at
+                              0x01, // entry size
+                              0x00, // timestamp
+                              0x6A, // crc
+                              0x6F]);
         });
     }
 
@@ -206,32 +187,20 @@ mod tests {
             #[rustfmt::skip]
             assert_eq!(buf,
                        &[0x03, // three metadata entries
-                         0x00, // entry type: track_type = 0x00
-                         0x05, // two byte entry size = 5
-                         0x00,
-                         0x00, // track type: trip = 0x00
+                         0x00, // entry type: track_type
+                         0x02, // entry size
+                         0x00, // track type: trip
                          0x14, // four byte trip ID = 20
-                         0x00,
-                         0x00,
-                         0x00,
-                         0x00, // entry type: track_type = 0x00
-                         0x05, // two byte entry size = 5
-                         0x00,
-                         0x00, // track type: trip = 0x00
-                         0x15, // four byte trip ID = 21
-                         0x00,
-                         0x00,
-                         0x00,
-                         0x00, // entry type: track_type = 0x00
-                         0x05, // two byte entry size = 5
-                         0x00,
-                         0x01, // track type: route = 0x01
-                         0x16, // four byte route ID = 22
-                         0x00,
-                         0x00,
-                         0x00,
-                         0xDE, // crc
-                         0x57]);
+                         0x00, // entry type: track_type
+                         0x02, // entry size
+                         0x00, // track type: trip
+                         0x15, // trip id
+                         0x00, // entry type: track_type
+                         0x02, // entry size
+                         0x01, // track type: route
+                         0x16, // route id
+                         0x02, // crc
+                         0xF2]);
         });
     }
 }

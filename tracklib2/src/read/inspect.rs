@@ -5,6 +5,7 @@ use super::section::Section;
 use crate::types::{FieldValue, MetadataEntry, TrackType};
 use chrono::offset::TimeZone;
 use chrono::Utc;
+use humansize::{file_size_opts, FileSize};
 use nom::Offset;
 use term_table::row::Row;
 use term_table::table_cell::{Alignment, TableCell};
@@ -164,7 +165,14 @@ fn try_format_data_table(
                 table.add_row(Row::new(vec![
                     TableCell::new("Size"),
                     TableCell::new_with_alignment(
-                        format!("{:#04X}", data_table_entry.size()),
+                        format!(
+                            "{} ({})",
+                            data_table_entry
+                                .size()
+                                .file_size(file_size_opts::BINARY)
+                                .unwrap(),
+                            italic(&data_table_entry.size().to_string())
+                        ),
                         2,
                         Alignment::Right,
                     ),
@@ -212,7 +220,14 @@ fn try_format_data_table(
                         TableCell::new(""),
                         TableCell::new_with_alignment("Size", 1, Alignment::Left),
                         TableCell::new_with_alignment(
-                            format!("{:#04X}", schema_entry.size()),
+                            format!(
+                                "{} ({})",
+                                schema_entry
+                                    .size()
+                                    .file_size(file_size_opts::BINARY)
+                                    .unwrap(),
+                                italic(&schema_entry.size().to_string())
+                            ),
                             1,
                             Alignment::Right,
                         ),

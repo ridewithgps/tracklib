@@ -7,6 +7,7 @@ edition = "2021"
 [dependencies]
 chrono = {version = "0.4", optional = true}
 crc = "2.1"
+humansize = {version = "1.1", optional = true}
 leb128 = "0.2"
 nom = {version = "7.1", default_features = false, features = []}
 nom-leb128 = "0.2"
@@ -19,4 +20,4 @@ float-cmp = "0.9"
 
 [features]
 default = []
-inspect = ["chrono", "term-table"]
+inspect = ["chrono", "humansize", "term-table"]

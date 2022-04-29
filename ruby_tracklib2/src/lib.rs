@@ -28,7 +28,8 @@ pub extern "C" fn Init_Tracklib() {
         });
 
         module.define_nested_class("Section", None).define(|class| {
-            class.def_self("new", write::section_new);
+            class.def_self("standard", write::section_standard);
+            class.def_self("encrypted", write::section_encrypted);
         });
 
         module.define_module_function("write_track", write::write_track);

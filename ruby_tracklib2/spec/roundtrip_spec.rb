@@ -9,7 +9,7 @@ describe Tracklib do
             {"a" => -40.0}]
 
     schema = Tracklib::Schema.new([["a", :i64]])
-    section = Tracklib::Section.new(:standard, schema, data)
+    section = Tracklib::Section::standard(schema, data)
     buf = Tracklib::write_track([], [section])
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.section_data(0)).to eq(data)
@@ -22,7 +22,7 @@ describe Tracklib do
             {"a" => -400.000003}]
 
     schema = Tracklib::Schema.new([["a", :f64, 7]])
-    section = Tracklib::Section.new(:standard, schema, data)
+    section = Tracklib::Section::standard(schema, data)
     buf = Tracklib::write_track([], [section])
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.section_data(0)).to eq(data)
@@ -36,7 +36,7 @@ describe Tracklib do
             {"a" => 20}]
 
     schema = Tracklib::Schema.new([["a", :u64]])
-    section = Tracklib::Section.new(:standard, schema, data)
+    section = Tracklib::Section::standard(schema, data)
     buf = Tracklib::write_track([], [section])
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.section_data(0)).to eq(data)
@@ -50,7 +50,7 @@ describe Tracklib do
             {}]
 
     schema = Tracklib::Schema.new([["a", :bool]])
-    section = Tracklib::Section.new(:standard, schema, data)
+    section = Tracklib::Section::standard(schema, data)
     buf = Tracklib::write_track([], [section])
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.section_data(0)).to eq(data)
@@ -63,7 +63,7 @@ describe Tracklib do
             {"a" => ""}]
 
     schema = Tracklib::Schema.new([["a", :string]])
-    section = Tracklib::Section.new(:standard, schema, data)
+    section = Tracklib::Section::standard(schema, data)
     buf = Tracklib::write_track([], [section])
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.section_data(0)).to eq(data)
@@ -76,7 +76,7 @@ describe Tracklib do
             {"a" => []}]
 
     schema = Tracklib::Schema.new([["a", :bool_array]])
-    section = Tracklib::Section.new(:standard, schema, data)
+    section = Tracklib::Section::standard(schema, data)
     buf = Tracklib::write_track([], [section])
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.section_data(0)).to eq(data)
@@ -89,7 +89,7 @@ describe Tracklib do
             {"a" => [80_000_000, 5]}]
 
     schema = Tracklib::Schema.new([["a", :u64_array]])
-    section = Tracklib::Section.new(:standard, schema, data)
+    section = Tracklib::Section::standard(schema, data)
     buf = Tracklib::write_track([], [section])
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.section_data(0)).to eq(data)
@@ -104,7 +104,7 @@ describe Tracklib do
             {"a" => example_string}]
 
     schema = Tracklib::Schema.new([["a", :byte_array]])
-    section = Tracklib::Section.new(:standard, schema, data)
+    section = Tracklib::Section::standard(schema, data)
     buf = Tracklib::write_track([], [section])
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.section_data(0)).to eq(data)
@@ -131,22 +131,46 @@ describe Tracklib do
               "boolarray" => [false, true, false],
               "u64array" => [20, 10, 11],
               "bytearray" => "RWGPS"}]
-    section0 = Tracklib::Section.new(:standard, Tracklib::Schema.new(schema), data0)
+    section0 = Tracklib::Section::standard(Tracklib::Schema.new(schema), data0)
 
     data1 = [{"i64" => 11,
               "bool" => false,
               "string" => "Hello"},
              {"f64" => 21.12}]
-    section1 = Tracklib::Section.new(:standard, Tracklib::Schema.new(schema), data1)
+    section1 = Tracklib::Section::encrypted(Tracklib::Schema.new(schema), data1, "01234567890123456789012345678901")
 
     buf = Tracklib::write_track(metadata, [section0, section1])
     reader = Tracklib::TrackReader::new(buf)
     expect(reader.metadata()).to eq(metadata)
 
+    # Check section 0 - standard encoding
+
     expect(reader.section_schema(0)).to eq(schema)
+    expect(reader.section_rows(0)).to eq(1)
+    expect(reader.section_encoding(0)).to eq(:standard)
     expect(reader.section_data(0)).to eq(data0)
+    expect(reader.section_column(0, "i64")).to eq([-200])
+
+    # the password argument is ignored for a Standard section
+    expect(reader.section_data(0, "01234567890123456789012345678901")).to eq(data0)
+    expect(reader.section_data(0, nil)).to eq(data0)
+    expect(reader.section_data(0, "Invalid Password")).to eq(data0)
+    expect(reader.section_column(0, "i64", "Invalid Password")).to eq([-200])
+
+
+    # Check section 1 - encrypted encoding
 
     expect(reader.section_schema(1)).to eq(schema)
-    expect(reader.section_data(1)).to eq(data1)
+    expect(reader.section_rows(1)).to eq(2)
+    expect(reader.section_encoding(1)).to eq(:encrypted)
+    expect(reader.section_data(1, "01234567890123456789012345678901")).to eq(data1)
+    expect(reader.section_column(1, "i64", "01234567890123456789012345678901")).to eq([11, nil])
+    expect(reader.section_column(1, "f64", "01234567890123456789012345678901")).to eq([nil, 21.12])
+
+    # only the right password works when it's encrypted
+    expect { reader.section_data(1, nil) }.to raise_error
+    expect { reader.section_data(1, "Invalid Password") }.to raise_error
+    expect { reader.section_data(1, "00004567890123456789012345678901") }.to raise_error
+    expect { reader.section_column(1, "i64", "00004567890123456789012345678901") }.to raise_error
   end
 end

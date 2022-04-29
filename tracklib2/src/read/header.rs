@@ -56,10 +56,7 @@ pub(crate) fn parse_header(input: &[u8]) -> IResult<&[u8], Header, TracklibError
                 data_offset,
             },
         )),
-        CRC::Invalid { expected, computed } => Err(nom::Err::Error(TracklibError::CRC16Error {
-            expected,
-            computed,
-        })),
+        CRC::Invalid { expected, computed } => Err(nom::Err::Error(TracklibError::CRC16Error { expected, computed })),
     }
 }
 

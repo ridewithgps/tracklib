@@ -46,9 +46,7 @@ impl<T: PartialEq> CRC<T> {
 }
 
 impl<T: CRCImpl + PartialEq> CRC<T> {
-    pub(crate) fn parser<'a>(
-        start: &'a [u8],
-    ) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Self, TracklibError> {
+    pub(crate) fn parser<'a>(start: &'a [u8]) -> impl Fn(&'a [u8]) -> IResult<&'a [u8], Self, TracklibError> {
         move |input: &[u8]| {
             let end = start.offset(input);
             let computed = CRCImpl::crc_bytes(&start[..end]);

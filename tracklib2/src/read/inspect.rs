@@ -33,35 +33,19 @@ fn format_header(header: &Header) -> String {
     )]));
     table.add_row(Row::new(vec![
         TableCell::new("File Version"),
-        TableCell::new_with_alignment(
-            format!("{:#04X}", header.file_version()),
-            1,
-            Alignment::Right,
-        ),
+        TableCell::new_with_alignment(format!("{:#04X}", header.file_version()), 1, Alignment::Right),
     ]));
     table.add_row(Row::new(vec![
         TableCell::new("Creator Version"),
-        TableCell::new_with_alignment(
-            format!("{:#04X}", header.creator_version()),
-            1,
-            Alignment::Right,
-        ),
+        TableCell::new_with_alignment(format!("{:#04X}", header.creator_version()), 1, Alignment::Right),
     ]));
     table.add_row(Row::new(vec![
         TableCell::new("Metadata Offset"),
-        TableCell::new_with_alignment(
-            format!("{:#04X}", header.metadata_offset()),
-            1,
-            Alignment::Right,
-        ),
+        TableCell::new_with_alignment(format!("{:#04X}", header.metadata_offset()), 1, Alignment::Right),
     ]));
     table.add_row(Row::new(vec![
         TableCell::new("Data Offset"),
-        TableCell::new_with_alignment(
-            format!("{:#04X}", header.data_offset()),
-            1,
-            Alignment::Right,
-        ),
+        TableCell::new_with_alignment(format!("{:#04X}", header.data_offset()), 1, Alignment::Right),
     ]));
 
     table.render()
@@ -122,10 +106,7 @@ fn try_format_metadata(input: &[u8]) -> String {
     table.render()
 }
 
-fn try_format_data_table(
-    input: &[u8],
-    data_table_offset: usize,
-) -> (Option<(&[u8], Vec<DataTableEntry>)>, String) {
+fn try_format_data_table(input: &[u8], data_table_offset: usize) -> (Option<(&[u8], Vec<DataTableEntry>)>, String) {
     match parse_data_table(&input[data_table_offset..]) {
         Ok((data_start, data_table)) => {
             let data_start_offset = input.offset(data_start);
@@ -133,10 +114,8 @@ fn try_format_data_table(
 
             for (i, data_table_entry) in data_table.iter().enumerate() {
                 const CRC_BYTES: usize = 4;
-                let presence_column_bytes_required =
-                    (data_table_entry.schema_entries().len() + 7) / 8;
-                let presence_column_size =
-                    presence_column_bytes_required * data_table_entry.rows() + CRC_BYTES;
+                let presence_column_bytes_required = (data_table_entry.schema_entries().len() + 7) / 8;
+                let presence_column_size = presence_column_bytes_required * data_table_entry.rows() + CRC_BYTES;
 
                 let mut table = Table::new();
                 table.add_row(Row::new(vec![TableCell::new_with_alignment(
@@ -155,11 +134,7 @@ fn try_format_data_table(
 
                 table.add_row(Row::new(vec![
                     TableCell::new("Rows"),
-                    TableCell::new_with_alignment(
-                        format!("{}", data_table_entry.rows()),
-                        2,
-                        Alignment::Right,
-                    ),
+                    TableCell::new_with_alignment(format!("{}", data_table_entry.rows()), 2, Alignment::Right),
                 ]));
 
                 table.add_row(Row::new(vec![
@@ -167,10 +142,7 @@ fn try_format_data_table(
                     TableCell::new_with_alignment(
                         format!(
                             "{} ({})",
-                            data_table_entry
-                                .size()
-                                .file_size(file_size_opts::BINARY)
-                                .unwrap(),
+                            data_table_entry.size().file_size(file_size_opts::BINARY).unwrap(),
                             italic(&data_table_entry.size().to_string())
                         ),
                         2,
@@ -180,11 +152,7 @@ fn try_format_data_table(
 
                 table.add_row(Row::new(vec![
                     TableCell::new(format!("Offset ({})", italic("relative"))),
-                    TableCell::new_with_alignment(
-                        format!("{:#04X}", data_table_entry.offset()),
-                        2,
-                        Alignment::Right,
-                    ),
+                    TableCell::new_with_alignment(format!("{:#04X}", data_table_entry.offset()), 2, Alignment::Right),
                 ]));
 
                 table.add_row(Row::new(vec![
@@ -222,10 +190,7 @@ fn try_format_data_table(
                         TableCell::new_with_alignment(
                             format!(
                                 "{} ({})",
-                                schema_entry
-                                    .size()
-                                    .file_size(file_size_opts::BINARY)
-                                    .unwrap(),
+                                schema_entry.size().file_size(file_size_opts::BINARY).unwrap(),
                                 italic(&schema_entry.size().to_string())
                             ),
                             1,
@@ -235,25 +200,13 @@ fn try_format_data_table(
 
                     table.add_row(Row::new(vec![
                         TableCell::new(""),
-                        TableCell::new_with_alignment(
-                            format!("Offset ({})", italic("relative")),
-                            1,
-                            Alignment::Right,
-                        ),
-                        TableCell::new_with_alignment(
-                            format!("{:#04X}", schema_entry.offset()),
-                            1,
-                            Alignment::Right,
-                        ),
+                        TableCell::new_with_alignment(format!("Offset ({})", italic("relative")), 1, Alignment::Right),
+                        TableCell::new_with_alignment(format!("{:#04X}", schema_entry.offset()), 1, Alignment::Right),
                     ]));
 
                     table.add_row(Row::new(vec![
                         TableCell::new(""),
-                        TableCell::new_with_alignment(
-                            format!("Offset ({})", italic("absolute")),
-                            1,
-                            Alignment::Right,
-                        ),
+                        TableCell::new_with_alignment(format!("Offset ({})", italic("absolute")), 1, Alignment::Right),
                         TableCell::new_with_alignment(
                             format!(
                                 "{:#04X}",
@@ -389,14 +342,11 @@ pub fn inspect(input: &[u8]) -> Result<String, String> {
     out.push_str("\n\n");
 
     // Metadata
-    out.push_str(&try_format_metadata(
-        &input[usize::from(header.metadata_offset())..],
-    ));
+    out.push_str(&try_format_metadata(&input[usize::from(header.metadata_offset())..]));
     out.push_str("\n\n");
 
     // Data Table
-    let (maybe_data_table, data_table_out) =
-        try_format_data_table(input, usize::from(header.data_offset()));
+    let (maybe_data_table, data_table_out) = try_format_data_table(input, usize::from(header.data_offset()));
     out.push_str(&data_table_out);
 
     // Data

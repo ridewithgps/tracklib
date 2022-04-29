@@ -6,11 +6,7 @@ use crate::error::Result;
 use crate::types::MetadataEntry;
 use std::io::{self, Write};
 
-pub fn write_track<W: Write>(
-    out: &mut W,
-    metadata_entries: &[MetadataEntry],
-    sections: &[&Section],
-) -> Result<()> {
+pub fn write_track<W: Write>(out: &mut W, metadata_entries: &[MetadataEntry], sections: &[&Section]) -> Result<()> {
     // write metadata to a buffer so we can measure its size to use in the file header
     let mut metadata_buf = Vec::new();
     write_metadata(&mut metadata_buf, metadata_entries)?;

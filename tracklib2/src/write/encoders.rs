@@ -3,12 +3,7 @@ use crate::error::Result;
 
 pub trait Encoder {
     type T: ?Sized;
-    fn encode(
-        &mut self,
-        value: Option<&Self::T>,
-        buf: &mut Vec<u8>,
-        presence: &mut Vec<bool>,
-    ) -> Result<()>;
+    fn encode(&mut self, value: Option<&Self::T>, buf: &mut Vec<u8>, presence: &mut Vec<bool>) -> Result<()>;
 }
 
 #[derive(Debug, Default)]
@@ -19,12 +14,7 @@ pub struct I64Encoder {
 impl Encoder for I64Encoder {
     type T = i64;
 
-    fn encode(
-        &mut self,
-        value: Option<&Self::T>,
-        buf: &mut Vec<u8>,
-        presence: &mut Vec<bool>,
-    ) -> Result<()> {
+    fn encode(&mut self, value: Option<&Self::T>, buf: &mut Vec<u8>, presence: &mut Vec<bool>) -> Result<()> {
         presence.push(value.is_some());
         bitstream::write_i64(value, buf, &mut self.prev)
     }
@@ -38,12 +28,7 @@ pub struct U64Encoder {
 impl Encoder for U64Encoder {
     type T = u64;
 
-    fn encode(
-        &mut self,
-        value: Option<&Self::T>,
-        buf: &mut Vec<u8>,
-        presence: &mut Vec<bool>,
-    ) -> Result<()> {
+    fn encode(&mut self, value: Option<&Self::T>, buf: &mut Vec<u8>, presence: &mut Vec<bool>) -> Result<()> {
         presence.push(value.is_some());
         bitstream::write_i64(value.map(|val| *val as i64).as_ref(), buf, &mut self.prev)
     }
@@ -67,12 +52,7 @@ impl F64Encoder {
 impl Encoder for F64Encoder {
     type T = f64;
 
-    fn encode(
-        &mut self,
-        value: Option<&Self::T>,
-        buf: &mut Vec<u8>,
-        presence: &mut Vec<bool>,
-    ) -> Result<()> {
+    fn encode(&mut self, value: Option<&Self::T>, buf: &mut Vec<u8>, presence: &mut Vec<bool>) -> Result<()> {
         presence.push(value.is_some());
         bitstream::write_i64(
             value.map(|val| (*val * self.factor) as i64).as_ref(),
@@ -88,12 +68,7 @@ pub struct BoolEncoder;
 impl Encoder for BoolEncoder {
     type T = bool;
 
-    fn encode(
-        &mut self,
-        value: Option<&Self::T>,
-        buf: &mut Vec<u8>,
-        presence: &mut Vec<bool>,
-    ) -> Result<()> {
+    fn encode(&mut self, value: Option<&Self::T>, buf: &mut Vec<u8>, presence: &mut Vec<bool>) -> Result<()> {
         presence.push(value.is_some());
         bitstream::write_byte(value.map(|v| u8::from(*v)).as_ref(), buf)
     }
@@ -105,12 +80,7 @@ pub struct StringEncoder;
 impl Encoder for StringEncoder {
     type T = str;
 
-    fn encode(
-        &mut self,
-        value: Option<&Self::T>,
-        buf: &mut Vec<u8>,
-        presence: &mut Vec<bool>,
-    ) -> Result<()> {
+    fn encode(&mut self, value: Option<&Self::T>, buf: &mut Vec<u8>, presence: &mut Vec<bool>) -> Result<()> {
         presence.push(value.is_some());
         bitstream::write_bytes(value.map(|v| v.as_bytes()), buf)
     }
@@ -122,12 +92,7 @@ pub struct BoolArrayEncoder;
 impl Encoder for BoolArrayEncoder {
     type T = [bool];
 
-    fn encode(
-        &mut self,
-        value: Option<&Self::T>,
-        buf: &mut Vec<u8>,
-        presence: &mut Vec<bool>,
-    ) -> Result<()> {
+    fn encode(&mut self, value: Option<&Self::T>, buf: &mut Vec<u8>, presence: &mut Vec<bool>) -> Result<()> {
         presence.push(value.is_some());
         if let Some(array) = value {
             leb128::write::unsigned(buf, u64::try_from(array.len()).expect("usize != u64"))?;
@@ -145,12 +110,7 @@ pub struct U64ArrayEncoder;
 impl Encoder for U64ArrayEncoder {
     type T = [u64];
 
-    fn encode(
-        &mut self,
-        value: Option<&Self::T>,
-        buf: &mut Vec<u8>,
-        presence: &mut Vec<bool>,
-    ) -> Result<()> {
+    fn encode(&mut self, value: Option<&Self::T>, buf: &mut Vec<u8>, presence: &mut Vec<bool>) -> Result<()> {
         presence.push(value.is_some());
         if let Some(array) = value {
             leb128::write::unsigned(buf, u64::try_from(array.len()).expect("usize != u64"))?;
@@ -170,12 +130,7 @@ pub struct ByteArrayEncoder;
 impl Encoder for ByteArrayEncoder {
     type T = [u8];
 
-    fn encode(
-        &mut self,
-        value: Option<&Self::T>,
-        buf: &mut Vec<u8>,
-        presence: &mut Vec<bool>,
-    ) -> Result<()> {
+    fn encode(&mut self, value: Option<&Self::T>, buf: &mut Vec<u8>, presence: &mut Vec<bool>) -> Result<()> {
         presence.push(value.is_some());
         if let Some(array) = value {
             leb128::write::unsigned(buf, u64::try_from(array.len()).expect("usize != u64"))?;
@@ -197,30 +152,14 @@ mod tests {
         let mut presence_buf = vec![];
         let mut encoder = I64Encoder::default();
 
-        assert!(encoder
-            .encode(Some(&1), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(Some(&2), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(Some(&3), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(Some(&-100), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(None, &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(None, &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(Some(&-100), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(Some(&100), &mut data_buf, &mut presence_buf)
-            .is_ok());
+        assert!(encoder.encode(Some(&1), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(Some(&2), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(Some(&3), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(Some(&-100), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(None, &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(None, &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(Some(&-100), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(Some(&100), &mut data_buf, &mut presence_buf).is_ok());
 
         #[rustfmt::skip]
         assert_eq!(data_buf, &[0x01, // +1 from 0
@@ -251,24 +190,14 @@ mod tests {
         let mut presence_buf = vec![];
         let mut encoder = U64Encoder::default();
 
-        assert!(encoder
-            .encode(Some(&1), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(Some(&2), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(None, &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(Some(&100), &mut data_buf, &mut presence_buf)
-            .is_ok());
+        assert!(encoder.encode(Some(&1), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(Some(&2), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(None, &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(Some(&100), &mut data_buf, &mut presence_buf).is_ok());
         assert!(encoder
             .encode(Some(&u64::MAX), &mut data_buf, &mut presence_buf)
             .is_ok());
-        assert!(encoder
-            .encode(Some(&7), &mut data_buf, &mut presence_buf)
-            .is_ok());
+        assert!(encoder.encode(Some(&7), &mut data_buf, &mut presence_buf).is_ok());
 
         #[rustfmt::skip]
         assert_eq!(data_buf, &[0x01,
@@ -294,24 +223,12 @@ mod tests {
         let mut presence_buf = vec![];
         let mut encoder = F64Encoder::new(7);
 
-        assert!(encoder
-            .encode(Some(&0.0), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(Some(&1.0), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(None, &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(Some(&2.5), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(Some(&3.00001), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(Some(&-100.26), &mut data_buf, &mut presence_buf)
-            .is_ok());
+        assert!(encoder.encode(Some(&0.0), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(Some(&1.0), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(None, &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(Some(&2.5), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(Some(&3.00001), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(Some(&-100.26), &mut data_buf, &mut presence_buf).is_ok());
 
         #[rustfmt::skip]
         assert_eq!(data_buf, &[0x00, // first storing a 0
@@ -354,15 +271,9 @@ mod tests {
         let mut presence_buf = vec![];
         let mut encoder = F64Encoder::new(2);
 
-        assert!(encoder
-            .encode(Some(&0.0), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(Some(&1.0), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(Some(&-20.0), &mut data_buf, &mut presence_buf)
-            .is_ok());
+        assert!(encoder.encode(Some(&0.0), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(Some(&1.0), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(Some(&-20.0), &mut data_buf, &mut presence_buf).is_ok());
         assert!(encoder
             .encode(Some(&-20.1234567), &mut data_buf, &mut presence_buf)
             .is_ok());
@@ -389,27 +300,13 @@ mod tests {
         let mut presence_buf = vec![];
         let mut encoder = BoolEncoder::default();
 
-        assert!(encoder
-            .encode(Some(&true), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(Some(&true), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(Some(&false), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(None, &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(None, &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(Some(&false), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(Some(&true), &mut data_buf, &mut presence_buf)
-            .is_ok());
+        assert!(encoder.encode(Some(&true), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(Some(&true), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(Some(&false), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(None, &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(None, &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(Some(&false), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(Some(&true), &mut data_buf, &mut presence_buf).is_ok());
 
         #[rustfmt::skip]
         assert_eq!(data_buf, &[0x01,   // true
@@ -436,30 +333,16 @@ mod tests {
         let mut presence_buf = vec![];
         let mut encoder = StringEncoder::default();
 
-        assert!(encoder
-            .encode(Some("A"), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(None, &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(Some("B"), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(None, &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(Some("C"), &mut data_buf, &mut presence_buf)
-            .is_ok());
-        assert!(encoder
-            .encode(None, &mut data_buf, &mut presence_buf)
-            .is_ok());
+        assert!(encoder.encode(Some("A"), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(None, &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(Some("B"), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(None, &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(Some("C"), &mut data_buf, &mut presence_buf).is_ok());
+        assert!(encoder.encode(None, &mut data_buf, &mut presence_buf).is_ok());
         assert!(encoder
             .encode(Some("Hello, World!"), &mut data_buf, &mut presence_buf)
             .is_ok());
-        assert!(encoder
-            .encode(None, &mut data_buf, &mut presence_buf)
-            .is_ok());
+        assert!(encoder.encode(None, &mut data_buf, &mut presence_buf).is_ok());
 
         #[rustfmt::skip]
         assert_eq!(data_buf, &[0x01, // length
@@ -506,15 +389,9 @@ mod tests {
         let mut encoder = BoolArrayEncoder::default();
 
         assert!(encoder
-            .encode(
-                Some(&[true, false, false]),
-                &mut data_buf,
-                &mut presence_buf
-            )
+            .encode(Some(&[true, false, false]), &mut data_buf, &mut presence_buf)
             .is_ok());
-        assert!(encoder
-            .encode(None, &mut data_buf, &mut presence_buf)
-            .is_ok());
+        assert!(encoder.encode(None, &mut data_buf, &mut presence_buf).is_ok());
         assert!(encoder
             .encode(
                 Some(&[false, false, false, false, true, true]),
@@ -522,9 +399,7 @@ mod tests {
                 &mut presence_buf
             )
             .is_ok());
-        assert!(encoder
-            .encode(Some(&[true]), &mut data_buf, &mut presence_buf)
-            .is_ok());
+        assert!(encoder.encode(Some(&[true]), &mut data_buf, &mut presence_buf).is_ok());
 
         #[rustfmt::skip]
         assert_eq!(data_buf, &[0x03, // array len three
@@ -557,15 +432,11 @@ mod tests {
         assert!(encoder
             .encode(Some(&[0, 17, 15]), &mut data_buf, &mut presence_buf)
             .is_ok());
-        assert!(encoder
-            .encode(None, &mut data_buf, &mut presence_buf)
-            .is_ok());
+        assert!(encoder.encode(None, &mut data_buf, &mut presence_buf).is_ok());
         assert!(encoder
             .encode(Some(&[8_000, 1]), &mut data_buf, &mut presence_buf)
             .is_ok());
-        assert!(encoder
-            .encode(Some(&[50]), &mut data_buf, &mut presence_buf)
-            .is_ok());
+        assert!(encoder.encode(Some(&[50]), &mut data_buf, &mut presence_buf).is_ok());
 
         #[rustfmt::skip]
         assert_eq!(data_buf, &[0x03, // array len three
@@ -597,15 +468,11 @@ mod tests {
         assert!(encoder
             .encode(Some(&[0, 17, 15]), &mut data_buf, &mut presence_buf)
             .is_ok());
-        assert!(encoder
-            .encode(None, &mut data_buf, &mut presence_buf)
-            .is_ok());
+        assert!(encoder.encode(None, &mut data_buf, &mut presence_buf).is_ok());
         assert!(encoder
             .encode(Some(&[255, 1]), &mut data_buf, &mut presence_buf)
             .is_ok());
-        assert!(encoder
-            .encode(Some(&[127]), &mut data_buf, &mut presence_buf)
-            .is_ok());
+        assert!(encoder.encode(Some(&[127]), &mut data_buf, &mut presence_buf).is_ok());
 
         #[rustfmt::skip]
         assert_eq!(data_buf, &[0x03, // array len three

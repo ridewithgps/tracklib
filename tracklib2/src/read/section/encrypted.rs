@@ -27,21 +27,13 @@ impl<'a> Section<'a> {
 
         SectionReader::new(
             &self.decrypted,
-            self.data_table_entry
-                .schema_entries()
-                .iter()
-                .enumerate()
-                .collect(),
+            self.data_table_entry.schema_entries().iter().enumerate().collect(),
             self.data_table_entry.schema_entries().len(),
             self.data_table_entry.rows(),
         )
     }
 
-    pub fn reader_for_schema(
-        &mut self,
-        key_material: &[u8],
-        schema: &Schema,
-    ) -> Result<SectionReader> {
+    pub fn reader_for_schema(&mut self, key_material: &[u8], schema: &Schema) -> Result<SectionReader> {
         let key = orion::aead::SecretKey::from_slice(key_material)?;
         let decrypted = orion::aead::open(&key, self.input)?;
         self.decrypted = decrypted;

@@ -59,13 +59,13 @@ impl<'a> SectionReader<'a> {
         let decoders = schema_entries
             .into_iter()
             .map(|(presence_column_index, schema_entry)| {
-                let column_data = &column_data
-                    [schema_entry.offset()..schema_entry.offset() + schema_entry.size()];
-                let presence_column_view = presence_column.view(presence_column_index).ok_or(
-                    TracklibError::ParseIncompleteError {
-                        needed: nom::Needed::Unknown,
-                    },
-                )?;
+                let column_data = &column_data[schema_entry.offset()..schema_entry.offset() + schema_entry.size()];
+                let presence_column_view =
+                    presence_column
+                        .view(presence_column_index)
+                        .ok_or(TracklibError::ParseIncompleteError {
+                            needed: nom::Needed::Unknown,
+                        })?;
                 let field_definition = schema_entry.field_definition();
                 let decoder = match field_definition.data_type() {
                     DataType::I64 => ColumnDecoder::I64 {

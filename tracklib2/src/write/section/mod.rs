@@ -40,8 +40,7 @@ pub(crate) trait SectionInternal: SectionWrite {
     fn write_data_size<W: Write>(&self, out: &mut W) -> Result<()> {
         const CRC_BYTES: usize = 4;
         let presence_bytes_required = (SectionWrite::schema(self).fields().len() + 7) / 8;
-        let presence_bytes =
-            (presence_bytes_required * SectionWrite::rows_written(self)) + CRC_BYTES;
+        let presence_bytes = (presence_bytes_required * SectionWrite::rows_written(self)) + CRC_BYTES;
         let data_bytes: usize = self.buffers().iter().map(|buffer| buffer.data_size()).sum();
         let full_size = data_bytes + presence_bytes + self.data_size_overhead();
 

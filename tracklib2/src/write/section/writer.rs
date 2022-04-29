@@ -123,27 +123,27 @@ impl<'a> RowBuilder<'a> {
         let maybe_buffer = self.column_data.get_mut(field_index);
 
         match (maybe_field_def, maybe_buffer) {
-            (Some(field_def), Some(Buffer::I64(ref mut buffer_impl))) => Some(
-                ColumnWriter::I64ColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
-            ),
-            (Some(field_def), Some(Buffer::U64(ref mut buffer_impl))) => Some(
-                ColumnWriter::U64ColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
-            ),
-            (Some(field_def), Some(Buffer::F64(ref mut buffer_impl))) => Some(
-                ColumnWriter::F64ColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
-            ),
-            (Some(field_def), Some(Buffer::Bool(ref mut buffer_impl))) => Some(
-                ColumnWriter::BoolColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
-            ),
-            (Some(field_def), Some(Buffer::String(ref mut buffer_impl))) => Some(
-                ColumnWriter::StringColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
-            ),
+            (Some(field_def), Some(Buffer::I64(ref mut buffer_impl))) => Some(ColumnWriter::I64ColumnWriter(
+                ColumnWriterImpl::new(field_def, buffer_impl),
+            )),
+            (Some(field_def), Some(Buffer::U64(ref mut buffer_impl))) => Some(ColumnWriter::U64ColumnWriter(
+                ColumnWriterImpl::new(field_def, buffer_impl),
+            )),
+            (Some(field_def), Some(Buffer::F64(ref mut buffer_impl))) => Some(ColumnWriter::F64ColumnWriter(
+                ColumnWriterImpl::new(field_def, buffer_impl),
+            )),
+            (Some(field_def), Some(Buffer::Bool(ref mut buffer_impl))) => Some(ColumnWriter::BoolColumnWriter(
+                ColumnWriterImpl::new(field_def, buffer_impl),
+            )),
+            (Some(field_def), Some(Buffer::String(ref mut buffer_impl))) => Some(ColumnWriter::StringColumnWriter(
+                ColumnWriterImpl::new(field_def, buffer_impl),
+            )),
             (Some(field_def), Some(Buffer::BoolArray(ref mut buffer_impl))) => Some(
                 ColumnWriter::BoolArrayColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
             ),
-            (Some(field_def), Some(Buffer::U64Array(ref mut buffer_impl))) => Some(
-                ColumnWriter::U64ArrayColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
-            ),
+            (Some(field_def), Some(Buffer::U64Array(ref mut buffer_impl))) => Some(ColumnWriter::U64ArrayColumnWriter(
+                ColumnWriterImpl::new(field_def, buffer_impl),
+            )),
             (Some(field_def), Some(Buffer::ByteArray(ref mut buffer_impl))) => Some(
                 ColumnWriter::ByteArrayColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
             ),
@@ -174,10 +174,7 @@ pub struct ColumnWriterImpl<'a, E: Encoder> {
 
 impl<'a, E: Encoder> ColumnWriterImpl<'a, E> {
     fn new(field_definition: &'a FieldDefinition, buf: &'a mut BufferImpl<E>) -> Self {
-        Self {
-            field_definition,
-            buf,
-        }
+        Self { field_definition, buf }
     }
 
     pub fn field_definition(&self) -> &FieldDefinition {

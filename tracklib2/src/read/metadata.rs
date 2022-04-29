@@ -4,9 +4,7 @@ use crate::types::{MetadataEntry, TrackType};
 use nom::{multi::length_data, number::complete::le_u8, IResult};
 use nom_leb128::leb128_u64;
 
-fn parse_metadata_entry_track_type(
-    input: &[u8],
-) -> IResult<&[u8], Option<MetadataEntry>, TracklibError> {
+fn parse_metadata_entry_track_type(input: &[u8]) -> IResult<&[u8], Option<MetadataEntry>, TracklibError> {
     let (input, _size) = leb128_u64(input)?;
     let (input, type_tag) = le_u8(input)?;
     let (input, id) = leb128_u64(input)?;
@@ -14,28 +12,21 @@ fn parse_metadata_entry_track_type(
     match type_tag {
         0x00 => Ok((input, Some(MetadataEntry::TrackType(TrackType::Trip(id))))),
         0x01 => Ok((input, Some(MetadataEntry::TrackType(TrackType::Route(id))))),
-        0x02 => Ok((
-            input,
-            Some(MetadataEntry::TrackType(TrackType::Segment(id))),
-        )),
+        0x02 => Ok((input, Some(MetadataEntry::TrackType(TrackType::Segment(id))))),
         _ => Err(nom::Err::Error(TracklibError::ParseError {
             error_kind: nom::error::ErrorKind::Tag,
         })),
     }
 }
 
-fn parse_metadata_entry_created_at(
-    input: &[u8],
-) -> IResult<&[u8], Option<MetadataEntry>, TracklibError> {
+fn parse_metadata_entry_created_at(input: &[u8]) -> IResult<&[u8], Option<MetadataEntry>, TracklibError> {
     let (input, _size) = leb128_u64(input)?;
     let (input, seconds_since_epoch) = leb128_u64(input)?;
 
     Ok((input, Some(MetadataEntry::CreatedAt(seconds_since_epoch))))
 }
 
-fn parse_metadata_entry_unknown(
-    input: &[u8],
-) -> IResult<&[u8], Option<MetadataEntry>, TracklibError> {
+fn parse_metadata_entry_unknown(input: &[u8]) -> IResult<&[u8], Option<MetadataEntry>, TracklibError> {
     let (input, _data) = length_data(leb128_u64)(input)?;
     Ok((input, None))
 }
@@ -69,10 +60,7 @@ pub(crate) fn parse_metadata(input: &[u8]) -> IResult<&[u8], Vec<MetadataEntry>,
 
     match checksum {
         CRC::Valid(_) => Ok((input, entries)),
-        CRC::Invalid { expected, computed } => Err(nom::Err::Error(TracklibError::CRC16Error {
-            expected,
-            computed,
-        })),
+        CRC::Invalid { expected, computed } => Err(nom::Err::Error(TracklibError::CRC16Error { expected, computed })),
     }
 }
 

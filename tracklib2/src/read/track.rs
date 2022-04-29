@@ -17,8 +17,7 @@ impl<'a> TrackReader<'a> {
     pub fn new(data: &'a [u8]) -> Result<Self> {
         let (_, header) = parse_header(data)?;
         let (_, metadata_entries) = parse_metadata(&data[usize::from(header.metadata_offset())..])?;
-        let (data_start, data_table) =
-            parse_data_table(&data[usize::from(header.data_offset())..])?;
+        let (data_start, data_table) = parse_data_table(&data[usize::from(header.data_offset())..])?;
 
         Ok(Self {
             header,
@@ -42,12 +41,9 @@ impl<'a> TrackReader<'a> {
 
     pub fn section(&self, index: usize) -> Option<Section> {
         let section_data_table_entry = self.data_table.get(index)?;
-        let data = &self.data_start[section_data_table_entry.offset()
-            ..section_data_table_entry.offset() + section_data_table_entry.size()];
-        Some(crate::read::section::Section::new(
-            data,
-            section_data_table_entry,
-        ))
+        let data = &self.data_start
+            [section_data_table_entry.offset()..section_data_table_entry.offset() + section_data_table_entry.size()];
+        Some(crate::read::section::Section::new(data, section_data_table_entry))
     }
 
     pub fn sections(&self) -> SectionIter {
@@ -310,10 +306,7 @@ mod tests {
         assert_eq!(track.section_count(), 2);
         assert_eq!(track.metadata().len(), 1);
 
-        assert_matches!(
-            track.metadata()[0],
-            MetadataEntry::TrackType(TrackType::Segment(5))
-        );
+        assert_matches!(track.metadata()[0], MetadataEntry::TrackType(TrackType::Segment(5)));
 
         let expected_section_0 = vec![
             vec![

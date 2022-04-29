@@ -21,11 +21,7 @@ impl<'a> Section<'a> {
     pub fn reader(&self) -> Result<SectionReader> {
         SectionReader::new(
             self.input,
-            self.data_table_entry
-                .schema_entries()
-                .iter()
-                .enumerate()
-                .collect(),
+            self.data_table_entry.schema_entries().iter().enumerate().collect(),
             self.data_table_entry.schema_entries().len(),
             self.data_table_entry.rows(),
         )

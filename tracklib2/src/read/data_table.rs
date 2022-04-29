@@ -36,9 +36,7 @@ impl DataTableEntry {
     }
 }
 
-fn parse_data_table_entry(
-    offset: usize,
-) -> impl Fn(&[u8]) -> IResult<&[u8], DataTableEntry, TracklibError> {
+fn parse_data_table_entry(offset: usize) -> impl Fn(&[u8]) -> IResult<&[u8], DataTableEntry, TracklibError> {
     move |input: &[u8]| {
         let (input, type_tag) = le_u8(input)?;
         let (input, rows) = leb128_u64(input)?;
@@ -83,10 +81,7 @@ pub(crate) fn parse_data_table(input: &[u8]) -> IResult<&[u8], Vec<DataTableEntr
 
     match checksum {
         CRC::Valid(_) => Ok((input, entries)),
-        CRC::Invalid { expected, computed } => Err(nom::Err::Error(TracklibError::CRC16Error {
-            expected,
-            computed,
-        })),
+        CRC::Invalid { expected, computed } => Err(nom::Err::Error(TracklibError::CRC16Error { expected, computed })),
     }
 }
 

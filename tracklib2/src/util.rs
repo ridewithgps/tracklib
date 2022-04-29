@@ -27,9 +27,6 @@ pub(crate) fn decrypt(key_material: &[u8], buf: &[u8]) -> Result<Vec<u8>, String
     let key = Key::from_slice(key_material);
     let aead = XChaCha20Poly1305::new(key);
     let nonce = XNonce::from_slice(&buf[..orion::hazardous::stream::xchacha20::XCHACHA_NONCESIZE]);
-    aead.decrypt(
-        nonce,
-        &buf[orion::hazardous::stream::xchacha20::XCHACHA_NONCESIZE..],
-    )
-    .map_err(|e| format!("{e:?}"))
+    aead.decrypt(nonce, &buf[orion::hazardous::stream::xchacha20::XCHACHA_NONCESIZE..])
+        .map_err(|e| format!("{e:?}"))
 }

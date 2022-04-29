@@ -82,10 +82,7 @@ pub(crate) fn parse_presence_column<'a>(
         match checksum {
             CRC::Valid(_) => Ok((input, PresenceColumn { data, fields, rows })),
             CRC::Invalid { expected, computed } => {
-                Err(nom::Err::Error(TracklibError::CRC32Error {
-                    expected,
-                    computed,
-                }))
+                Err(nom::Err::Error(TracklibError::CRC32Error { expected, computed }))
             }
         }
     }

@@ -54,8 +54,7 @@ impl super::SectionInternal for Section {
     }
 
     fn data_size_overhead(&self) -> usize {
-        orion::hazardous::stream::xchacha20::XCHACHA_NONCESIZE
-            + orion::hazardous::mac::poly1305::POLY1305_OUTSIZE
+        orion::hazardous::stream::xchacha20::XCHACHA_NONCESIZE + orion::hazardous::mac::poly1305::POLY1305_OUTSIZE
     }
 
     fn buffers(&self) -> &[Buffer] {

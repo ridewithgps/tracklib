@@ -12,6 +12,7 @@ mod tests {
     #[test]
     fn roundtrip_i64() {
         let mut buf = vec![];
+        #[rustfmt::skip]
         let write_values = &[
             0,
             20,
@@ -26,10 +27,7 @@ mod tests {
         ];
 
         // Write
-        let mut section = standard::Section::new(Schema::with_fields(vec![FieldDefinition::new(
-            "v",
-            DataType::I64,
-        )]));
+        let mut section = standard::Section::new(Schema::with_fields(vec![FieldDefinition::new("v", DataType::I64)]));
         for v in write_values.iter() {
             let mut rowbuilder = section.open_row_builder();
 
@@ -65,6 +63,7 @@ mod tests {
     #[test]
     fn roundtrip_u64() {
         let mut buf = vec![];
+        #[rustfmt::skip]
         let write_values = &[
             0,
             20,
@@ -80,10 +79,7 @@ mod tests {
         ];
 
         // Write
-        let mut section = standard::Section::new(Schema::with_fields(vec![FieldDefinition::new(
-            "v",
-            DataType::U64,
-        )]));
+        let mut section = standard::Section::new(Schema::with_fields(vec![FieldDefinition::new("v", DataType::U64)]));
         for v in write_values.iter() {
             let mut rowbuilder = section.open_row_builder();
 
@@ -119,7 +115,12 @@ mod tests {
     #[test]
     fn roundtrip_f64() {
         let mut buf = vec![];
-        let write_values = &[-200.101, 0.0, 0.1];
+        #[rustfmt::skip]
+        let write_values = &[
+            -200.101,
+            0.0,
+            0.1,
+        ];
 
         // Write
         let mut section = standard::Section::new(Schema::with_fields(vec![FieldDefinition::new(
@@ -161,13 +162,19 @@ mod tests {
     #[test]
     fn roundtrip_bool() {
         let mut buf = vec![];
-        let write_values = &[false, true, true, true, false, false, true];
+        #[rustfmt::skip]
+        let write_values = &[
+            false,
+            true,
+            true,
+            true,
+            false,
+            false,
+            true,
+        ];
 
         // Write
-        let mut section = standard::Section::new(Schema::with_fields(vec![FieldDefinition::new(
-            "v",
-            DataType::Bool,
-        )]));
+        let mut section = standard::Section::new(Schema::with_fields(vec![FieldDefinition::new("v", DataType::Bool)]));
         for v in write_values.iter() {
             let mut rowbuilder = section.open_row_builder();
 
@@ -203,6 +210,7 @@ mod tests {
     #[test]
     fn roundtrip_string() {
         let mut buf = vec![];
+        #[rustfmt::skip]
         let write_values = &[
             "",
             "longer string",
@@ -212,10 +220,8 @@ mod tests {
         ];
 
         // Write
-        let mut section = standard::Section::new(Schema::with_fields(vec![FieldDefinition::new(
-            "v",
-            DataType::String,
-        )]));
+        let mut section =
+            standard::Section::new(Schema::with_fields(vec![FieldDefinition::new("v", DataType::String)]));
         for v in write_values.iter() {
             let mut rowbuilder = section.open_row_builder();
 
@@ -251,6 +257,7 @@ mod tests {
     #[test]
     fn roundtrip_bool_array() {
         let mut buf = vec![];
+        #[rustfmt::skip]
         let write_values = &[
             vec![true, true, true, false],
             vec![],
@@ -300,6 +307,7 @@ mod tests {
     #[test]
     fn roundtrip_u64_array() {
         let mut buf = vec![];
+        #[rustfmt::skip]
         let write_values = &[
             vec![1, 2, 3, 4, 1_000],
             vec![1000, 5, 2000, 0, 9000, 8000, 2],
@@ -307,10 +315,8 @@ mod tests {
         ];
 
         // Write
-        let mut section = standard::Section::new(Schema::with_fields(vec![FieldDefinition::new(
-            "v",
-            DataType::U64Array,
-        )]));
+        let mut section =
+            standard::Section::new(Schema::with_fields(vec![FieldDefinition::new("v", DataType::U64Array)]));
         for v in write_values.iter() {
             let mut rowbuilder = section.open_row_builder();
 
@@ -346,6 +352,7 @@ mod tests {
     #[test]
     fn roundtrip_byte_array() {
         let mut buf = vec![];
+        #[rustfmt::skip]
         let write_values = &[
             vec![1, 2, 3, 4, 100, 5],
             vec![],
@@ -420,26 +427,17 @@ mod tests {
         h.insert("u64".to_string(), FieldValue::U64(80_000_000_000_000));
         h.insert("bool".to_string(), FieldValue::Bool(true));
         h.insert("second i64".to_string(), FieldValue::I64(12));
-        h.insert(
-            "string".to_string(),
-            FieldValue::String("RWGPS".to_string()),
-        );
+        h.insert("string".to_string(), FieldValue::String("RWGPS".to_string()));
         h.insert(
             "bool array".to_string(),
             FieldValue::BoolArray(vec![true, false, false, false, true, false]),
         );
-        h.insert(
-            "u64 array".to_string(),
-            FieldValue::U64Array(vec![100, 120, 140, 160]),
-        );
+        h.insert("u64 array".to_string(), FieldValue::U64Array(vec![100, 120, 140, 160]));
         h.insert(
             "second string".to_string(),
             FieldValue::String("This is a string".to_string()),
         );
-        h.insert(
-            "byte array".to_string(),
-            FieldValue::ByteArray(vec![3, 4, 255]),
-        );
+        h.insert("byte array".to_string(), FieldValue::ByteArray(vec![3, 4, 255]));
         write_values.push(h);
         write_values.push(HashMap::new());
         write_values.push(HashMap::new());
@@ -447,10 +445,7 @@ mod tests {
         let mut h = HashMap::new();
         h.insert("i64".to_string(), FieldValue::I64(200));
         h.insert("second i64".to_string(), FieldValue::I64(-600));
-        h.insert(
-            "string".to_string(),
-            FieldValue::String("RWGPS 2".to_string()),
-        );
+        h.insert("string".to_string(), FieldValue::String("RWGPS 2".to_string()));
         h.insert("bool array".to_string(), FieldValue::BoolArray(vec![]));
         h.insert("u64 array".to_string(), FieldValue::U64Array(vec![]));
         h.insert(
@@ -630,26 +625,17 @@ mod tests {
         h.insert("u64".to_string(), FieldValue::U64(80_000_000_000_000));
         h.insert("bool".to_string(), FieldValue::Bool(true));
         h.insert("second i64".to_string(), FieldValue::I64(12));
-        h.insert(
-            "string".to_string(),
-            FieldValue::String("RWGPS".to_string()),
-        );
+        h.insert("string".to_string(), FieldValue::String("RWGPS".to_string()));
         h.insert(
             "bool array".to_string(),
             FieldValue::BoolArray(vec![true, false, false, false, true, false]),
         );
-        h.insert(
-            "u64 array".to_string(),
-            FieldValue::U64Array(vec![100, 120, 140, 160]),
-        );
+        h.insert("u64 array".to_string(), FieldValue::U64Array(vec![100, 120, 140, 160]));
         h.insert(
             "second string".to_string(),
             FieldValue::String("This is a string".to_string()),
         );
-        h.insert(
-            "byte array".to_string(),
-            FieldValue::ByteArray(vec![3, 4, 255]),
-        );
+        h.insert("byte array".to_string(), FieldValue::ByteArray(vec![3, 4, 255]));
         write_values.push(h);
         write_values.push(HashMap::new());
         write_values.push(HashMap::new());
@@ -657,10 +643,7 @@ mod tests {
         let mut h = HashMap::new();
         h.insert("i64".to_string(), FieldValue::I64(200));
         h.insert("second i64".to_string(), FieldValue::I64(-600));
-        h.insert(
-            "string".to_string(),
-            FieldValue::String("RWGPS 2".to_string()),
-        );
+        h.insert("string".to_string(), FieldValue::String("RWGPS 2".to_string()));
         h.insert("bool array".to_string(), FieldValue::BoolArray(vec![]));
         h.insert("u64 array".to_string(), FieldValue::U64Array(vec![]));
         h.insert(
@@ -671,9 +654,7 @@ mod tests {
         write_values.push(h);
 
         // Write
-        let key_material = orion::aead::SecretKey::default()
-            .unprotected_as_bytes()
-            .to_vec();
+        let key_material = orion::aead::SecretKey::default().unprotected_as_bytes().to_vec();
         let mut section0 = encrypted::Section::new(
             &key_material,
             Schema::with_fields(vec![

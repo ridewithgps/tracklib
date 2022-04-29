@@ -14,12 +14,7 @@ pub(crate) struct SchemaEntry {
 
 #[cfg(test)]
 impl SchemaEntry {
-    pub(crate) fn new_for_tests(
-        name: &str,
-        data_type: DataType,
-        size: usize,
-        offset: usize,
-    ) -> Self {
+    pub(crate) fn new_for_tests(name: &str, data_type: DataType, size: usize, offset: usize) -> Self {
         Self {
             field_definition: FieldDefinition::new(name, data_type),
             size,
@@ -42,9 +37,7 @@ impl SchemaEntry {
     }
 }
 
-fn parse_schema_entry(
-    offset: usize,
-) -> impl Fn(&[u8]) -> IResult<&[u8], SchemaEntry, TracklibError> {
+fn parse_schema_entry(offset: usize) -> impl Fn(&[u8]) -> IResult<&[u8], SchemaEntry, TracklibError> {
     move |input: &[u8]| {
         let (mut input, type_tag) = le_u8(input)?;
 

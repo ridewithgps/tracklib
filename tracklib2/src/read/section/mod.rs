@@ -21,12 +21,8 @@ pub trait SectionRead {
 impl<'a> Section<'a> {
     pub(crate) fn new(input: &'a [u8], data_table_entry: &'a DataTableEntry) -> Self {
         match data_table_entry.section_encoding() {
-            SectionEncoding::Standard => {
-                Self::Standard(standard::Section::new(input, data_table_entry))
-            }
-            SectionEncoding::Encrypted => {
-                Self::Encrypted(encrypted::Section::new(input, data_table_entry))
-            }
+            SectionEncoding::Standard => Self::Standard(standard::Section::new(input, data_table_entry)),
+            SectionEncoding::Encrypted => Self::Encrypted(encrypted::Section::new(input, data_table_entry)),
         }
     }
 }

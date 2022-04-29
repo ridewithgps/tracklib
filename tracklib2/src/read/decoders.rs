@@ -17,9 +17,7 @@ fn validate_column(data: &[u8]) -> Result<&[u8]> {
 
     match checksum {
         CRC::Valid(_) => Ok(column_data),
-        CRC::Invalid { expected, computed } => {
-            Err(TracklibError::CRC32Error { expected, computed })
-        }
+        CRC::Invalid { expected, computed } => Err(TracklibError::CRC32Error { expected, computed }),
     }
 }
 
@@ -31,10 +29,7 @@ pub(crate) struct I64Decoder<'a> {
 }
 
 impl<'a> I64Decoder<'a> {
-    pub(crate) fn new(
-        data: &'a [u8],
-        presence_column_view: PresenceColumnView<'a>,
-    ) -> Result<Self> {
+    pub(crate) fn new(data: &'a [u8], presence_column_view: PresenceColumnView<'a>) -> Result<Self> {
         let column_data = validate_column(data)?;
 
         Ok(Self {
@@ -71,10 +66,7 @@ pub(crate) struct U64Decoder<'a> {
 }
 
 impl<'a> U64Decoder<'a> {
-    pub(crate) fn new(
-        data: &'a [u8],
-        presence_column_view: PresenceColumnView<'a>,
-    ) -> Result<Self> {
+    pub(crate) fn new(data: &'a [u8], presence_column_view: PresenceColumnView<'a>) -> Result<Self> {
         let column_data = validate_column(data)?;
 
         Ok(Self {
@@ -112,11 +104,7 @@ pub(crate) struct F64Decoder<'a> {
 }
 
 impl<'a> F64Decoder<'a> {
-    pub(crate) fn new(
-        data: &'a [u8],
-        presence_column_view: PresenceColumnView<'a>,
-        scale: u8,
-    ) -> Result<Self> {
+    pub(crate) fn new(data: &'a [u8], presence_column_view: PresenceColumnView<'a>, scale: u8) -> Result<Self> {
         let column_data = validate_column(data)?;
 
         Ok(Self {
@@ -153,10 +141,7 @@ pub(crate) struct BoolDecoder<'a> {
 }
 
 impl<'a> BoolDecoder<'a> {
-    pub(crate) fn new(
-        data: &'a [u8],
-        presence_column_view: PresenceColumnView<'a>,
-    ) -> Result<Self> {
+    pub(crate) fn new(data: &'a [u8], presence_column_view: PresenceColumnView<'a>) -> Result<Self> {
         let column_data = validate_column(data)?;
 
         Ok(Self {
@@ -191,10 +176,7 @@ pub(crate) struct StringDecoder<'a> {
 }
 
 impl<'a> StringDecoder<'a> {
-    pub(crate) fn new(
-        data: &'a [u8],
-        presence_column_view: PresenceColumnView<'a>,
-    ) -> Result<Self> {
+    pub(crate) fn new(data: &'a [u8], presence_column_view: PresenceColumnView<'a>) -> Result<Self> {
         let column_data = validate_column(data)?;
 
         Ok(Self {
@@ -229,10 +211,7 @@ pub(crate) struct BoolArrayDecoder<'a> {
 }
 
 impl<'a> BoolArrayDecoder<'a> {
-    pub(crate) fn new(
-        data: &'a [u8],
-        presence_column_view: PresenceColumnView<'a>,
-    ) -> Result<Self> {
+    pub(crate) fn new(data: &'a [u8], presence_column_view: PresenceColumnView<'a>) -> Result<Self> {
         let column_data = validate_column(data)?;
 
         Ok(Self {
@@ -249,8 +228,7 @@ impl<'a> Decoder for BoolArrayDecoder<'a> {
         match self.presence_column_view.next() {
             Some(true) => {
                 let (mut data, array_len) = leb128_u64(self.data)?;
-                let mut array =
-                    Vec::with_capacity(usize::try_from(array_len).expect("usize != u64"));
+                let mut array = Vec::with_capacity(usize::try_from(array_len).expect("usize != u64"));
                 for _ in 0..array_len {
                     let (rest, value) = bitstream::read_byte(data)?;
                     data = rest;
@@ -275,10 +253,7 @@ pub(crate) struct U64ArrayDecoder<'a> {
 }
 
 impl<'a> U64ArrayDecoder<'a> {
-    pub(crate) fn new(
-        data: &'a [u8],
-        presence_column_view: PresenceColumnView<'a>,
-    ) -> Result<Self> {
+    pub(crate) fn new(data: &'a [u8], presence_column_view: PresenceColumnView<'a>) -> Result<Self> {
         let column_data = validate_column(data)?;
 
         Ok(Self {
@@ -295,8 +270,7 @@ impl<'a> Decoder for U64ArrayDecoder<'a> {
         match self.presence_column_view.next() {
             Some(true) => {
                 let (mut data, array_len) = leb128_u64(self.data)?;
-                let mut array =
-                    Vec::with_capacity(usize::try_from(array_len).expect("usize != u64"));
+                let mut array = Vec::with_capacity(usize::try_from(array_len).expect("usize != u64"));
                 let mut prev = 0;
                 for _ in 0..array_len {
                     let (rest, value) = bitstream::read_i64(data, &mut prev)?;
@@ -322,10 +296,7 @@ pub(crate) struct ByteArrayDecoder<'a> {
 }
 
 impl<'a> ByteArrayDecoder<'a> {
-    pub(crate) fn new(
-        data: &'a [u8],
-        presence_column_view: PresenceColumnView<'a>,
-    ) -> Result<Self> {
+    pub(crate) fn new(data: &'a [u8], presence_column_view: PresenceColumnView<'a>) -> Result<Self> {
         let column_data = validate_column(data)?;
 
         Ok(Self {
@@ -342,8 +313,7 @@ impl<'a> Decoder for ByteArrayDecoder<'a> {
         match self.presence_column_view.next() {
             Some(true) => {
                 let (mut data, array_len) = leb128_u64(self.data)?;
-                let mut array =
-                    Vec::with_capacity(usize::try_from(array_len).expect("usize != u64"));
+                let mut array = Vec::with_capacity(usize::try_from(array_len).expect("usize != u64"));
                 for _ in 0..array_len {
                     let (rest, value) = bitstream::read_byte(data)?;
                     data = rest;
@@ -380,8 +350,7 @@ mod tests {
                              0x65,
                              0x57,
                              0xFB];
-        let presence_column =
-            assert_matches!(parse_presence_column(1, 5)(presence_buf), Ok((&[], pc)) => pc);
+        let presence_column = assert_matches!(parse_presence_column(1, 5)(presence_buf), Ok((&[], pc)) => pc);
         let presence_column_view = assert_matches!(presence_column.view(0), Some(v) => v);
         #[rustfmt::skip]
         let buf = &[0x20,
@@ -414,8 +383,7 @@ mod tests {
                              0x59,
                              0xA0,
                              0x40];
-        let presence_column =
-            assert_matches!(parse_presence_column(1, 6)(presence_buf), Ok((&[], pc)) => pc);
+        let presence_column = assert_matches!(parse_presence_column(1, 6)(presence_buf), Ok((&[], pc)) => pc);
         let presence_column_view = assert_matches!(presence_column.view(0), Some(v) => v);
         #[rustfmt::skip]
         let buf = &[1, 1, 226, 0, 155, 127, 8,
@@ -444,8 +412,7 @@ mod tests {
                              0x59,
                              0xA0,
                              0x40];
-        let presence_column =
-            assert_matches!(parse_presence_column(1, 6)(presence_buf), Ok((&[], pc)) => pc);
+        let presence_column = assert_matches!(parse_presence_column(1, 6)(presence_buf), Ok((&[], pc)) => pc);
         let presence_column_view = assert_matches!(presence_column.view(0), Some(v) => v);
         #[rustfmt::skip]
         let buf = &[0x00, // first storing a 0
@@ -507,8 +474,7 @@ mod tests {
                              0x5E,
                              0x43,
                              0x9E];
-        let presence_column =
-            assert_matches!(parse_presence_column(1, 3)(presence_buf), Ok((&[], pc)) => pc);
+        let presence_column = assert_matches!(parse_presence_column(1, 3)(presence_buf), Ok((&[], pc)) => pc);
         let presence_column_view = assert_matches!(presence_column.view(0), Some(v) => v);
         #[rustfmt::skip]
         let buf = &[0x01,
@@ -534,8 +500,7 @@ mod tests {
                              0x5E,
                              0x43,
                              0x9E];
-        let presence_column =
-            assert_matches!(parse_presence_column(1, 3)(presence_buf), Ok((&[], pc)) => pc);
+        let presence_column = assert_matches!(parse_presence_column(1, 3)(presence_buf), Ok((&[], pc)) => pc);
         let presence_column_view = assert_matches!(presence_column.view(0), Some(v) => v);
         #[rustfmt::skip]
         let buf = &[0x01,
@@ -567,8 +532,7 @@ mod tests {
                              0x5D,
                              0x36,
                              0xB5];
-        let presence_column =
-            assert_matches!(parse_presence_column(1, 1)(presence_buf), Ok((&[], pc)) => pc);
+        let presence_column = assert_matches!(parse_presence_column(1, 1)(presence_buf), Ok((&[], pc)) => pc);
         let presence_column_view = assert_matches!(presence_column.view(0), Some(v) => v);
         #[rustfmt::skip]
         let buf = &[0x05,
@@ -597,8 +561,7 @@ mod tests {
                              0x47,
                              0x90,
                              0x29];
-        let presence_column =
-            assert_matches!(parse_presence_column(1, 2)(presence_buf), Ok((&[], pc)) => pc);
+        let presence_column = assert_matches!(parse_presence_column(1, 2)(presence_buf), Ok((&[], pc)) => pc);
         let presence_column_view = assert_matches!(presence_column.view(0), Some(v) => v);
         #[rustfmt::skip]
         let buf = &[0x05, // array len 5
@@ -631,8 +594,7 @@ mod tests {
                              0x47,
                              0x90,
                              0x29];
-        let presence_column =
-            assert_matches!(parse_presence_column(1, 2)(presence_buf), Ok((&[], pc)) => pc);
+        let presence_column = assert_matches!(parse_presence_column(1, 2)(presence_buf), Ok((&[], pc)) => pc);
         let presence_column_view = assert_matches!(presence_column.view(0), Some(v) => v);
         #[rustfmt::skip]
         let buf = &[0x04, // array len
@@ -664,8 +626,7 @@ mod tests {
                              0x47,
                              0x90,
                              0x29];
-        let presence_column =
-            assert_matches!(parse_presence_column(1, 2)(presence_buf), Ok((&[], pc)) => pc);
+        let presence_column = assert_matches!(parse_presence_column(1, 2)(presence_buf), Ok((&[], pc)) => pc);
         let presence_column_view = assert_matches!(presence_column.view(0), Some(v) => v);
         #[rustfmt::skip]
         let buf = &[0x02, // array len
@@ -696,8 +657,7 @@ mod tests {
                              0x5E,
                              0x43,
                              0x9E];
-        let presence_column =
-            assert_matches!(parse_presence_column(1, 3)(presence_buf), Ok((&[], pc)) => pc);
+        let presence_column = assert_matches!(parse_presence_column(1, 3)(presence_buf), Ok((&[], pc)) => pc);
         let presence_column_view = assert_matches!(presence_column.view(0), Some(v) => v);
         #[rustfmt::skip]
         let buf = &[0x00,

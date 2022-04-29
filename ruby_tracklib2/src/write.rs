@@ -1,6 +1,6 @@
 use rutie::{
-    class, methods, module, wrappable_struct, AnyObject, Array, Boolean, Class, Encoding, Float,
-    Hash, Integer, Module, Object, RString, Symbol, VerifiedObject, VM,
+    class, methods, module, wrappable_struct, AnyObject, Array, Boolean, Class, Encoding, Float, Hash, Integer, Module,
+    Object, RString, Symbol, VerifiedObject, VM,
 };
 
 pub struct WrappableSection {
@@ -17,18 +17,15 @@ methods!(
     rtself,
     fn section_standard(schema: crate::schema::Schema, data: Array) -> AnyObject {
         let tracklib_schema = schema.map_err(VM::raise_ex).unwrap().inner().clone();
-        let mut tracklib_section =
-            tracklib2::write::section::standard::Section::new(tracklib_schema);
+        let mut tracklib_section = tracklib2::write::section::standard::Section::new(tracklib_schema);
         write_ruby_array_into_section(&mut tracklib_section, data.map_err(VM::raise_ex).unwrap());
 
-        Module::from_existing("Tracklib")
-            .get_nested_class("Section")
-            .wrap_data(
-                WrappableSection {
-                    section: tracklib2::write::section::Section::Standard(tracklib_section),
-                },
-                &*SECTION_WRAPPER_INSTANCE,
-            )
+        Module::from_existing("Tracklib").get_nested_class("Section").wrap_data(
+            WrappableSection {
+                section: tracklib2::write::section::Section::Standard(tracklib_section),
+            },
+            &*SECTION_WRAPPER_INSTANCE,
+        )
     },
     fn section_encrypted(schema: crate::schema::Schema, data: Array, key_material: RString) -> AnyObject {
         let ruby_key_material = key_material.map_err(VM::raise_ex).unwrap();
@@ -40,31 +37,25 @@ methods!(
                 .unwrap();
         write_ruby_array_into_section(&mut tracklib_section, data.map_err(VM::raise_ex).unwrap());
 
-        Module::from_existing("Tracklib")
-            .get_nested_class("Section")
-            .wrap_data(
-                WrappableSection {
-                    section: tracklib2::write::section::Section::Encrypted(tracklib_section),
-                },
-                &*SECTION_WRAPPER_INSTANCE,
-            )
+        Module::from_existing("Tracklib").get_nested_class("Section").wrap_data(
+            WrappableSection {
+                section: tracklib2::write::section::Section::Encrypted(tracklib_section),
+            },
+            &*SECTION_WRAPPER_INSTANCE,
+        )
     },
 );
 
 fn write_ruby_array_into_section<SW: SectionWrite>(section: &mut SW, data: Array) {
     for ruby_row_obj in data {
-        let ruby_row = ruby_row_obj
-            .try_convert_to::<Hash>()
-            .map_err(VM::raise_ex)
-            .unwrap();
+        let ruby_row = ruby_row_obj.try_convert_to::<Hash>().map_err(VM::raise_ex).unwrap();
 
         let mut rowbuilder = section.open_row_builder();
 
         while let Some(column_writer) = rowbuilder.next_column_writer() {
             match column_writer {
                 tracklib2::write::section::writer::ColumnWriter::I64ColumnWriter(cwi) => {
-                    let ruby_field_name =
-                        RString::from(String::from(cwi.field_definition().name()));
+                    let ruby_field_name = RString::from(String::from(cwi.field_definition().name()));
                     let ruby_field = ruby_row.at(&ruby_field_name);
 
                     let write_result = if ruby_field.is_nil() {
@@ -86,18 +77,14 @@ fn write_ruby_array_into_section<SW: SectionWrite>(section: &mut SW, data: Array
                     }
                 }
                 tracklib2::write::section::writer::ColumnWriter::F64ColumnWriter(cwi) => {
-                    let ruby_field_name =
-                        RString::from(String::from(cwi.field_definition().name()));
+                    let ruby_field_name = RString::from(String::from(cwi.field_definition().name()));
                     let ruby_field = ruby_row.at(&ruby_field_name);
 
                     let write_result = if ruby_field.is_nil() {
                         cwi.write(None)
                     } else {
                         cwi.write(Some(
-                            &Float::implicit_to_f(ruby_field)
-                                .map_err(VM::raise_ex)
-                                .unwrap()
-                                .to_f64(),
+                            &Float::implicit_to_f(ruby_field).map_err(VM::raise_ex).unwrap().to_f64(),
                         ))
                     };
 
@@ -106,8 +93,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(section: &mut SW, data: Array
                     }
                 }
                 tracklib2::write::section::writer::ColumnWriter::U64ColumnWriter(cwi) => {
-                    let ruby_field_name =
-                        RString::from(String::from(cwi.field_definition().name()));
+                    let ruby_field_name = RString::from(String::from(cwi.field_definition().name()));
                     let ruby_field = ruby_row.at(&ruby_field_name);
 
                     let write_result = if ruby_field.is_nil() {
@@ -129,8 +115,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(section: &mut SW, data: Array
                     }
                 }
                 tracklib2::write::section::writer::ColumnWriter::BoolColumnWriter(cwi) => {
-                    let ruby_field_name =
-                        RString::from(String::from(cwi.field_definition().name()));
+                    let ruby_field_name = RString::from(String::from(cwi.field_definition().name()));
                     let ruby_field = ruby_row.at(&ruby_field_name);
 
                     let write_result = if ruby_field.is_nil() {
@@ -150,8 +135,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(section: &mut SW, data: Array
                     }
                 }
                 tracklib2::write::section::writer::ColumnWriter::StringColumnWriter(cwi) => {
-                    let ruby_field_name =
-                        RString::from(String::from(cwi.field_definition().name()));
+                    let ruby_field_name = RString::from(String::from(cwi.field_definition().name()));
                     let ruby_field = ruby_row.at(&ruby_field_name);
 
                     let write_result = if ruby_field.is_nil() {
@@ -171,26 +155,17 @@ fn write_ruby_array_into_section<SW: SectionWrite>(section: &mut SW, data: Array
                     }
                 }
                 tracklib2::write::section::writer::ColumnWriter::BoolArrayColumnWriter(cwi) => {
-                    let ruby_field_name =
-                        RString::from(String::from(cwi.field_definition().name()));
+                    let ruby_field_name = RString::from(String::from(cwi.field_definition().name()));
                     let ruby_field = ruby_row.at(&ruby_field_name);
 
                     let write_result = if ruby_field.is_nil() {
                         cwi.write(None)
                     } else {
-                        let array = ruby_field
-                            .try_convert_to::<Array>()
-                            .map_err(VM::raise_ex)
-                            .unwrap();
+                        let array = ruby_field.try_convert_to::<Array>().map_err(VM::raise_ex).unwrap();
 
                         let bool_vec = array
                             .into_iter()
-                            .map(|ele| {
-                                ele.try_convert_to::<Boolean>()
-                                    .map_err(VM::raise_ex)
-                                    .unwrap()
-                                    .to_bool()
-                            })
+                            .map(|ele| ele.try_convert_to::<Boolean>().map_err(VM::raise_ex).unwrap().to_bool())
                             .collect::<Vec<_>>();
 
                         cwi.write(Some(bool_vec.as_slice()))
@@ -201,17 +176,13 @@ fn write_ruby_array_into_section<SW: SectionWrite>(section: &mut SW, data: Array
                     }
                 }
                 tracklib2::write::section::writer::ColumnWriter::U64ArrayColumnWriter(cwi) => {
-                    let ruby_field_name =
-                        RString::from(String::from(cwi.field_definition().name()));
+                    let ruby_field_name = RString::from(String::from(cwi.field_definition().name()));
                     let ruby_field = ruby_row.at(&ruby_field_name);
 
                     let write_result = if ruby_field.is_nil() {
                         cwi.write(None)
                     } else {
-                        let array = ruby_field
-                            .try_convert_to::<Array>()
-                            .map_err(VM::raise_ex)
-                            .unwrap();
+                        let array = ruby_field.try_convert_to::<Array>().map_err(VM::raise_ex).unwrap();
 
                         let u64_vec = array
                             .into_iter()
@@ -234,8 +205,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(section: &mut SW, data: Array
                     }
                 }
                 tracklib2::write::section::writer::ColumnWriter::ByteArrayColumnWriter(cwi) => {
-                    let ruby_field_name =
-                        RString::from(String::from(cwi.field_definition().name()));
+                    let ruby_field_name = RString::from(String::from(cwi.field_definition().name()));
                     let ruby_field = ruby_row.at(&ruby_field_name);
 
                     let write_result = if ruby_field.is_nil() {
@@ -291,10 +261,7 @@ methods!(
         let metadata_entries = metadata_array
             .into_iter()
             .map(|metadata_ele| {
-                let metadata_ele_array = metadata_ele
-                    .try_convert_to::<Array>()
-                    .map_err(VM::raise_ex)
-                    .unwrap();
+                let metadata_ele_array = metadata_ele.try_convert_to::<Array>().map_err(VM::raise_ex).unwrap();
                 if metadata_ele_array.length() >= 1 {
                     let metadata_type = metadata_ele_array
                         .at(0)
@@ -384,12 +351,7 @@ methods!(
 
         let section_wrappers = sections_array
             .into_iter()
-            .map(|ruby_section| {
-                ruby_section
-                    .try_convert_to::<Section>()
-                    .map_err(VM::raise_ex)
-                    .unwrap()
-            })
+            .map(|ruby_section| ruby_section.try_convert_to::<Section>().map_err(VM::raise_ex).unwrap())
             .collect::<Vec<_>>();
 
         let tracklib_sections = section_wrappers

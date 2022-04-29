@@ -1,7 +1,7 @@
 use ouroboros::self_referencing;
 use rutie::{
-    class, methods, wrappable_struct, AnyObject, Array, Boolean, Class, Encoding, Float, Hash,
-    Integer, Module, NilClass, Object, RString, Symbol, VM,
+    class, methods, wrappable_struct, AnyObject, Array, Boolean, Class, Encoding, Float, Hash, Integer, Module,
+    NilClass, Object, RString, Symbol, VM,
 };
 use tracklib2::read::section::SectionRead;
 
@@ -13,11 +13,7 @@ pub struct WrappableTrackReader {
     track_reader: tracklib2::read::track::TrackReader<'this>,
 }
 
-wrappable_struct!(
-    WrappableTrackReader,
-    TrackReaderWrapper,
-    TRACK_READER_WRAPPER_INSTANCE
-);
+wrappable_struct!(WrappableTrackReader, TrackReaderWrapper, TRACK_READER_WRAPPER_INSTANCE);
 
 class!(TrackReader);
 
@@ -50,15 +46,9 @@ methods!(
                     let mut metadata_entry_array = Array::new();
 
                     let (type_name, id) = match track_type {
-                        tracklib2::types::TrackType::Trip(id) => {
-                            (Symbol::new("trip"), Integer::from(*id))
-                        }
-                        tracklib2::types::TrackType::Route(id) => {
-                            (Symbol::new("route"), Integer::from(*id))
-                        }
-                        tracklib2::types::TrackType::Segment(id) => {
-                            (Symbol::new("segment"), Integer::from(*id))
-                        }
+                        tracklib2::types::TrackType::Trip(id) => (Symbol::new("trip"), Integer::from(*id)),
+                        tracklib2::types::TrackType::Route(id) => (Symbol::new("route"), Integer::from(*id)),
+                        tracklib2::types::TrackType::Segment(id) => (Symbol::new("segment"), Integer::from(*id)),
                     };
 
                     metadata_entry_array.push(Symbol::new("track_type"));
@@ -124,12 +114,10 @@ methods!(
         let encoding = rtself
             .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
             .with_track_reader(|track_reader| {
-                track_reader
-                    .section(rust_index)
-                    .map(|section| match section {
-                        tracklib2::read::section::Section::Standard(section) => section.encoding(),
-                        tracklib2::read::section::Section::Encrypted(section) => section.encoding(),
-                    })
+                track_reader.section(rust_index).map(|section| match section {
+                    tracklib2::read::section::Section::Standard(section) => section.encoding(),
+                    tracklib2::read::section::Section::Encrypted(section) => section.encoding(),
+                })
             })
             .ok_or_else(|| VM::raise(Class::from_existing("Exception"), "Section does not exist"))
             .unwrap();
@@ -147,12 +135,10 @@ methods!(
         let schema = rtself
             .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
             .with_track_reader(|track_reader| {
-                track_reader
-                    .section(rust_index)
-                    .map(|section| match section {
-                        tracklib2::read::section::Section::Standard(section) => section.schema(),
-                        tracklib2::read::section::Section::Encrypted(section) => section.schema(),
-                    })
+                track_reader.section(rust_index).map(|section| match section {
+                    tracklib2::read::section::Section::Standard(section) => section.schema(),
+                    tracklib2::read::section::Section::Encrypted(section) => section.schema(),
+                })
             })
             .ok_or_else(|| VM::raise(Class::from_existing("Exception"), "Section does not exist"))
             .unwrap();
@@ -202,12 +188,10 @@ methods!(
         let rows = rtself
             .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
             .with_track_reader(|track_reader| {
-                track_reader
-                    .section(rust_index)
-                    .map(|section| match section {
-                        tracklib2::read::section::Section::Standard(section) => section.rows(),
-                        tracklib2::read::section::Section::Encrypted(section) => section.rows(),
-                    })
+                track_reader.section(rust_index).map(|section| match section {
+                    tracklib2::read::section::Section::Standard(section) => section.rows(),
+                    tracklib2::read::section::Section::Encrypted(section) => section.rows(),
+                })
             })
             .ok_or_else(|| VM::raise(Class::from_existing("Exception"), "Section does not exist"))
             .unwrap();
@@ -226,38 +210,24 @@ methods!(
         let data = rtself
             .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
             .with_track_reader(|track_reader| {
-                track_reader
-                    .section(rust_index)
-                    .map(|section| match section {
-                        tracklib2::read::section::Section::Standard(section) => {
-                            reader_to_array_of_hashes(
-                                section
-                                    .reader()
-                                    .map_err(|e| {
-                                        VM::raise(
-                                            Class::from_existing("Exception"),
-                                            &format!("{}", e),
-                                        )
-                                    })
-                                    .unwrap(),
-                            )
-                        }
-                        tracklib2::read::section::Section::Encrypted(mut section) => {
-                            let ruby_key_material = key_material.map_err(VM::raise_ex).unwrap();
-                            let rust_key_material = ruby_key_material.to_bytes_unchecked();
-                            reader_to_array_of_hashes(
-                                section
-                                    .reader(rust_key_material)
-                                    .map_err(|e| {
-                                        VM::raise(
-                                            Class::from_existing("Exception"),
-                                            &format!("{}", e),
-                                        )
-                                    })
-                                    .unwrap(),
-                            )
-                        }
-                    })
+                track_reader.section(rust_index).map(|section| match section {
+                    tracklib2::read::section::Section::Standard(section) => reader_to_array_of_hashes(
+                        section
+                            .reader()
+                            .map_err(|e| VM::raise(Class::from_existing("Exception"), &format!("{}", e)))
+                            .unwrap(),
+                    ),
+                    tracklib2::read::section::Section::Encrypted(mut section) => {
+                        let ruby_key_material = key_material.map_err(VM::raise_ex).unwrap();
+                        let rust_key_material = ruby_key_material.to_bytes_unchecked();
+                        reader_to_array_of_hashes(
+                            section
+                                .reader(rust_key_material)
+                                .map_err(|e| VM::raise(Class::from_existing("Exception"), &format!("{}", e)))
+                                .unwrap(),
+                        )
+                    }
+                })
             })
             .ok_or_else(|| VM::raise(Class::from_existing("Exception"), "Section does not exist"))
             .unwrap();
@@ -277,48 +247,28 @@ methods!(
                     let field_name = ruby_field_name.to_str();
 
                     let schema = match section {
-                        tracklib2::read::section::Section::Standard(ref section) => {
-                            section.schema()
-                        }
-                        tracklib2::read::section::Section::Encrypted(ref section) => {
-                            section.schema()
-                        }
+                        tracklib2::read::section::Section::Standard(ref section) => section.schema(),
+                        tracklib2::read::section::Section::Encrypted(ref section) => section.schema(),
                     };
-                    let maybe_field_def = schema
-                        .fields()
-                        .iter()
-                        .find(|field_def| field_def.name() == field_name);
+                    let maybe_field_def = schema.fields().iter().find(|field_def| field_def.name() == field_name);
 
                     if let Some(field_def) = maybe_field_def {
-                        let schema =
-                            tracklib2::schema::Schema::with_fields(vec![field_def.clone()]);
+                        let schema = tracklib2::schema::Schema::with_fields(vec![field_def.clone()]);
                         match section {
-                            tracklib2::read::section::Section::Standard(section) => {
-                                reader_to_single_column_array(
-                                    section
-                                        .reader_for_schema(&schema)
-                                        .map_err(|e| {
-                                            VM::raise(
-                                                Class::from_existing("Exception"),
-                                                &format!("{}", e),
-                                            )
-                                        })
-                                        .unwrap(),
-                                )
-                                .to_any_object()
-                            }
+                            tracklib2::read::section::Section::Standard(section) => reader_to_single_column_array(
+                                section
+                                    .reader_for_schema(&schema)
+                                    .map_err(|e| VM::raise(Class::from_existing("Exception"), &format!("{}", e)))
+                                    .unwrap(),
+                            )
+                            .to_any_object(),
                             tracklib2::read::section::Section::Encrypted(mut section) => {
                                 let ruby_key_material = key_material.map_err(VM::raise_ex).unwrap();
                                 let rust_key_material = ruby_key_material.to_bytes_unchecked();
                                 reader_to_single_column_array(
                                     section
                                         .reader_for_schema(rust_key_material, &schema)
-                                        .map_err(|e| {
-                                            VM::raise(
-                                                Class::from_existing("Exception"),
-                                                &format!("{}", e),
-                                            )
-                                        })
+                                        .map_err(|e| VM::raise(Class::from_existing("Exception"), &format!("{}", e)))
                                         .unwrap(),
                                 )
                                 .to_any_object()
@@ -375,10 +325,7 @@ fn reader_to_array_of_hashes(mut reader: tracklib2::read::section::reader::Secti
                 .unwrap();
 
             if let Some(value) = maybe_value {
-                row_hash.store(
-                    RString::from(String::from(field_def.name())),
-                    fieldvalue_to_ruby(value),
-                );
+                row_hash.store(RString::from(String::from(field_def.name())), fieldvalue_to_ruby(value));
             }
         }
         data_array.push(row_hash);
@@ -387,19 +334,12 @@ fn reader_to_array_of_hashes(mut reader: tracklib2::read::section::reader::Secti
     data_array
 }
 
-fn reader_to_single_column_array(
-    mut reader: tracklib2::read::section::reader::SectionReader,
-) -> Array {
+fn reader_to_single_column_array(mut reader: tracklib2::read::section::reader::SectionReader) -> Array {
     let mut data_array = Array::new();
     while let Some(mut columniter) = reader.open_column_iter() {
         let (_field_def, maybe_value) = columniter
             .next()
-            .ok_or_else(|| {
-                VM::raise(
-                    Class::from_existing("Exception"),
-                    "Missing field inside iterator",
-                )
-            })
+            .ok_or_else(|| VM::raise(Class::from_existing("Exception"), "Missing field inside iterator"))
             .unwrap()
             .map_err(|e| VM::raise(Class::from_existing("Exception"), &format!("{}", e)))
             .unwrap();

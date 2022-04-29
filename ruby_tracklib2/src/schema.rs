@@ -1,6 +1,6 @@
 use rutie::{
-    class, methods, wrappable_struct, AnyObject, Array, Class, Integer, Module, Object, RString,
-    Symbol, VerifiedObject, VM,
+    class, methods, wrappable_struct, AnyObject, Array, Class, Integer, Module, Object, RString, Symbol,
+    VerifiedObject, VM,
 };
 
 pub struct WrappableSchema {
@@ -20,8 +20,7 @@ methods!(
             .unwrap()
             .into_iter()
             .map(|ele| {
-                let ruby_schema_entry =
-                    ele.try_convert_to::<Array>().map_err(VM::raise_ex).unwrap();
+                let ruby_schema_entry = ele.try_convert_to::<Array>().map_err(VM::raise_ex).unwrap();
 
                 let ruby_field_name = ruby_schema_entry
                     .at(0)
@@ -43,9 +42,7 @@ methods!(
                             .map_err(VM::raise_ex)
                             .unwrap();
                         let scale = u8::try_from(ruby_scale.to_u64())
-                            .map_err(|e| {
-                                VM::raise(Class::from_existing("Exception"), &format!("{}", e))
-                            })
+                            .map_err(|e| VM::raise(Class::from_existing("Exception"), &format!("{}", e)))
                             .unwrap();
                         tracklib2::schema::DataType::F64 { scale }
                     }
@@ -68,14 +65,12 @@ methods!(
             })
             .collect::<Vec<_>>();
 
-        Module::from_existing("Tracklib")
-            .get_nested_class("Schema")
-            .wrap_data(
-                WrappableSchema {
-                    schema: tracklib2::schema::Schema::with_fields(fields),
-                },
-                &*SCHEMA_WRAPPER_INSTANCE,
-            )
+        Module::from_existing("Tracklib").get_nested_class("Schema").wrap_data(
+            WrappableSchema {
+                schema: tracklib2::schema::Schema::with_fields(fields),
+            },
+            &*SCHEMA_WRAPPER_INSTANCE,
+        )
     },
 );
 

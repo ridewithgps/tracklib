@@ -1,107 +1,17 @@
-use super::crcwriter::CrcWriter;
-use super::encoders::*;
-use crate::consts::SCHEMA_VERSION;
+use super::writer::{Buffer, RowBuilder};
 use crate::error::Result;
 use crate::schema::*;
 use crate::types::SectionEncoding;
-use std::io::{self, Write};
-
-fn write_data_type_tag<W: Write>(out: &mut W, data_type: &DataType) -> Result<()> {
-    match data_type {
-        DataType::I64 => out.write_all(&[0x00])?,
-        DataType::F64 { scale } => out.write_all(&[0x01, *scale])?,
-        DataType::U64 => out.write_all(&[0x02])?,
-
-        DataType::Bool => out.write_all(&[0x10])?,
-
-        DataType::String => out.write_all(&[0x20])?,
-        DataType::BoolArray => out.write_all(&[0x21])?,
-        DataType::U64Array => out.write_all(&[0x22])?,
-        DataType::ByteArray => out.write_all(&[0x23])?,
-    }
-
-    Ok(())
-}
-
-#[derive(Debug)]
-struct BufferImpl<E: Encoder> {
-    buf: Vec<u8>,
-    presence: Vec<bool>,
-    encoder: E,
-}
-
-impl<E: Encoder> BufferImpl<E> {
-    fn new(encoder: E) -> Self {
-        Self {
-            encoder,
-            presence: vec![],
-            buf: vec![],
-        }
-    }
-
-    fn write_data<W: Write>(&self, out: &mut W) -> Result<()> {
-        let mut crcwriter = CrcWriter::new32(out);
-        io::copy(&mut io::Cursor::new(&self.buf), &mut crcwriter)?;
-        crcwriter.append_crc()?;
-        Ok(())
-    }
-
-    fn data_size(&self) -> usize {
-        const CRC_BYTES: usize = 4;
-        self.buf.len() + CRC_BYTES
-    }
-}
-
-#[derive(Debug)]
-enum Buffer {
-    I64(BufferImpl<I64Encoder>),
-    U64(BufferImpl<U64Encoder>),
-    F64(BufferImpl<F64Encoder>),
-    Bool(BufferImpl<BoolEncoder>),
-    String(BufferImpl<StringEncoder>),
-    BoolArray(BufferImpl<BoolArrayEncoder>),
-    U64Array(BufferImpl<U64ArrayEncoder>),
-    ByteArray(BufferImpl<ByteArrayEncoder>),
-}
-
-impl Buffer {
-    fn new(data_type: &DataType) -> Self {
-        match data_type {
-            DataType::I64 => Buffer::I64(BufferImpl::new(I64Encoder::default())),
-            DataType::U64 => Buffer::U64(BufferImpl::new(U64Encoder::default())),
-            DataType::Bool => Buffer::Bool(BufferImpl::new(BoolEncoder::default())),
-            DataType::String => Buffer::String(BufferImpl::new(StringEncoder::default())),
-            DataType::F64 { scale } => Buffer::F64(BufferImpl::new(F64Encoder::new(*scale))),
-            DataType::BoolArray => Buffer::BoolArray(BufferImpl::new(BoolArrayEncoder::default())),
-            DataType::U64Array => Buffer::U64Array(BufferImpl::new(U64ArrayEncoder::default())),
-            DataType::ByteArray => Buffer::ByteArray(BufferImpl::new(ByteArrayEncoder::default())),
-        }
-    }
-
-    fn len(&self) -> usize {
-        match self {
-            Self::I64(buffer_impl) => buffer_impl.buf.len(),
-            Self::U64(buffer_impl) => buffer_impl.buf.len(),
-            Self::F64(buffer_impl) => buffer_impl.buf.len(),
-            Self::Bool(buffer_impl) => buffer_impl.buf.len(),
-            Self::String(buffer_impl) => buffer_impl.buf.len(),
-            Self::BoolArray(buffer_impl) => buffer_impl.buf.len(),
-            Self::U64Array(buffer_impl) => buffer_impl.buf.len(),
-            Self::ByteArray(buffer_impl) => buffer_impl.buf.len(),
-        }
-    }
-}
+use std::io::Write;
 
 pub struct Section {
-    section_encoding: SectionEncoding,
     rows_written: usize,
     schema: Schema,
     column_data: Vec<Buffer>,
 }
 
 impl Section {
-    // TODO: provide a size_hint param to size buffer Vecs (at least presence)
-    pub fn new(section_encoding: SectionEncoding, schema: Schema) -> Self {
+    pub fn new(schema: Schema) -> Self {
         let column_data = schema
             .fields()
             .iter()
@@ -109,223 +19,47 @@ impl Section {
             .collect();
 
         Self {
-            section_encoding,
             rows_written: 0,
             schema,
             column_data,
         }
     }
+}
 
-    pub fn schema(&self) -> &Schema {
+impl super::SectionWrite for Section {
+    fn schema(&self) -> &Schema {
         &self.schema
     }
 
-    /// mut borrow of self so only one row can be open at a time
-    pub fn open_row_builder(&mut self) -> RowBuilder {
-        self.rows_written += 1; // TODO: bug when you open a row builder but never write data with it?
-        RowBuilder::new(&self.schema, &mut self.column_data)
+    fn encoding(&self) -> SectionEncoding {
+        SectionEncoding::Standard
     }
 
-    pub(crate) fn encoding(&self) -> &SectionEncoding {
-        &self.section_encoding
-    }
-
-    pub(crate) fn rows(&self) -> usize {
+    fn rows_written(&self) -> usize {
         self.rows_written
     }
 
-    pub(crate) fn data_size(&self) -> usize {
-        const CRC_BYTES: usize = 4;
-        let presence_bytes_required = (self.schema.fields().len() + 7) / 8;
-        let presence_bytes = (presence_bytes_required * self.rows_written) + CRC_BYTES;
-        let data_bytes: usize = self
-            .column_data
-            .iter()
-            .map(|buffer| buffer.len() + CRC_BYTES)
-            .sum();
-        data_bytes + presence_bytes
-    }
-
-    fn write_presence_column<W: Write>(&self, out: &mut W) -> Result<()> {
-        let mut crcwriter = CrcWriter::new32(out);
-        let bytes_required = (self.schema.fields().len() + 7) / 8;
-
-        for row_i in 0..self.rows_written {
-            let mut row = vec![0; bytes_required];
-            let mut mask: u8 = 1;
-            let mut bit_index = (self.schema.fields().len() + 7) & !7; // next multiple of 8
-            for buffer in self.column_data.iter() {
-                let is_present = match buffer {
-                    Buffer::I64(buffer_impl) => buffer_impl.presence.get(row_i),
-                    Buffer::U64(buffer_impl) => buffer_impl.presence.get(row_i),
-                    Buffer::F64(buffer_impl) => buffer_impl.presence.get(row_i),
-                    Buffer::Bool(buffer_impl) => buffer_impl.presence.get(row_i),
-                    Buffer::String(buffer_impl) => buffer_impl.presence.get(row_i),
-                    Buffer::BoolArray(buffer_impl) => buffer_impl.presence.get(row_i),
-                    Buffer::U64Array(buffer_impl) => buffer_impl.presence.get(row_i),
-                    Buffer::ByteArray(buffer_impl) => buffer_impl.presence.get(row_i),
-                };
-
-                if let Some(true) = is_present {
-                    let byte_index = ((bit_index + 7) / 8) - 1;
-                    row[byte_index] |= mask;
-                }
-                mask = mask.rotate_left(1);
-
-                bit_index -= 1;
-            }
-
-            crcwriter.write_all(&row)?;
-        }
-        crcwriter.append_crc()?;
-
-        Ok(())
-    }
-
-    #[rustfmt::skip]
-    pub(crate) fn write_schema<W: Write>(&self, out: &mut W) -> Result<()> {
-        out.write_all(&SCHEMA_VERSION.to_le_bytes())?;                            // 1 byte  - schema version
-        out.write_all(&u8::try_from(self.schema.fields().len())?.to_le_bytes())?; // 1 byte  - number of entries
-
-        for (i, field_def) in self.schema.fields().iter().enumerate() {
-            let data_column_size = self
-                .column_data
-                .get(i)
-                .map(|buffer| match buffer {
-                    Buffer::I64(buffer_impl) => buffer_impl.data_size(),
-                    Buffer::U64(buffer_impl) => buffer_impl.data_size(),
-                    Buffer::F64(buffer_impl) => buffer_impl.data_size(),
-                    Buffer::Bool(buffer_impl) => buffer_impl.data_size(),
-                    Buffer::String(buffer_impl) => buffer_impl.data_size(),
-                    Buffer::BoolArray(buffer_impl) => buffer_impl.data_size(),
-                    Buffer::U64Array(buffer_impl) => buffer_impl.data_size(),
-                    Buffer::ByteArray(buffer_impl) => buffer_impl.data_size(),
-                })
-                .unwrap_or(0);
-
-            write_data_type_tag(out, field_def.data_type())?;                     // ? bytes - type tag
-            out.write_all(&u8::try_from(field_def.name().len())?.to_le_bytes())?; // 1 byte  - field name length
-            out.write_all(field_def.name().as_bytes())?;                          // ? bytes - the name of this field
-            leb128::write::unsigned(out, u64::try_from(data_column_size)?)?;      // ? bytes - leb128 column data size
-        }
-
-        Ok(())
-    }
-
-    #[rustfmt::skip]
-    pub(crate) fn write<W: Write>(&self, out: &mut W) -> Result<()> {
-        self.write_presence_column(out)?;                                         // ? bytes - presence column with crc
-        for buffer in self.column_data.iter() {
-            match buffer {
-                Buffer::I64(buffer_impl) => buffer_impl.write_data(out)?,         // |
-                Buffer::U64(buffer_impl) => buffer_impl.write_data(out)?,         // |
-                Buffer::F64(buffer_impl) => buffer_impl.write_data(out)?,         // |
-                Buffer::Bool(buffer_impl) => buffer_impl.write_data(out)?,        // |
-                Buffer::String(buffer_impl) => buffer_impl.write_data(out)?,      // |
-                Buffer::BoolArray(buffer_impl) => buffer_impl.write_data(out)?,   // |
-                Buffer::U64Array(buffer_impl) => buffer_impl.write_data(out)?,    // |
-                Buffer::ByteArray(buffer_impl) => buffer_impl.write_data(out)?,   //  - > ? bytes - data column with crc
-            };
-        }
-
-        Ok(())
+    fn open_row_builder(&mut self) -> RowBuilder {
+        self.rows_written += 1;
+        RowBuilder::new(&self.schema, &mut self.column_data)
     }
 }
 
-pub struct RowBuilder<'a> {
-    schema: &'a Schema,
-    column_data: &'a mut Vec<Buffer>,
-    field_index: usize,
-}
-
-impl<'a> RowBuilder<'a> {
-    fn new(schema: &'a Schema, column_data: &'a mut Vec<Buffer>) -> Self {
-        Self {
-            schema,
-            column_data,
-            field_index: 0,
-        }
+impl super::SectionInternal for Section {
+    fn section_encoding_tag(&self) -> u8 {
+        0x00
     }
 
-    /// mut borrow of self so only one column writer can be open at a time
-    pub fn next_column_writer(&mut self) -> Option<ColumnWriter> {
-        let field_index = self.field_index;
-        self.field_index += 1;
-
-        let maybe_field_def = self.schema.fields().get(field_index);
-        let maybe_buffer = self.column_data.get_mut(field_index);
-
-        match (maybe_field_def, maybe_buffer) {
-            (Some(field_def), Some(Buffer::I64(ref mut buffer_impl))) => Some(
-                ColumnWriter::I64ColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
-            ),
-            (Some(field_def), Some(Buffer::U64(ref mut buffer_impl))) => Some(
-                ColumnWriter::U64ColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
-            ),
-            (Some(field_def), Some(Buffer::F64(ref mut buffer_impl))) => Some(
-                ColumnWriter::F64ColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
-            ),
-            (Some(field_def), Some(Buffer::Bool(ref mut buffer_impl))) => Some(
-                ColumnWriter::BoolColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
-            ),
-            (Some(field_def), Some(Buffer::String(ref mut buffer_impl))) => Some(
-                ColumnWriter::StringColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
-            ),
-            (Some(field_def), Some(Buffer::BoolArray(ref mut buffer_impl))) => Some(
-                ColumnWriter::BoolArrayColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
-            ),
-            (Some(field_def), Some(Buffer::U64Array(ref mut buffer_impl))) => Some(
-                ColumnWriter::U64ArrayColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
-            ),
-            (Some(field_def), Some(Buffer::ByteArray(ref mut buffer_impl))) => Some(
-                ColumnWriter::ByteArrayColumnWriter(ColumnWriterImpl::new(field_def, buffer_impl)),
-            ),
-            _ => None,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub enum ColumnWriter<'a> {
-    I64ColumnWriter(ColumnWriterImpl<'a, I64Encoder>),
-    U64ColumnWriter(ColumnWriterImpl<'a, U64Encoder>),
-    F64ColumnWriter(ColumnWriterImpl<'a, F64Encoder>),
-    BoolColumnWriter(ColumnWriterImpl<'a, BoolEncoder>),
-    StringColumnWriter(ColumnWriterImpl<'a, StringEncoder>),
-    BoolArrayColumnWriter(ColumnWriterImpl<'a, BoolArrayEncoder>),
-    U64ArrayColumnWriter(ColumnWriterImpl<'a, U64ArrayEncoder>),
-    ByteArrayColumnWriter(ColumnWriterImpl<'a, ByteArrayEncoder>),
-}
-
-#[derive(Debug)]
-// TODO: is this must_use correct?
-#[must_use]
-pub struct ColumnWriterImpl<'a, E: Encoder> {
-    field_definition: &'a FieldDefinition,
-    buf: &'a mut BufferImpl<E>,
-}
-
-impl<'a, E: Encoder> ColumnWriterImpl<'a, E> {
-    fn new(field_definition: &'a FieldDefinition, buf: &'a mut BufferImpl<E>) -> Self {
-        Self {
-            field_definition,
-            buf,
-        }
+    fn data_size_overhead(&self) -> usize {
+        0
     }
 
-    pub fn field_definition(&self) -> &FieldDefinition {
-        self.field_definition
+    fn buffers(&self) -> &[Buffer] {
+        &self.column_data
     }
 
-    /// Takes `self` so that only one value per column can be written
-    pub fn write(self, value: Option<&E::T>) -> Result<()> {
-        let BufferImpl {
-            ref mut encoder,
-            ref mut buf,
-            ref mut presence,
-            ..
-        } = self.buf;
-        encoder.encode(value, buf, presence)
+    fn write<W: Write>(&self, out: &mut W) -> Result<()> {
+        self.write_data(out)
     }
 }
 
@@ -333,19 +67,18 @@ impl<'a, E: Encoder> ColumnWriterImpl<'a, E> {
 mod tests {
     use super::*;
     use crate::types::FieldValue;
+    use crate::write::section::writer::ColumnWriter;
+    use crate::write::section::{SectionInternal, SectionWrite};
     use assert_matches::assert_matches;
     use std::collections::HashMap;
 
     #[test]
     fn test_write_presence_column() {
-        let mut section = Section::new(
-            SectionEncoding::Standard,
-            Schema::with_fields(vec![
-                FieldDefinition::new("a", DataType::I64),
-                FieldDefinition::new("b", DataType::Bool),
-                FieldDefinition::new("c", DataType::String),
-            ]),
-        );
+        let mut section = Section::new(Schema::with_fields(vec![
+            FieldDefinition::new("a", DataType::I64),
+            FieldDefinition::new("b", DataType::Bool),
+            FieldDefinition::new("c", DataType::String),
+        ]));
         let mut buf = Vec::new();
         assert_matches!(section.write_presence_column(&mut buf), Ok(()) => {
             assert_eq!(buf,
@@ -398,14 +131,11 @@ mod tests {
 
     #[test]
     fn test_multibyte_presence_column() {
-        let mut section = Section::new(
-            SectionEncoding::Standard,
-            Schema::with_fields(
-                (0..20)
-                    .map(|i| FieldDefinition::new(i.to_string(), DataType::Bool))
-                    .collect(),
-            ),
-        );
+        let mut section = Section::new(Schema::with_fields(
+            (0..20)
+                .map(|i| FieldDefinition::new(i.to_string(), DataType::Bool))
+                .collect(),
+        ));
 
         for _ in 0..2 {
             let mut rowbuilder = section.open_row_builder();
@@ -432,14 +162,11 @@ mod tests {
 
     #[test]
     fn test_write_huge_presence_column() {
-        let mut section = Section::new(
-            SectionEncoding::Standard,
-            Schema::with_fields(
-                (0..80)
-                    .map(|i| FieldDefinition::new(i.to_string(), DataType::Bool))
-                    .collect(),
-            ),
-        );
+        let mut section = Section::new(Schema::with_fields(
+            (0..80)
+                .map(|i| FieldDefinition::new(i.to_string(), DataType::Bool))
+                .collect(),
+        ));
 
         #[rustfmt::skip]
         let vals = &[
@@ -488,19 +215,16 @@ mod tests {
 
     #[test]
     fn test_schema() {
-        let mut section = Section::new(
-            SectionEncoding::Standard,
-            Schema::with_fields(vec![
-                FieldDefinition::new("m", DataType::I64),
-                FieldDefinition::new("k", DataType::Bool),
-                FieldDefinition::new("long name!", DataType::String),
-                FieldDefinition::new("f", DataType::F64 { scale: 7 }),
-                FieldDefinition::new("ab", DataType::BoolArray),
-                FieldDefinition::new("u", DataType::U64),
-                FieldDefinition::new("au", DataType::U64Array),
-                FieldDefinition::new("abyte", DataType::ByteArray),
-            ]),
-        );
+        let mut section = Section::new(Schema::with_fields(vec![
+            FieldDefinition::new("m", DataType::I64),
+            FieldDefinition::new("k", DataType::Bool),
+            FieldDefinition::new("long name!", DataType::String),
+            FieldDefinition::new("f", DataType::F64 { scale: 7 }),
+            FieldDefinition::new("ab", DataType::BoolArray),
+            FieldDefinition::new("u", DataType::U64),
+            FieldDefinition::new("au", DataType::U64Array),
+            FieldDefinition::new("abyte", DataType::ByteArray),
+        ]));
 
         let mut rowbuilder = section.open_row_builder();
         while let Some(cw) = rowbuilder.next_column_writer() {
@@ -616,19 +340,16 @@ mod tests {
         h.insert("h", FieldValue::ByteArray(vec![0, 1]));
         v.push(h);
 
-        let mut section = Section::new(
-            SectionEncoding::Standard,
-            Schema::with_fields(vec![
-                FieldDefinition::new("a", DataType::I64),
-                FieldDefinition::new("b", DataType::Bool),
-                FieldDefinition::new("c", DataType::String),
-                FieldDefinition::new("d", DataType::F64 { scale: 7 }),
-                FieldDefinition::new("e", DataType::BoolArray),
-                FieldDefinition::new("f", DataType::U64),
-                FieldDefinition::new("g", DataType::U64Array),
-                FieldDefinition::new("h", DataType::ByteArray),
-            ]),
-        );
+        let mut section = Section::new(Schema::with_fields(vec![
+            FieldDefinition::new("a", DataType::I64),
+            FieldDefinition::new("b", DataType::Bool),
+            FieldDefinition::new("c", DataType::String),
+            FieldDefinition::new("d", DataType::F64 { scale: 7 }),
+            FieldDefinition::new("e", DataType::BoolArray),
+            FieldDefinition::new("f", DataType::U64),
+            FieldDefinition::new("g", DataType::U64Array),
+            FieldDefinition::new("h", DataType::ByteArray),
+        ]));
 
         let fields = section.schema().fields().to_vec();
 

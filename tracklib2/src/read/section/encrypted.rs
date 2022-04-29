@@ -1,14 +1,13 @@
-use super::data_table::DataTableEntry;
-use super::decoders::*;
-use super::presence_column::parse_presence_column;
-use super::schema::SchemaEntry;
-use crate::error::{Result, TracklibError};
+use super::reader::SectionReader;
+use crate::error::Result;
+use crate::read::data_table::DataTableEntry;
 use crate::schema::*;
-use crate::types::{FieldValue, SectionEncoding};
+use crate::types::SectionEncoding;
 
 #[cfg_attr(test, derive(Debug))]
 pub struct Section<'a> {
     input: &'a [u8],
+    decrypted: Vec<u8>,
     data_table_entry: &'a DataTableEntry,
 }
 
@@ -16,31 +15,18 @@ impl<'a> Section<'a> {
     pub(crate) fn new(input: &'a [u8], data_table_entry: &'a DataTableEntry) -> Self {
         Self {
             input,
+            decrypted: vec![],
             data_table_entry,
         }
     }
 
-    pub fn encoding(&self) -> SectionEncoding {
-        self.data_table_entry.section_encoding()
-    }
+    pub fn reader(&mut self, key_material: &[u8]) -> Result<SectionReader> {
+        let key = orion::aead::SecretKey::from_slice(key_material)?;
+        let decrypted = orion::aead::open(&key, self.input)?;
+        self.decrypted = decrypted;
 
-    pub fn schema(&self) -> Schema {
-        Schema::with_fields(
-            self.data_table_entry
-                .schema_entries()
-                .iter()
-                .map(|schema_entry| schema_entry.field_definition().clone())
-                .collect(),
-        )
-    }
-
-    pub fn rows(&self) -> usize {
-        self.data_table_entry.rows()
-    }
-
-    pub fn reader(&self) -> Result<SectionReader> {
         SectionReader::new(
-            self.input,
+            &self.decrypted,
             self.data_table_entry
                 .schema_entries()
                 .iter()
@@ -51,7 +37,15 @@ impl<'a> Section<'a> {
         )
     }
 
-    pub fn reader_for_schema(&self, schema: &Schema) -> Result<SectionReader> {
+    pub fn reader_for_schema(
+        &mut self,
+        key_material: &[u8],
+        schema: &Schema,
+    ) -> Result<SectionReader> {
+        let key = orion::aead::SecretKey::from_slice(key_material)?;
+        let decrypted = orion::aead::open(&key, self.input)?;
+        self.decrypted = decrypted;
+
         let schema_entries = schema
             .fields()
             .iter()
@@ -65,7 +59,7 @@ impl<'a> Section<'a> {
             .collect::<Vec<_>>();
 
         SectionReader::new(
-            self.input,
+            &self.decrypted,
             schema_entries,
             self.data_table_entry.schema_entries().len(),
             self.data_table_entry.rows(),
@@ -73,218 +67,23 @@ impl<'a> Section<'a> {
     }
 }
 
-#[cfg_attr(test, derive(Debug))]
-enum ColumnDecoder<'a> {
-    I64 {
-        field_definition: &'a FieldDefinition,
-        decoder: I64Decoder<'a>,
-    },
-    U64 {
-        field_definition: &'a FieldDefinition,
-        decoder: U64Decoder<'a>,
-    },
-    F64 {
-        field_definition: &'a FieldDefinition,
-        decoder: F64Decoder<'a>,
-    },
-    Bool {
-        field_definition: &'a FieldDefinition,
-        decoder: BoolDecoder<'a>,
-    },
-    String {
-        field_definition: &'a FieldDefinition,
-        decoder: StringDecoder<'a>,
-    },
-    BoolArray {
-        field_definition: &'a FieldDefinition,
-        decoder: BoolArrayDecoder<'a>,
-    },
-    U64Array {
-        field_definition: &'a FieldDefinition,
-        decoder: U64ArrayDecoder<'a>,
-    },
-    ByteArray {
-        field_definition: &'a FieldDefinition,
-        decoder: ByteArrayDecoder<'a>,
-    },
-}
-
-#[cfg_attr(test, derive(Debug))]
-pub struct SectionReader<'a> {
-    decoders: Vec<ColumnDecoder<'a>>,
-    rows: usize,
-}
-
-impl<'a> SectionReader<'a> {
-    pub(crate) fn new(
-        input: &'a [u8],
-        schema_entries: Vec<(usize, &'a SchemaEntry)>,
-        columns: usize,
-        rows: usize,
-    ) -> Result<Self> {
-        let (column_data, presence_column) = parse_presence_column(columns, rows)(input)?;
-
-        let decoders = schema_entries
-            .into_iter()
-            .map(|(presence_column_index, schema_entry)| {
-                let column_data = &column_data
-                    [schema_entry.offset()..schema_entry.offset() + schema_entry.size()];
-                let presence_column_view = presence_column.view(presence_column_index).ok_or(
-                    TracklibError::ParseIncompleteError {
-                        needed: nom::Needed::Unknown,
-                    },
-                )?;
-                let field_definition = schema_entry.field_definition();
-                let decoder = match field_definition.data_type() {
-                    DataType::I64 => ColumnDecoder::I64 {
-                        field_definition,
-                        decoder: I64Decoder::new(column_data, presence_column_view)?,
-                    },
-                    DataType::U64 => ColumnDecoder::U64 {
-                        field_definition,
-                        decoder: U64Decoder::new(column_data, presence_column_view)?,
-                    },
-                    DataType::F64 { scale } => ColumnDecoder::F64 {
-                        field_definition,
-                        decoder: F64Decoder::new(column_data, presence_column_view, *scale)?,
-                    },
-                    DataType::Bool => ColumnDecoder::Bool {
-                        field_definition,
-                        decoder: BoolDecoder::new(column_data, presence_column_view)?,
-                    },
-                    DataType::String => ColumnDecoder::String {
-                        field_definition,
-                        decoder: StringDecoder::new(column_data, presence_column_view)?,
-                    },
-                    DataType::BoolArray => ColumnDecoder::BoolArray {
-                        field_definition,
-                        decoder: BoolArrayDecoder::new(column_data, presence_column_view)?,
-                    },
-                    DataType::U64Array => ColumnDecoder::U64Array {
-                        field_definition,
-                        decoder: U64ArrayDecoder::new(column_data, presence_column_view)?,
-                    },
-                    DataType::ByteArray => ColumnDecoder::ByteArray {
-                        field_definition,
-                        decoder: ByteArrayDecoder::new(column_data, presence_column_view)?,
-                    },
-                };
-                Ok(decoder)
-            })
-            .collect::<Result<Vec<_>>>()?;
-
-        Ok(Self { decoders, rows })
+impl<'a> super::SectionRead for Section<'a> {
+    fn encoding(&self) -> SectionEncoding {
+        SectionEncoding::Encrypted
     }
 
-    pub fn rows_remaining(&self) -> usize {
-        self.rows
+    fn schema(&self) -> Schema {
+        Schema::with_fields(
+            self.data_table_entry
+                .schema_entries()
+                .iter()
+                .map(|schema_entry| schema_entry.field_definition().clone())
+                .collect(),
+        )
     }
 
-    pub fn open_column_iter<'r>(&'r mut self) -> Option<ColumnIter<'r, 'a>> {
-        if self.rows > 0 {
-            self.rows -= 1;
-            Some(ColumnIter::new(&mut self.decoders))
-        } else {
-            None
-        }
-    }
-}
-
-#[cfg_attr(test, derive(Debug))]
-pub struct ColumnIter<'a, 'b> {
-    decoders: &'a mut Vec<ColumnDecoder<'b>>,
-    index: usize,
-}
-
-impl<'a, 'b> ColumnIter<'a, 'b> {
-    fn new(decoders: &'a mut Vec<ColumnDecoder<'b>>) -> Self {
-        Self { decoders, index: 0 }
-    }
-}
-
-impl<'a, 'b> Iterator for ColumnIter<'a, 'b> {
-    type Item = Result<(&'b FieldDefinition, Option<FieldValue>)>;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if let Some(decoder_enum) = self.decoders.get_mut(self.index) {
-            self.index += 1;
-            match decoder_enum {
-                ColumnDecoder::I64 {
-                    field_definition,
-                    ref mut decoder,
-                } => Some(
-                    decoder
-                        .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::I64)))
-                        .map_err(|e| e),
-                ),
-                ColumnDecoder::U64 {
-                    field_definition,
-                    ref mut decoder,
-                } => Some(
-                    decoder
-                        .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::U64)))
-                        .map_err(|e| e),
-                ),
-                ColumnDecoder::F64 {
-                    field_definition,
-                    ref mut decoder,
-                } => Some(
-                    decoder
-                        .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::F64)))
-                        .map_err(|e| e),
-                ),
-                ColumnDecoder::Bool {
-                    field_definition,
-                    ref mut decoder,
-                } => Some(
-                    decoder
-                        .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::Bool)))
-                        .map_err(|e| e),
-                ),
-                ColumnDecoder::String {
-                    field_definition,
-                    ref mut decoder,
-                } => Some(
-                    decoder
-                        .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::String)))
-                        .map_err(|e| e),
-                ),
-                ColumnDecoder::BoolArray {
-                    field_definition,
-                    ref mut decoder,
-                } => Some(
-                    decoder
-                        .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::BoolArray)))
-                        .map_err(|e| e),
-                ),
-                ColumnDecoder::U64Array {
-                    field_definition,
-                    ref mut decoder,
-                } => Some(
-                    decoder
-                        .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::U64Array)))
-                        .map_err(|e| e),
-                ),
-                ColumnDecoder::ByteArray {
-                    field_definition,
-                    ref mut decoder,
-                } => Some(
-                    decoder
-                        .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::ByteArray)))
-                        .map_err(|e| e),
-                ),
-            }
-        } else {
-            None
-        }
+    fn rows(&self) -> usize {
+        self.data_table_entry.rows()
     }
 }
 
@@ -292,17 +91,22 @@ impl<'a, 'b> Iterator for ColumnIter<'a, 'b> {
 mod tests {
     use super::*;
     use crate::read::data_table::parse_data_table;
+    use crate::read::section::SectionRead;
+    use crate::types::{FieldValue, SectionEncoding};
     use assert_matches::assert_matches;
 
     #[test]
     fn test_section_reader() {
+        let orion_key = orion::aead::SecretKey::default();
+        let key_material = orion_key.unprotected_as_bytes();
+
         #[rustfmt::skip]
         let data_table_buf = &[0x01, // number of sections
 
                                // Section 1
-                               0x00, // section encoding = standard
+                               0x01, // section encoding = encrypted
                                0x03, // leb128 section point count
-                               0x26, // leb128 section data size
+                               0x00, // leb128 section data size
                                // Schema
                                0x00, // schema version
                                0x08, // field count
@@ -343,8 +147,8 @@ mod tests {
                                b'B',
                                0x08, // data size
 
-                               0x04, // crc
-                               0x13,
+                               0x05, // crc
+                               0x47,
         ];
 
         assert_matches!(parse_data_table(data_table_buf), Ok((&[], data_table_entries)) => {
@@ -457,9 +261,11 @@ mod tests {
                 0xDB,
             ];
 
-            let section = Section::new(buf, &data_table_entries[0]);
+            let encrypted_buf = crate::util::encrypt(key_material, buf).unwrap();
 
-            assert_eq!(section.encoding(), SectionEncoding::Standard);
+            let mut section = Section::new(&encrypted_buf, &data_table_entries[0]);
+
+            assert_eq!(section.encoding(), SectionEncoding::Encrypted);
             assert_eq!(section.rows(), 3);
             assert_eq!(section.schema(), Schema::with_fields(vec![
                 FieldDefinition::new("a", DataType::I64),
@@ -472,7 +278,10 @@ mod tests {
                 FieldDefinition::new("bB", DataType::ByteArray),
             ]));
 
-            assert_matches!(section.reader(), Ok(mut section_reader) => {
+            // Opening a reader with the wrong password should fail
+            assert_matches!(section.reader(orion::aead::SecretKey::default().unprotected_as_bytes()), Err(_));
+
+            assert_matches!(section.reader(key_material), Ok(mut section_reader) => {
                 // Row 1
                 assert_eq!(section_reader.rows_remaining(), 3);
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
@@ -623,13 +432,16 @@ mod tests {
 
     #[test]
     fn test_section_reader_for_schema() {
+        let orion_key = orion::aead::SecretKey::default();
+        let key_material = orion_key.unprotected_as_bytes();
+
         #[rustfmt::skip]
         let data_table_buf = &[0x01, // number of sections
 
                                // Section 1
-                               0x00, // section encoding = standard
+                               0x01, // section encoding = encrypted
                                0x03, // leb128 section point count
-                               0x26, // leb128 section data size
+                               0x00, // leb128 section data size
                                // Schema
                                0x00, // schema version
                                0x04, // field count
@@ -651,8 +463,8 @@ mod tests {
                                b'f', // name
                                0x0C, // leb128 data size
 
-                               0xFB, // crc
-                               0xB9];
+                               0x24, // crc
+                               0x74];
 
         assert_matches!(parse_data_table(data_table_buf), Ok((&[], data_table_entries)) => {
             assert_eq!(data_table_entries.len(), 1);
@@ -722,9 +534,11 @@ mod tests {
                 0x15
             ];
 
-            let section = Section::new(buf, &data_table_entries[0]);
+            let encrypted_buf = crate::util::encrypt(key_material, buf).unwrap();
 
-            assert_eq!(section.encoding(), SectionEncoding::Standard);
+            let mut section = Section::new(&encrypted_buf, &data_table_entries[0]);
+
+            assert_eq!(section.encoding(), SectionEncoding::Encrypted);
             assert_eq!(section.rows(), 3);
             assert_eq!(section.schema(), Schema::with_fields(vec![
                 FieldDefinition::new("a", DataType::I64),
@@ -734,7 +548,7 @@ mod tests {
             ]));
 
             // Missing field
-            assert_matches!(section.reader_for_schema(&Schema::with_fields(vec![
+            assert_matches!(section.reader_for_schema(key_material, &Schema::with_fields(vec![
                 FieldDefinition::new("z", DataType::Bool),
             ])), Ok(mut section_reader) => {
                 // Row 1
@@ -761,7 +575,7 @@ mod tests {
             });
 
             // Field exists but we're asking for the wrong type
-            assert_matches!(section.reader_for_schema(&Schema::with_fields(vec![
+            assert_matches!(section.reader_for_schema(key_material, &Schema::with_fields(vec![
                 FieldDefinition::new("b", DataType::I64),
             ])), Ok(mut section_reader) => {
                 // Row 1
@@ -789,7 +603,7 @@ mod tests {
 
 
             // Only one of these fields exists
-            assert_matches!(section.reader_for_schema(&Schema::with_fields(vec![
+            assert_matches!(section.reader_for_schema(key_material, &Schema::with_fields(vec![
                 FieldDefinition::new("b", DataType::Bool),
                 FieldDefinition::new("z", DataType::Bool),
             ])), Ok(mut section_reader) => {
@@ -835,7 +649,7 @@ mod tests {
             });
 
             // Both of these fields exist
-            assert_matches!(section.reader_for_schema(&Schema::with_fields(vec![
+            assert_matches!(section.reader_for_schema(key_material, &Schema::with_fields(vec![
                 FieldDefinition::new("b", DataType::Bool),
                 FieldDefinition::new("f", DataType::F64{scale: 7}),
             ])), Ok(mut section_reader) => {

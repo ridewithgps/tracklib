@@ -1,29 +1,30 @@
 use super::crcwriter::CrcWriter;
-use super::section::Section;
+use super::section::{Section, SectionInternal};
 use crate::error::Result;
-use crate::types::SectionEncoding;
 use std::io::Write;
-
-impl SectionEncoding {
-    fn type_tag(&self) -> u8 {
-        match self {
-            Self::Standard => 0x00,
-        }
-    }
-}
 
 #[rustfmt::skip]
 pub(crate) fn write_data_table<W: Write>(out: &mut W, sections: &[&Section]) -> Result<()> {
     let mut crcwriter = CrcWriter::new16(out);
 
-    crcwriter.write_all(&u8::try_from(sections.len())?.to_le_bytes())?;                // 1 byte  - number of sections
+    crcwriter.write_all(&u8::try_from(sections.len())?.to_le_bytes())?; // 1 byte  - number of sections
     for section in sections.iter() {
-        crcwriter.write_all(&section.encoding().type_tag().to_le_bytes())?;            // 1 byte  - section encoding
-        leb128::write::unsigned(&mut crcwriter, u64::try_from(section.rows())?)?;      // ? bytes - number of points in this section
-        leb128::write::unsigned(&mut crcwriter, u64::try_from(section.data_size())?)?; // ? bytes - leb128 section size
-        section.write_schema(&mut crcwriter)?;                                         // ? bytes - schema
+        match section {
+            Section::Standard(section) => {
+                section.write_encoding(&mut crcwriter)?;                // ? bytes - section encoding
+                section.write_rows(&mut crcwriter)?;                    // ? bytes - number of points in this section
+                section.write_data_size(&mut crcwriter)?;               // ? bytes - leb128 section size
+                section.write_schema(&mut crcwriter)?;                  // ? bytes - schema
+            }
+            Section::Encrypted(section) => {
+                section.write_encoding(&mut crcwriter)?;                // ? bytes - section encoding
+                section.write_rows(&mut crcwriter)?;                    // ? bytes - number of points in this section
+                section.write_data_size(&mut crcwriter)?;               // ? bytes - leb128 section size
+                section.write_schema(&mut crcwriter)?;                  // ? bytes - schema
+            }
+        }
     }
-    crcwriter.append_crc()?;                                                           // 2 bytes - crc
+    crcwriter.append_crc()?;                                            // 2 bytes - crc
 
     Ok(())
 }
@@ -32,7 +33,7 @@ pub(crate) fn write_data_table<W: Write>(out: &mut W, sections: &[&Section]) -> 
 mod tests {
     use super::*;
     use crate::schema::*;
-    use crate::types::SectionEncoding;
+    use crate::write::section::{encrypted, standard};
     use assert_matches::assert_matches;
 
     #[test]
@@ -48,26 +49,24 @@ mod tests {
 
     #[test]
     fn test_data_table() {
-        let section1 = Section::new(
-            SectionEncoding::Standard,
-            Schema::with_fields(vec![
-                FieldDefinition::new("a", DataType::I64),
-                FieldDefinition::new("b", DataType::Bool),
-                FieldDefinition::new("c", DataType::String),
-            ]),
-        );
+        let section1 = standard::Section::new(Schema::with_fields(vec![
+            FieldDefinition::new("a", DataType::I64),
+            FieldDefinition::new("b", DataType::Bool),
+            FieldDefinition::new("c", DataType::String),
+        ]));
 
-        let section2 = Section::new(
-            SectionEncoding::Standard,
+        let section2 = encrypted::Section::new(
+            orion::aead::SecretKey::default().unprotected_as_bytes(),
             Schema::with_fields(vec![
                 FieldDefinition::new("Ride", DataType::I64),
                 FieldDefinition::new("with", DataType::Bool),
                 FieldDefinition::new("GPS", DataType::String),
             ]),
-        );
+        )
+        .unwrap();
 
         let mut buf = Vec::new();
-        assert_matches!(write_data_table(&mut buf, &[&section1, &section2]), Ok(()) => {
+        assert_matches!(write_data_table(&mut buf, &[&Section::Standard(section1), &Section::Encrypted(section2)]), Ok(()) => {
             #[rustfmt::skip]
             assert_eq!(buf,
                        &[0x02, // number of sections
@@ -94,9 +93,9 @@ mod tests {
 
 
                          // Section 2
-                         0x00, // section encoding = standard
+                         0x01, // section encoding = encrypted
                          0x00, // leb128 section point count
-                         0x10, // leb128 section data size
+                         0x38, // leb128 section data size
 
                          // Schema
                          0x00, // schema version
@@ -122,23 +121,20 @@ mod tests {
                          b'S', // name
                          0x04, // leb128 data size
 
-                         0x5D, // crc
-                         0x2D]);
+                         0xF4, // crc
+                         0x6B]);
         });
     }
 
     #[test]
     fn test_data_table_with_multibyte_character() {
-        let section = Section::new(
-            SectionEncoding::Standard,
-            Schema::with_fields(vec![FieldDefinition::new(
-                "I ♥ NY",
-                DataType::F64 { scale: 7 },
-            )]),
-        );
+        let section = standard::Section::new(Schema::with_fields(vec![FieldDefinition::new(
+            "I ♥ NY",
+            DataType::F64 { scale: 7 },
+        )]));
 
         let mut buf = Vec::new();
-        assert_matches!(write_data_table(&mut buf, &[&section]), Ok(()) => {
+        assert_matches!(write_data_table(&mut buf, &[&Section::Standard(section)]), Ok(()) => {
             #[rustfmt::skip]
             assert_eq!(buf,
                        &[0x01, // number of sections

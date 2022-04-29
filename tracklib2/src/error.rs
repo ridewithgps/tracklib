@@ -25,6 +25,12 @@ pub enum TracklibError {
         #[from]
         source: std::io::Error,
     },
+
+    #[error("CryptoError")]
+    CryptoError {
+        #[from]
+        source: orion::errors::UnknownCryptoError,
+    },
 }
 
 pub type Result<T, E = TracklibError> = std::result::Result<T, E>;

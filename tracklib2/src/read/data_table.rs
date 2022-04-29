@@ -23,7 +23,6 @@ impl DataTableEntry {
         self.offset
     }
 
-    #[cfg(feature = "inspect")]
     pub(crate) fn size(&self) -> usize {
         self.size
     }
@@ -48,6 +47,7 @@ fn parse_data_table_entry(
 
         let section_encoding = match type_tag {
             0x00 => SectionEncoding::Standard,
+            0x01 => SectionEncoding::Encrypted,
             _ => {
                 return Err(nom::Err::Error(TracklibError::ParseError {
                     error_kind: nom::error::ErrorKind::Tag,

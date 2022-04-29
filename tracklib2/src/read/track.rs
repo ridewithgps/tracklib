@@ -41,9 +41,13 @@ impl<'a> TrackReader<'a> {
     }
 
     pub fn section(&self, index: usize) -> Option<Section> {
-        let section = self.data_table.get(index)?;
-        let data = &self.data_start[section.offset()..];
-        Some(Section::new(data, section))
+        let section_data_table_entry = self.data_table.get(index)?;
+        let data = &self.data_start[section_data_table_entry.offset()
+            ..section_data_table_entry.offset() + section_data_table_entry.size()];
+        Some(crate::read::section::Section::new(
+            data,
+            section_data_table_entry,
+        ))
     }
 
     pub fn sections(&self) -> SectionIter {
@@ -67,11 +71,11 @@ impl<'a> Iterator for SectionIter<'a> {
     type Item = Section<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if let Some((section, rest)) = self.entries.split_first() {
+        if let Some((section_data_table_entry, rest)) = self.entries.split_first() {
             self.entries = rest;
-
-            let data = &self.data[section.offset()..];
-            Some(Section::new(data, section))
+            let data = &self.data[section_data_table_entry.offset()
+                ..section_data_table_entry.offset() + section_data_table_entry.size()];
+            Some(Section::new(data, section_data_table_entry))
         } else {
             None
         }
@@ -81,15 +85,18 @@ impl<'a> Iterator for SectionIter<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::read::section::SectionRead;
     use crate::schema::*;
     use crate::types::{FieldValue, SectionEncoding, TrackType};
     use assert_matches::assert_matches;
 
     #[test]
     fn test_read_a_track() {
+        let orion_key = orion::aead::SecretKey::default();
+        let key_material = orion_key.unprotected_as_bytes();
+
         #[rustfmt::skip]
-        let buf = &[
-            // Header
+        let header_bytes = &[
             0x89, // rwtfmagic
             0x52,
             0x57,
@@ -114,8 +121,10 @@ mod tests {
             0x00,
             0x85, // header crc
             0xC8,
+        ];
 
-            // Metadata Table
+        #[rustfmt::skip]
+        let metadata_bytes = &[
             0x01, // one entry
             0x00, // entry type: track_type
             0x02, // entry size
@@ -123,8 +132,10 @@ mod tests {
             0x05, // segment id
             0x86, // crc
             0x9C,
+        ];
 
-            // Data Table
+        #[rustfmt::skip]
+        let data_table_bytes = &[
             0x02, // two sections
 
             // Data Table Section 1
@@ -149,9 +160,9 @@ mod tests {
             0x18, // leb128 data size
 
             // Data Table Section 2
-            0x00, // section encoding = standard
+            0x01, // section encoding = encrypted
             0x03, // leb128 point count
-            0x26, // leb128 data size
+            0x4E, // leb128 data size
 
             // Schema for Section 2
             0x00, // schema version
@@ -170,11 +181,12 @@ mod tests {
             0x12, // leb128 data size
 
             // Data Table CRC
-            0x34,
-            0x2E,
+            0x0D,
+            0x90,
+        ];
 
-            // Data Section 1
-
+        #[rustfmt::skip]
+        let data_section_1_bytes = &[
             // Presence Column
             0b00000111,
             0b00000111,
@@ -233,9 +245,10 @@ mod tests {
             0x71,
             0x24,
             0x0B,
+        ];
 
-            // Data Section 2
-
+        #[rustfmt::skip]
+        let data_section_2_bytes = &[
             // Presence Column
             0b00000111,
             0b00000101,
@@ -281,9 +294,17 @@ mod tests {
             0xA3, // crc
             0x02,
             0xEC,
-            0x48];
+            0x48,
+        ];
 
-        let track = assert_matches!(TrackReader::new(buf), Ok(track) => track);
+        let mut buf = vec![];
+        buf.extend_from_slice(header_bytes);
+        buf.extend_from_slice(metadata_bytes);
+        buf.extend_from_slice(data_table_bytes);
+        buf.extend_from_slice(data_section_1_bytes);
+        buf.extend_from_slice(&crate::util::encrypt(key_material, data_section_2_bytes).unwrap());
+
+        let track = assert_matches!(TrackReader::new(&buf), Ok(track) => track);
 
         assert_eq!(track.file_version(), 1);
         assert_eq!(track.creator_version(), 0);
@@ -344,18 +365,36 @@ mod tests {
         let sections = track
             .sections()
             .map(|section| {
-                let mut section_reader = section.reader()?;
                 let mut v = vec![];
-                while let Some(columniter) = section_reader.open_column_iter() {
-                    v.push(
-                        columniter
-                            .map(|column_result| {
-                                let (_field_def, field_value) = column_result.unwrap();
-                                field_value
-                            })
-                            .collect::<Vec<_>>(),
-                    );
+                match section {
+                    Section::Standard(section) => {
+                        let mut section_reader = section.reader()?;
+                        while let Some(columniter) = section_reader.open_column_iter() {
+                            v.push(
+                                columniter
+                                    .map(|column_result| {
+                                        let (_field_def, field_value) = column_result.unwrap();
+                                        field_value
+                                    })
+                                    .collect::<Vec<_>>(),
+                            );
+                        }
+                    }
+                    Section::Encrypted(mut section) => {
+                        let mut section_reader = section.reader(key_material)?;
+                        while let Some(columniter) = section_reader.open_column_iter() {
+                            v.push(
+                                columniter
+                                    .map(|column_result| {
+                                        let (_field_def, field_value) = column_result.unwrap();
+                                        field_value
+                                    })
+                                    .collect::<Vec<_>>(),
+                            );
+                        }
+                    }
                 }
+
                 Ok(v)
             })
             .collect::<Result<Vec<_>>>();
@@ -366,7 +405,7 @@ mod tests {
             assert_eq!(sections[1], expected_section_1);
         });
 
-        assert_matches!(track.section(0), Some(section) => {
+        assert_matches!(track.section(0), Some(Section::Standard(section)) => {
             assert_eq!(section.encoding(), SectionEncoding::Standard);
             assert_eq!(section.rows(), 5);
             assert_eq!(section.schema(), Schema::with_fields(vec![
@@ -388,15 +427,15 @@ mod tests {
             });
         });
 
-        assert_matches!(track.section(1), Some(section) => {
-            assert_eq!(section.encoding(), SectionEncoding::Standard);
+        assert_matches!(track.section(1), Some(Section::Encrypted(mut section)) => {
+            assert_eq!(section.encoding(), SectionEncoding::Encrypted);
             assert_eq!(section.rows(), 3);
             assert_eq!(section.schema(), Schema::with_fields(vec![
                 FieldDefinition::new("a", DataType::I64),
                 FieldDefinition::new("b", DataType::Bool),
                 FieldDefinition::new("c", DataType::String),
             ]));
-            assert_matches!(section.reader(), Ok(mut section_reader) => {
+            assert_matches!(section.reader(key_material), Ok(mut section_reader) => {
                 let mut v = vec![];
                 while let Some(columniter) = section_reader.open_column_iter() {
                     v.push(columniter

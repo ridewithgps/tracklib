@@ -1,8 +1,8 @@
 use super::data_table::{parse_data_table, DataTableEntry};
 use super::header::{parse_header, Header};
 use super::metadata::parse_metadata;
-use super::section::Section;
-use crate::types::{FieldValue, MetadataEntry, TrackType};
+use super::section::{encrypted, standard, Section};
+use crate::types::{FieldValue, MetadataEntry, SectionEncoding, TrackType};
 use chrono::offset::TimeZone;
 use chrono::Utc;
 use humansize::{file_size_opts, FileSize};
@@ -312,53 +312,71 @@ fn format_val(value: Option<FieldValue>) -> String {
 fn try_format_section(data_start: &[u8], entry_num: usize, entry: &DataTableEntry) -> String {
     let mut table = Table::new();
 
-    let data = &data_start[entry.offset()..];
-    let section = Section::new(data, entry);
+    match entry.section_encoding() {
+        SectionEncoding::Standard => {
+            let data = &data_start[entry.offset()..];
+            let section = standard::Section::new(data, entry);
 
-    match section.reader() {
-        Ok(mut section_reader) => {
+            match section.reader() {
+                Ok(mut section_reader) => {
+                    table.add_row(Row::new(vec![TableCell::new_with_alignment(
+                        bold(&format!("Data {entry_num}")),
+                        entry.schema_entries().len() + 1,
+                        Alignment::Center,
+                    )]));
+
+                    table.add_row(Row::new(
+                        [TableCell::new_with_alignment("#", 1, Alignment::Center)]
+                            .into_iter()
+                            .chain(entry.schema_entries().iter().map(|schema_entry| {
+                                TableCell::new_with_alignment(
+                                    schema_entry.field_definition().name(),
+                                    1,
+                                    Alignment::Center,
+                                )
+                            }))
+                            .collect::<Vec<_>>(),
+                    ));
+
+                    let mut i = 0;
+                    while let Some(columniter) = section_reader.open_column_iter() {
+                        table.add_row(Row::new(
+                            [format!("{i}")]
+                                .into_iter()
+                                .chain(columniter.map(|row_result| {
+                                    row_result
+                                        .map(|(_, val)| format_val(val))
+                                        .unwrap_or_else(|e| format!("{e:?}"))
+                                }))
+                                .collect::<Vec<_>>(),
+                        ));
+                        i += 1;
+                    }
+                }
+                Err(e) => {
+                    table.add_row(Row::new(vec![TableCell::new_with_alignment(
+                        format!("{e:?}"),
+                        1,
+                        Alignment::Left,
+                    )]));
+                }
+            }
+        }
+        SectionEncoding::Encrypted => {
             table.add_row(Row::new(vec![TableCell::new_with_alignment(
                 bold(&format!("Data {entry_num}")),
-                entry.schema_entries().len() + 1,
+                1,
                 Alignment::Center,
             )]));
 
-            table.add_row(Row::new(
-                [TableCell::new_with_alignment("#", 1, Alignment::Center)]
-                    .into_iter()
-                    .chain(entry.schema_entries().iter().map(|schema_entry| {
-                        TableCell::new_with_alignment(
-                            schema_entry.field_definition().name(),
-                            1,
-                            Alignment::Center,
-                        )
-                    }))
-                    .collect::<Vec<_>>(),
-            ));
-
-            let mut i = 0;
-            while let Some(columniter) = section_reader.open_column_iter() {
-                table.add_row(Row::new(
-                    [format!("{i}")]
-                        .into_iter()
-                        .chain(columniter.map(|row_result| {
-                            row_result
-                                .map(|(_, val)| format_val(val))
-                                .unwrap_or_else(|e| format!("{e:?}"))
-                        }))
-                        .collect::<Vec<_>>(),
-                ));
-                i += 1;
-            }
-        }
-        Err(e) => {
             table.add_row(Row::new(vec![TableCell::new_with_alignment(
-                format!("{e:?}"),
+                italic(&format!("Encrypted Data")),
                 1,
-                Alignment::Left,
+                Alignment::Center,
             )]));
         }
     }
+
     table.render()
 }
 

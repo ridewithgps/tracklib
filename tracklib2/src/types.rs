@@ -26,5 +26,5 @@ pub enum MetadataEntry {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum SectionEncoding {
     Standard,
-    // Encrypted,
+    Encrypted,
 }

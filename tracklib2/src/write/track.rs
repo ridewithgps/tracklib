@@ -1,6 +1,6 @@
 use super::data_table::write_data_table;
 use super::metadata::write_metadata;
-use super::section::Section;
+use super::section::{Section, SectionInternal};
 use crate::consts::RWTF_HEADER_SIZE;
 use crate::error::Result;
 use crate::types::MetadataEntry;
@@ -30,7 +30,10 @@ pub fn write_track<W: Write>(
 
     // now write out all the data sections
     for section in sections {
-        section.write(out)?;
+        match section {
+            Section::Standard(section) => section.write(out)?,
+            Section::Encrypted(section) => section.write(out)?,
+        }
     }
 
     Ok(())
@@ -40,8 +43,9 @@ pub fn write_track<W: Write>(
 mod tests {
     use super::*;
     use crate::schema::*;
-    use crate::types::{FieldValue, SectionEncoding, TrackType};
-    use crate::write::section::ColumnWriter;
+    use crate::types::{FieldValue, TrackType};
+    use crate::write::section::writer::ColumnWriter;
+    use crate::write::section::{encrypted, standard, SectionWrite};
     use assert_matches::assert_matches;
     use std::collections::HashMap;
 
@@ -91,19 +95,16 @@ mod tests {
 
     #[test]
     fn test_write_a_track() {
-        let mut section1 = Section::new(
-            SectionEncoding::Standard,
-            Schema::with_fields(vec![
-                FieldDefinition::new("i64", DataType::I64),
-                FieldDefinition::new("f64:2", DataType::F64 { scale: 2 }),
-                FieldDefinition::new("u64", DataType::U64),
-                FieldDefinition::new("bool", DataType::Bool),
-                FieldDefinition::new("string", DataType::String),
-                FieldDefinition::new("bool array", DataType::BoolArray),
-                FieldDefinition::new("u64 array", DataType::U64Array),
-                FieldDefinition::new("byte array", DataType::ByteArray),
-            ]),
-        );
+        let mut section1 = standard::Section::new(Schema::with_fields(vec![
+            FieldDefinition::new("i64", DataType::I64),
+            FieldDefinition::new("f64:2", DataType::F64 { scale: 2 }),
+            FieldDefinition::new("u64", DataType::U64),
+            FieldDefinition::new("bool", DataType::Bool),
+            FieldDefinition::new("string", DataType::String),
+            FieldDefinition::new("bool array", DataType::BoolArray),
+            FieldDefinition::new("u64 array", DataType::U64Array),
+            FieldDefinition::new("byte array", DataType::ByteArray),
+        ]));
 
         for _ in 0..5 {
             let mut rowbuilder = section1.open_row_builder();
@@ -154,14 +155,17 @@ mod tests {
         h.insert("c", FieldValue::String("GPS".to_string()));
         v.push(h);
 
-        let mut section2 = Section::new(
-            SectionEncoding::Standard,
+        let orion_key = orion::aead::SecretKey::default();
+        let key_material = orion_key.unprotected_as_bytes();
+        let mut section2 = encrypted::Section::new(
+            key_material,
             Schema::with_fields(vec![
                 FieldDefinition::new("a", DataType::I64),
                 FieldDefinition::new("b", DataType::Bool),
                 FieldDefinition::new("c", DataType::String),
             ]),
-        );
+        )
+        .unwrap();
 
         let fields = section2.schema().fields().to_vec();
 
@@ -218,11 +222,11 @@ mod tests {
         assert_matches!(write_track(&mut buf,
                                     &[MetadataEntry::TrackType(TrackType::Segment(5)),
                                       MetadataEntry::CreatedAt(25)],
-                                    &[&section1, &section2]), Ok(()) => {
+                                    &[&Section::Standard(section1), &Section::Encrypted(section2)]), Ok(()) => {
             // std::fs::write("example.rwtf", &buf).unwrap();
+
             #[rustfmt::skip]
-            assert_eq!(buf, &[
-                // Header
+            let header_bytes = &[
                 0x89, // rwtfmagic
                 0x52,
                 0x57,
@@ -247,8 +251,10 @@ mod tests {
                 0x00,
                 0x88, // header crc
                 0x64,
+            ];
 
-                // Metadata Table
+            #[rustfmt::skip]
+            let metadata_bytes = &[
                 0x02, // one entry
                 0x00, // entry type: track_type
                 0x02, // entry size
@@ -259,8 +265,10 @@ mod tests {
                 0x19, // timestamp
                 0xD7, // crc
                 0x59,
+            ];
 
-                // Data Table
+            #[rustfmt::skip]
+            let data_table_bytes = &[
                 0x02, // two sections
 
                 // Data Table Section 1
@@ -349,9 +357,9 @@ mod tests {
                 0x18, // data len
 
                 // Data Table Section 2
-                0x00, // section encoding = standard
+                0x01, // section encoding = encrypted
                 0x03, // leb128 point count
-                0x26, // leb128 data size
+                0x4E, // leb128 data size
 
                 // Schema for Section 2
                 0x00, // schema version
@@ -370,11 +378,12 @@ mod tests {
                 0x12, // leb128 data size
 
                 // Data Table CRC
-                0xCD,
-                0xB9,
+                0xF4,
+                0x07,
+            ];
 
-                // Data Section 1
-
+            #[rustfmt::skip]
+            let data_section_1_bytes = &[
                 // Presence Column
                 0b11111111,
                 0b11111111,
@@ -524,9 +533,10 @@ mod tests {
                 0x1D,
                 0x88,
                 0xAB,
+            ];
 
-                // Data Section 2
-
+            #[rustfmt::skip]
+            let data_section_2_bytes = &[
                 // Presence Column
                 0b00000111,
                 0b00000101,
@@ -572,7 +582,20 @@ mod tests {
                 0xA3, // crc
                 0x02,
                 0xEC,
-                0x48]);
+                0x48,
+            ];
+
+            // most of the track can be compared as-is
+            let mut expected = vec![];
+            expected.extend_from_slice(header_bytes);
+            expected.extend_from_slice(metadata_bytes);
+            expected.extend_from_slice(data_table_bytes);
+            expected.extend_from_slice(data_section_1_bytes);
+            assert_eq!(buf[..expected.len()], expected);
+
+            // section 2 has to be decrypted first, and then compared with the reference
+            let decrypted_section_2_bytes = crate::util::decrypt(key_material, &buf[expected.len()..]).unwrap();
+            assert_eq!(decrypted_section_2_bytes, data_section_2_bytes);
         });
     }
 }

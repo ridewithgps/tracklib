@@ -97,8 +97,7 @@ mod tests {
 
     #[test]
     fn test_section_reader() {
-        let orion_key = orion::aead::SecretKey::default();
-        let key_material = orion_key.unprotected_as_bytes();
+        let key_material = crate::util::random_key_material();
 
         #[rustfmt::skip]
         let data_table_buf = &[0x01, // number of sections
@@ -261,7 +260,7 @@ mod tests {
                 0xDB,
             ];
 
-            let encrypted_buf = crate::util::encrypt(key_material, buf).unwrap();
+            let encrypted_buf = crate::util::encrypt(&key_material, buf).unwrap();
 
             let mut section = Section::new(&encrypted_buf, &data_table_entries[0]);
 
@@ -279,9 +278,9 @@ mod tests {
             ]));
 
             // Opening a reader with the wrong password should fail
-            assert_matches!(section.reader(orion::aead::SecretKey::default().unprotected_as_bytes()), Err(_));
+            assert_matches!(section.reader(&crate::util::random_key_material()), Err(_));
 
-            assert_matches!(section.reader(key_material), Ok(mut section_reader) => {
+            assert_matches!(section.reader(&key_material), Ok(mut section_reader) => {
                 // Row 1
                 assert_eq!(section_reader.rows_remaining(), 3);
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
@@ -432,8 +431,7 @@ mod tests {
 
     #[test]
     fn test_section_reader_for_schema() {
-        let orion_key = orion::aead::SecretKey::default();
-        let key_material = orion_key.unprotected_as_bytes();
+        let key_material = crate::util::random_key_material();
 
         #[rustfmt::skip]
         let data_table_buf = &[0x01, // number of sections
@@ -534,7 +532,7 @@ mod tests {
                 0x15
             ];
 
-            let encrypted_buf = crate::util::encrypt(key_material, buf).unwrap();
+            let encrypted_buf = crate::util::encrypt(&key_material, buf).unwrap();
 
             let mut section = Section::new(&encrypted_buf, &data_table_entries[0]);
 
@@ -548,7 +546,7 @@ mod tests {
             ]));
 
             // Missing field
-            assert_matches!(section.reader_for_schema(key_material, &Schema::with_fields(vec![
+            assert_matches!(section.reader_for_schema(&key_material, &Schema::with_fields(vec![
                 FieldDefinition::new("z", DataType::Bool),
             ])), Ok(mut section_reader) => {
                 // Row 1
@@ -575,7 +573,7 @@ mod tests {
             });
 
             // Field exists but we're asking for the wrong type
-            assert_matches!(section.reader_for_schema(key_material, &Schema::with_fields(vec![
+            assert_matches!(section.reader_for_schema(&key_material, &Schema::with_fields(vec![
                 FieldDefinition::new("b", DataType::I64),
             ])), Ok(mut section_reader) => {
                 // Row 1
@@ -603,7 +601,7 @@ mod tests {
 
 
             // Only one of these fields exists
-            assert_matches!(section.reader_for_schema(key_material, &Schema::with_fields(vec![
+            assert_matches!(section.reader_for_schema(&key_material, &Schema::with_fields(vec![
                 FieldDefinition::new("b", DataType::Bool),
                 FieldDefinition::new("z", DataType::Bool),
             ])), Ok(mut section_reader) => {
@@ -649,7 +647,7 @@ mod tests {
             });
 
             // Both of these fields exist
-            assert_matches!(section.reader_for_schema(key_material, &Schema::with_fields(vec![
+            assert_matches!(section.reader_for_schema(&key_material, &Schema::with_fields(vec![
                 FieldDefinition::new("b", DataType::Bool),
                 FieldDefinition::new("f", DataType::F64{scale: 7}),
             ])), Ok(mut section_reader) => {

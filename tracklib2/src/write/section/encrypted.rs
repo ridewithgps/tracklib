@@ -85,7 +85,7 @@ mod tests {
     #[test]
     fn test_write_presence_column() {
         let mut section = Section::new(
-            orion::aead::SecretKey::default().unprotected_as_bytes(),
+            &crate::util::random_key_material(),
             Schema::with_fields(vec![
                 FieldDefinition::new("a", DataType::I64),
                 FieldDefinition::new("b", DataType::Bool),
@@ -146,7 +146,7 @@ mod tests {
     #[test]
     fn test_multibyte_presence_column() {
         let mut section = Section::new(
-            orion::aead::SecretKey::default().unprotected_as_bytes(),
+            &crate::util::random_key_material(),
             Schema::with_fields(
                 (0..20)
                     .map(|i| FieldDefinition::new(i.to_string(), DataType::Bool))
@@ -181,7 +181,7 @@ mod tests {
     #[test]
     fn test_write_huge_presence_column() {
         let mut section = Section::new(
-            orion::aead::SecretKey::default().unprotected_as_bytes(),
+            &crate::util::random_key_material(),
             Schema::with_fields(
                 (0..80)
                     .map(|i| FieldDefinition::new(i.to_string(), DataType::Bool))
@@ -238,7 +238,7 @@ mod tests {
     #[test]
     fn test_schema() {
         let mut section = Section::new(
-            orion::aead::SecretKey::default().unprotected_as_bytes(),
+            &crate::util::random_key_material(),
             Schema::with_fields(vec![
                 FieldDefinition::new("m", DataType::I64),
                 FieldDefinition::new("k", DataType::Bool),
@@ -342,8 +342,7 @@ mod tests {
 
     #[test]
     fn test_writing_a_section() {
-        let orion_key = orion::aead::SecretKey::default();
-        let key_material = orion_key.unprotected_as_bytes();
+        let key_material = crate::util::random_key_material();
 
         let mut v = Vec::new();
         let mut h = HashMap::new();
@@ -370,7 +369,7 @@ mod tests {
         v.push(h);
 
         let mut section = Section::new(
-            key_material,
+            &key_material,
             Schema::with_fields(vec![
                 FieldDefinition::new("a", DataType::I64),
                 FieldDefinition::new("b", DataType::Bool),
@@ -590,7 +589,7 @@ mod tests {
                 0x4F,
             ];
 
-            let decrypted_buf = crate::util::decrypt(key_material, &buf).unwrap();
+            let decrypted_buf = crate::util::decrypt(&key_material, &buf).unwrap();
             assert_eq!(decrypted_buf, expected_buf);
         });
     }

@@ -56,7 +56,7 @@ mod tests {
         ]));
 
         let section2 = encrypted::Section::new(
-            orion::aead::SecretKey::default().unprotected_as_bytes(),
+            &crate::util::random_key_material(),
             Schema::with_fields(vec![
                 FieldDefinition::new("Ride", DataType::I64),
                 FieldDefinition::new("with", DataType::Bool),

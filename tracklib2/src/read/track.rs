@@ -92,8 +92,7 @@ mod tests {
 
     #[test]
     fn test_read_a_track() {
-        let orion_key = orion::aead::SecretKey::default();
-        let key_material = orion_key.unprotected_as_bytes();
+        let key_material = crate::util::random_key_material();
 
         #[rustfmt::skip]
         let header_bytes = &[
@@ -302,7 +301,7 @@ mod tests {
         buf.extend_from_slice(metadata_bytes);
         buf.extend_from_slice(data_table_bytes);
         buf.extend_from_slice(data_section_1_bytes);
-        buf.extend_from_slice(&crate::util::encrypt(key_material, data_section_2_bytes).unwrap());
+        buf.extend_from_slice(&crate::util::encrypt(&key_material, data_section_2_bytes).unwrap());
 
         let track = assert_matches!(TrackReader::new(&buf), Ok(track) => track);
 
@@ -381,7 +380,7 @@ mod tests {
                         }
                     }
                     Section::Encrypted(mut section) => {
-                        let mut section_reader = section.reader(key_material)?;
+                        let mut section_reader = section.reader(&key_material)?;
                         while let Some(columniter) = section_reader.open_column_iter() {
                             v.push(
                                 columniter
@@ -435,7 +434,7 @@ mod tests {
                 FieldDefinition::new("b", DataType::Bool),
                 FieldDefinition::new("c", DataType::String),
             ]));
-            assert_matches!(section.reader(key_material), Ok(mut section_reader) => {
+            assert_matches!(section.reader(&key_material), Ok(mut section_reader) => {
                 let mut v = vec![];
                 while let Some(columniter) = section_reader.open_column_iter() {
                     v.push(columniter

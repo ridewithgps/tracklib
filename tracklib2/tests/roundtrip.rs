@@ -671,10 +671,11 @@ mod tests {
         write_values.push(h);
 
         // Write
-        let secret_key = orion::aead::SecretKey::default();
-        let secret_key_material = secret_key.unprotected_as_bytes().to_vec();
+        let key_material = orion::aead::SecretKey::default()
+            .unprotected_as_bytes()
+            .to_vec();
         let mut section0 = encrypted::Section::new(
-            secret_key.unprotected_as_bytes(),
+            &key_material,
             Schema::with_fields(vec![
                 FieldDefinition::new("i64", DataType::I64),
                 FieldDefinition::new("f64:2", DataType::F64 { scale: 2 }),
@@ -814,7 +815,7 @@ mod tests {
         let mut read_values: Vec<HashMap<String, FieldValue>> = vec![];
         for section in track_reader.sections() {
             if let tracklib2::read::section::Section::Encrypted(mut section) = section {
-                let mut section_reader = section.reader(&secret_key_material).unwrap();
+                let mut section_reader = section.reader(&key_material).unwrap();
                 while let Some(columniter) = section_reader.open_column_iter() {
                     let row = columniter
                         .filter_map(|row_result| {

@@ -155,10 +155,9 @@ mod tests {
         h.insert("c", FieldValue::String("GPS".to_string()));
         v.push(h);
 
-        let orion_key = orion::aead::SecretKey::default();
-        let key_material = orion_key.unprotected_as_bytes();
+        let key_material = crate::util::random_key_material();
         let mut section2 = encrypted::Section::new(
-            key_material,
+            &key_material,
             Schema::with_fields(vec![
                 FieldDefinition::new("a", DataType::I64),
                 FieldDefinition::new("b", DataType::Bool),
@@ -594,7 +593,7 @@ mod tests {
             assert_eq!(buf[..expected.len()], expected);
 
             // section 2 has to be decrypted first, and then compared with the reference
-            let decrypted_section_2_bytes = crate::util::decrypt(key_material, &buf[expected.len()..]).unwrap();
+            let decrypted_section_2_bytes = crate::util::decrypt(&key_material, &buf[expected.len()..]).unwrap();
             assert_eq!(decrypted_section_2_bytes, data_section_2_bytes);
         });
     }

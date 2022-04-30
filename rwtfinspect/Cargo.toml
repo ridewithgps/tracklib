@@ -7,5 +7,6 @@ license = "Apache-2.0 OR MIT"
 edition = "2021"
 
 [dependencies]
+base64 = "0.13"
 flate2 = "1.0"
 tracklib2 = {path = "../tracklib2", features=["inspect"]}

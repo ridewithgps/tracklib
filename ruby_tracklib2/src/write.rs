@@ -2,6 +2,7 @@ use rutie::{
     class, methods, module, wrappable_struct, AnyObject, Array, Boolean, Class, Encoding, Float, Hash, Integer, Module,
     Object, RString, Symbol, VerifiedObject, VM,
 };
+use std::collections::HashSet;
 
 pub struct WrappableSection {
     section: tracklib2::write::section::Section,
@@ -16,9 +17,12 @@ methods!(
     Section,
     rtself,
     fn section_standard(schema: crate::schema::Schema, data: Array) -> AnyObject {
-        let tracklib_schema = schema.map_err(VM::raise_ex).unwrap().inner().clone();
-        let mut tracklib_section = tracklib2::write::section::standard::Section::new(tracklib_schema);
-        write_ruby_array_into_section(&mut tracklib_section, data.map_err(VM::raise_ex).unwrap());
+        let ruby_data = data.map_err(VM::raise_ex).unwrap();
+        let ruby_schema = schema.map_err(VM::raise_ex).unwrap();
+        let base_tracklib_schema = ruby_schema.inner();
+        let trimmed_tracklib_schema = trim_schema(base_tracklib_schema, &ruby_data);
+        let mut tracklib_section = tracklib2::write::section::standard::Section::new(trimmed_tracklib_schema);
+        write_ruby_array_into_section(&mut tracklib_section, ruby_data);
 
         Module::from_existing("Tracklib").get_nested_class("Section").wrap_data(
             WrappableSection {
@@ -28,14 +32,17 @@ methods!(
         )
     },
     fn section_encrypted(schema: crate::schema::Schema, data: Array, key_material: RString) -> AnyObject {
+        let ruby_data = data.map_err(VM::raise_ex).unwrap();
         let ruby_key_material = key_material.map_err(VM::raise_ex).unwrap();
         let rust_key_material = ruby_key_material.to_bytes_unchecked();
-        let tracklib_schema = schema.map_err(VM::raise_ex).unwrap().inner().clone();
+        let ruby_schema = schema.map_err(VM::raise_ex).unwrap();
+        let base_tracklib_schema = ruby_schema.inner();
+        let trimmed_tracklib_schema = trim_schema(base_tracklib_schema, &ruby_data);
         let mut tracklib_section =
-            tracklib2::write::section::encrypted::Section::new(rust_key_material, tracklib_schema)
+            tracklib2::write::section::encrypted::Section::new(rust_key_material, trimmed_tracklib_schema)
                 .map_err(|e| VM::raise(Class::from_existing("Exception"), &format!("{:?}", e)))
                 .unwrap();
-        write_ruby_array_into_section(&mut tracklib_section, data.map_err(VM::raise_ex).unwrap());
+        write_ruby_array_into_section(&mut tracklib_section, ruby_data);
 
         Module::from_existing("Tracklib").get_nested_class("Section").wrap_data(
             WrappableSection {
@@ -45,6 +52,39 @@ methods!(
         )
     },
 );
+
+fn trim_schema(schema: &tracklib2::schema::Schema, data: &Array) -> tracklib2::schema::Schema {
+    // Find all the fields used in all rows of the data
+    let mut keys = HashSet::new();
+    for i in 0..data.length() {
+        let ruby_row_obj = data.at(i64::try_from(i)
+            .map_err(|_| VM::raise(Class::from_existing("Exception"), "array len larger than i64"))
+            .unwrap());
+        let ruby_row = ruby_row_obj.try_convert_to::<Hash>().map_err(VM::raise_ex).unwrap();
+        ruby_row.each(|k, _| {
+            keys.insert(k.try_convert_to::<RString>().map_err(VM::raise_ex).unwrap().to_string());
+        });
+    }
+
+    // subset original schema
+    let fields = schema
+        .fields()
+        .iter()
+        .filter_map(|field_def| {
+            if keys.contains(field_def.name()) {
+                Some(field_def.clone())
+            } else {
+                None
+            }
+        })
+        .collect::<Vec<_>>();
+
+    if fields.len() != keys.len() {
+        VM::raise(Class::from_existing("Exception"), "Schema is missing field(s)");
+    }
+
+    tracklib2::schema::Schema::with_fields(fields)
+}
 
 fn write_ruby_array_into_section<SW: SectionWrite>(section: &mut SW, data: Array) {
     for ruby_row_obj in data {

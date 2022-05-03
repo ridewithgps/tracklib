@@ -136,7 +136,11 @@ describe Tracklib do
     data1 = [{"i64" => 11,
               "bool" => false,
               "string" => "Hello"},
-             {"f64" => 21.12}]
+             {"f64" => 21.12,
+              "u64" => 2000,
+              "boolarray" => [],
+              "u64array" => [],
+              "bytearray" => ""}]
     section1 = Tracklib::Section::encrypted(Tracklib::Schema.new(schema), data1, "01234567890123456789012345678901")
 
     buf = Tracklib::write_track(metadata, [section0, section1])
@@ -172,5 +176,25 @@ describe Tracklib do
     expect { reader.section_data(1, "Invalid Password") }.to raise_error
     expect { reader.section_data(1, "00004567890123456789012345678901") }.to raise_error
     expect { reader.section_column(1, "i64", "00004567890123456789012345678901") }.to raise_error
+  end
+
+  it "will trim schema fields" do
+    schema = Tracklib::Schema.new([["a", :string],
+                                   ["b", :bool],
+                                   ["c", :u64]])
+    data = [{"a" => "RWGPS"},
+            {},
+            {"a" => "", "c" => 0}]
+    key = "01234567890123456789012345678901"
+    standard_section = Tracklib::Section::standard(schema, data)
+    encrypted_section = Tracklib::Section::encrypted(schema, data, key)
+    buf = Tracklib::write_track([], [standard_section, encrypted_section])
+    reader = Tracklib::TrackReader::new(buf)
+
+    expect(reader.section_data(0)).to eq(data)
+    expect(reader.section_schema(0)).to eq([["a", :string], ["c", :u64]])
+
+    expect(reader.section_data(1, key)).to eq(data)
+    expect(reader.section_schema(1)).to eq([["a", :string], ["c", :u64]])
   end
 end

@@ -644,4 +644,87 @@ describe Tracklib do
     expect { Tracklib::write_track([[:track_type, :foo, 5]], []) } .to raise_error "Metadata Entry Track Type 'foo' unknown"
     expect { Tracklib::write_track([[:track_type, :route, "foo"]], []) } .to raise_error "Error converting to Integer"
   end
+
+  it "raises errors if data doesn't match the schema" do
+    expect { Tracklib::Section::standard(Tracklib::Schema.new([["a", :string],
+                                                               ["b", :bool],
+                                                               ["c", :u64]]),
+                                         [{"a" => "RWGPS",
+                                           "d" => "RWGPS"}]) } .to raise_error "Schema is missing field(s)"
+    expect { Tracklib::Section::standard(Tracklib::Schema.new([["a", :string],
+                                                               ["b", :bool],
+                                                               ["c", :u64]]),
+                                         [{"d" => "RWGPS"}]) } .to raise_error "Schema is missing field(s)"
+    expect { Tracklib::Section::standard(Tracklib::Schema.new([["a", :string],
+                                                               ["b", :bool],
+                                                               ["c", :u64]]),
+                                         [{"a" => "RWGPS", "b" => false, "c" => 0, "d" => "RWGPS"}])
+    } .to raise_error "Schema is missing field(s)"
+  end
+
+  it "trims schema to only store fields in use" do
+    schema = Tracklib::Schema.new([["a", :string],
+                                   ["b", :bool],
+                                   ["c", :u64]])
+    section = Tracklib::Section::standard(schema, [{"a" => "RWGPS"},
+                                                   {},
+                                                   {"a" => "", "c" => 0}])
+    expect(Tracklib::write_track([], [section])
+             .unpack("C*")[27..])
+      .to eq([# Data Table
+
+               0x01, # one data section
+
+               # Data Table Section 1
+               0x00, # data encoding = standard
+               0x03, # point count
+               0x17, # leb128 data size
+
+               # Schema for Section 1
+               0x00, # schema version
+               0x02, # field count
+               0x20, # field type = String
+               0x01, # field name length
+               0x61, # field name = "a"
+               0x0B, # leb128 data size
+               0x02, # field type = U64
+               0x01, # field name length
+               0x63, # field name = "c"
+               0x05, # leb128 data size
+
+               # Data Table CRC
+               0x00,
+               0x0C,
+
+               # Data Section 1
+
+               # Presence Column
+               0b00000001,
+               0b00000000,
+               0b00000011,
+               0xA1, # crc
+               0x08,
+               0x00,
+               0x44,
+
+               # Data Column 1 = "a"
+               0x05, # array len 5
+               0x52, # R
+               0x57, # W
+               0x47, # G
+               0x50, # P
+               0x53, # S
+               0x00, # array len 0
+               0x6A, # crc
+               0x29,
+               0x93,
+               0xA3,
+
+               # Data Column 2 = "c"
+               0x00, # 0
+               0x4B, # crc
+               0x40,
+               0xF7,
+               0xB1])
+  end
 end

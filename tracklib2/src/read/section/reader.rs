@@ -45,6 +45,7 @@ enum ColumnDecoder<'a> {
 pub struct SectionReader<'a> {
     decoders: Vec<ColumnDecoder<'a>>,
     rows: usize,
+    schema_entries: Vec<(usize, &'a SchemaEntry)>,
 }
 
 impl<'a> SectionReader<'a> {
@@ -57,12 +58,12 @@ impl<'a> SectionReader<'a> {
         let (column_data, presence_column) = parse_presence_column(columns, rows)(input)?;
 
         let decoders = schema_entries
-            .into_iter()
+            .iter()
             .map(|(presence_column_index, schema_entry)| {
                 let column_data = &column_data[schema_entry.offset()..schema_entry.offset() + schema_entry.size()];
                 let presence_column_view =
                     presence_column
-                        .view(presence_column_index)
+                        .view(*presence_column_index)
                         .ok_or(TracklibError::ParseIncompleteError {
                             needed: nom::Needed::Unknown,
                         })?;
@@ -105,7 +106,20 @@ impl<'a> SectionReader<'a> {
             })
             .collect::<Result<Vec<_>>>()?;
 
-        Ok(Self { decoders, rows })
+        Ok(Self {
+            decoders,
+            rows,
+            schema_entries,
+        })
+    }
+
+    pub fn schema(&self) -> Schema {
+        Schema::with_fields(
+            self.schema_entries
+                .iter()
+                .map(|(_, schema_entry)| schema_entry.field_definition().clone())
+                .collect(),
+        )
     }
 
     pub fn rows_remaining(&self) -> usize {

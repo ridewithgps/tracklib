@@ -11,7 +11,7 @@ pub(crate) fn write_data_table<W: Write>(out: &mut W, sections: &[&Section]) -> 
     for section in sections.iter() {
         match section {
             Section::Standard(section) => {
-                section.write_encoding(&mut crcwriter)?;                // ? bytes - section encoding
+                section.write_encoding(&mut crcwriter)?;                // 1 byte  - section encoding
                 section.write_rows(&mut crcwriter)?;                    // ? bytes - number of points in this section
                 section.write_data_size(&mut crcwriter)?;               // ? bytes - leb128 section size
                 section.write_schema(&mut crcwriter)?;                  // ? bytes - schema

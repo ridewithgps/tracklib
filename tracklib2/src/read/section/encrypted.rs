@@ -273,6 +273,18 @@ mod tests {
             assert_matches!(section.reader(&crate::util::random_key_material()), Err(_));
 
             assert_matches!(section.reader(&key_material), Ok(mut section_reader) => {
+                // Reader has the full schema
+                assert_eq!(section_reader.schema(), Schema::with_fields(vec![
+                    FieldDefinition::new("a", DataType::I64),
+                    FieldDefinition::new("b", DataType::Bool),
+                    FieldDefinition::new("c", DataType::String),
+                    FieldDefinition::new("f", DataType::F64{scale: 7}),
+                    FieldDefinition::new("ba", DataType::BoolArray),
+                    FieldDefinition::new("u", DataType::U64),
+                    FieldDefinition::new("bu", DataType::U64Array),
+                    FieldDefinition::new("bB", DataType::ByteArray),
+                ]));
+
                 // Row 1
                 assert_eq!(section_reader.rows_remaining(), 3);
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
@@ -541,6 +553,9 @@ mod tests {
             assert_matches!(section.reader_for_schema(&key_material, &Schema::with_fields(vec![
                 FieldDefinition::new("z", DataType::Bool),
             ])), Ok(mut section_reader) => {
+                // Reader has an empty schema
+                assert_eq!(section_reader.schema(), Schema::with_fields(vec![]));
+
                 // Row 1
                 assert_eq!(section_reader.rows_remaining(), 3);
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
@@ -568,6 +583,9 @@ mod tests {
             assert_matches!(section.reader_for_schema(&key_material, &Schema::with_fields(vec![
                 FieldDefinition::new("b", DataType::I64),
             ])), Ok(mut section_reader) => {
+                // Reader has an empty schema
+                assert_eq!(section_reader.schema(), Schema::with_fields(vec![]));
+
                 // Row 1
                 assert_eq!(section_reader.rows_remaining(), 3);
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
@@ -597,6 +615,11 @@ mod tests {
                 FieldDefinition::new("b", DataType::Bool),
                 FieldDefinition::new("z", DataType::Bool),
             ])), Ok(mut section_reader) => {
+                // Reader has only the one field in its schema
+                assert_eq!(section_reader.schema(), Schema::with_fields(vec![
+                    FieldDefinition::new("b", DataType::Bool),
+                ]));
+
                 // Row 1
                 assert_eq!(section_reader.rows_remaining(), 3);
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {
@@ -643,6 +666,12 @@ mod tests {
                 FieldDefinition::new("b", DataType::Bool),
                 FieldDefinition::new("f", DataType::F64{scale: 7}),
             ])), Ok(mut section_reader) => {
+                // Reader has both fields
+                assert_eq!(section_reader.schema(), Schema::with_fields(vec![
+                    FieldDefinition::new("b", DataType::Bool),
+                    FieldDefinition::new("f", DataType::F64{scale: 7}),
+                ]));
+
                 // Row 1
                 assert_eq!(section_reader.rows_remaining(), 3);
                 assert_matches!(section_reader.open_column_iter(), Some(column_iter) => {

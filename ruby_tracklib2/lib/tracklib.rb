@@ -1,7 +1,8 @@
 require "tracklib/version"
-require 'rutie'
+require "rutie"
 
 module Tracklib
-  class TracklibError < StandardError; end
-  Rutie.new(:tracklib).init 'Init_Tracklib', __dir__
+  unless defined?(TrackReader)
+    Rutie.new(:ruby_tracklib).init 'Init_Tracklib', __dir__
+  end
 end

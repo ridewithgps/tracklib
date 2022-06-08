@@ -1,4 +1,4 @@
-mod read;
+pub mod read;
 mod schema;
 mod write;
 use rutie::{Module, Object};

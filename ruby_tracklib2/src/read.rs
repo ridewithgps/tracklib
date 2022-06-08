@@ -1,7 +1,7 @@
 use ouroboros::self_referencing;
 use rutie::{
     class, methods, wrappable_struct, AnyObject, Array, Boolean, Class, Encoding, Float, Hash, Integer, Module,
-    NilClass, Object, RString, Symbol, VM,
+    NilClass, Object, RString, Symbol, VerifiedObject, VM,
 };
 use tracklib2::read::section::SectionRead;
 
@@ -286,7 +286,26 @@ methods!(
     }
 );
 
-fn fieldvalue_to_ruby(value: tracklib2::types::FieldValue) -> AnyObject {
+impl TrackReader {
+    pub fn with_track_reader<'outer_borrow, ReturnType>(
+        &'outer_borrow self,
+        user: impl for<'this> ::core::ops::FnOnce(&'outer_borrow tracklib2::read::track::TrackReader<'this>) -> ReturnType,
+    ) -> ReturnType {
+        self.get_data(&*TRACK_READER_WRAPPER_INSTANCE).with_track_reader(user)
+    }
+}
+
+impl VerifiedObject for TrackReader {
+    fn is_correct_type<T: Object>(object: &T) -> bool {
+        object.class() == Module::from_existing("Tracklib").get_nested_class("TrackReader")
+    }
+
+    fn error_message() -> &'static str {
+        "Error converting to TrackReader"
+    }
+}
+
+pub fn fieldvalue_to_ruby(value: tracklib2::types::FieldValue) -> AnyObject {
     match value {
         tracklib2::types::FieldValue::I64(v) => Integer::new(v).to_any_object(),
         tracklib2::types::FieldValue::F64(v) => Float::new(v).to_any_object(),

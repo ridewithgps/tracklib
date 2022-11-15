@@ -1,7 +1,7 @@
 require_relative 'lib/tracklib/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = "tracklib2"
+  spec.name          = "tracklib_next"
   spec.version       = Tracklib2::VERSION
   spec.authors       = ["Dan Larkin"]
   spec.email         = ["dan@danlarkin.org"]

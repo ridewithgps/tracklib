@@ -1,8 +1,8 @@
 require_relative 'lib/tracklib/version'
 
 Gem::Specification.new do |spec|
-  spec.name          = "tracklib"
-  spec.version       = Tracklib::VERSION
+  spec.name          = "tracklib2"
+  spec.version       = Tracklib2::VERSION
   spec.authors       = ["Dan Larkin"]
   spec.email         = ["dan@danlarkin.org"]
 
@@ -21,6 +21,7 @@ Gem::Specification.new do |spec|
 
   spec.required_ruby_version = Gem::Requirement.new(">= 2.3.0")
   spec.require_paths = ["lib"]
+  spec.extensions = ["Rakefile"]
 
   spec.add_development_dependency "rspec"
 

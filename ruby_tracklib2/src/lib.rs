@@ -6,7 +6,7 @@ use rutie::{Module, Object};
 #[allow(non_snake_case)]
 #[no_mangle]
 pub extern "C" fn Init_Tracklib() {
-    Module::from_existing("Tracklib").define(|module| {
+    Module::from_existing("Tracklib2").define(|module| {
         module.define_nested_class("TrackReader", None).define(|class| {
             class.def_self("new", read::trackreader_new);
             class.def("metadata", read::trackreader_metadata);

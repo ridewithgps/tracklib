@@ -1,10 +1,10 @@
 [package]
-name = "ruby_tracklib2"
+name = "ruby_tracklib_next"
 version = "0.1.0"
 edition = "2021"
 
 [lib]
-name = "ruby_tracklib_version_two"
+name = "ruby_tracklib_next"
 crate-type = ["cdylib", "lib"]
 
 [dependencies]

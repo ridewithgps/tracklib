@@ -65,7 +65,7 @@ methods!(
             })
             .collect::<Vec<_>>();
 
-        Module::from_existing("Tracklib").get_nested_class("Schema").wrap_data(
+        Module::from_existing("TracklibNext").get_nested_class("Schema").wrap_data(
             WrappableSchema {
                 schema: tracklib2::schema::Schema::with_fields(fields),
             },
@@ -82,7 +82,7 @@ impl Schema {
 
 impl VerifiedObject for Schema {
     fn is_correct_type<T: Object>(object: &T) -> bool {
-        object.class() == Module::from_existing("Tracklib").get_nested_class("Schema")
+        object.class() == Module::from_existing("TracklibNext").get_nested_class("Schema")
     }
 
     fn error_message() -> &'static str {

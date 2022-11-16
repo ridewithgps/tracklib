@@ -1,20 +1,20 @@
-require_relative 'lib/tracklib/version'
+require_relative 'lib/tracklib_next/version'
 
 Gem::Specification.new do |spec|
   spec.name          = "tracklib_next"
-  spec.version       = Tracklib2::VERSION
+  spec.version       = TracklibNext::VERSION
   spec.authors       = ["Dan Larkin"]
   spec.email         = ["dan@danlarkin.org"]
 
-  spec.summary       = "tracklib"
+  spec.summary       = "tracklib_next"
   spec.description   = "RWGPS tracklib ruby gem"
   spec.homepage      = "https://ridewithgps.com"
   spec.licenses      = ["Apache-2.0", "MIT"]
-  spec.files         = ["tracklib.gemspec",
+  spec.files         = ["tracklib_next.gemspec",
                         "Rakefile",
                         "Gemfile",
-                        "lib/tracklib.rb",
-                        "lib/tracklib/version.rb",
+                        "lib/tracklib_next.rb",
+                        "lib/tracklib_next/version.rb",
                         "Cargo.toml",
                         "Cargo.lock"]
   spec.files        += Dir["src/**/*.rs"]

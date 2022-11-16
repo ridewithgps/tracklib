@@ -29,7 +29,7 @@ methods!(
                 .unwrap()
         });
 
-        Module::from_existing("Tracklib")
+        Module::from_existing("TracklibNext")
             .get_nested_class("TrackReader")
             .wrap_data(wrapper, &*TRACK_READER_WRAPPER_INSTANCE)
     },
@@ -297,7 +297,7 @@ impl TrackReader {
 
 impl VerifiedObject for TrackReader {
     fn is_correct_type<T: Object>(object: &T) -> bool {
-        object.class() == Module::from_existing("Tracklib").get_nested_class("TrackReader")
+        object.class() == Module::from_existing("TracklibNext").get_nested_class("TrackReader")
     }
 
     fn error_message() -> &'static str {

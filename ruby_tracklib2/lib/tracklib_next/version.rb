@@ -1,3 +1,3 @@
-module Tracklib2
+module TracklibNext
   VERSION = "0.1.0"
 end

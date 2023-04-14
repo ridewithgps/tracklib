@@ -1,7 +1,11 @@
-mkmf.log
-tracklib*.gem
-target/
+/.bundle/
+/.yardoc
+/_yardoc/
+/coverage/
+/doc/
+/pkg/
+/spec/reports/
+/tmp/
 .nix-gems/
-pkg/
-lib/tracklib.so
-Gemfile.lock
+target/
+*.gem

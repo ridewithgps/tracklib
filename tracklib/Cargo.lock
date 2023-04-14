@@ -762,8 +762,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "tracklib2"
-version = "0.1.0"
+name = "tracklib"
+version = "2.0.0"
 dependencies = [
  "assert_matches",
  "chacha20poly1305",

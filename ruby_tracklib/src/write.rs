@@ -5,9 +5,9 @@ use rutie::{
 use std::collections::HashSet;
 
 pub struct WrappableSection {
-    section: tracklib2::write::section::Section,
+    section: tracklib::write::section::Section,
 }
-use tracklib2::write::section::SectionWrite;
+use tracklib::write::section::SectionWrite;
 
 wrappable_struct!(WrappableSection, SectionWrapper, SECTION_WRAPPER_INSTANCE);
 
@@ -21,12 +21,12 @@ methods!(
         let ruby_schema = schema.map_err(VM::raise_ex).unwrap();
         let base_tracklib_schema = ruby_schema.inner();
         let trimmed_tracklib_schema = trim_schema(base_tracklib_schema, &ruby_data);
-        let mut tracklib_section = tracklib2::write::section::standard::Section::new(trimmed_tracklib_schema);
+        let mut tracklib_section = tracklib::write::section::standard::Section::new(trimmed_tracklib_schema);
         write_ruby_array_into_section(&mut tracklib_section, ruby_data);
 
-        Module::from_existing("TracklibNext").get_nested_class("Section").wrap_data(
+        Module::from_existing("Tracklib").get_nested_class("Section").wrap_data(
             WrappableSection {
-                section: tracklib2::write::section::Section::Standard(tracklib_section),
+                section: tracklib::write::section::Section::Standard(tracklib_section),
             },
             &*SECTION_WRAPPER_INSTANCE,
         )
@@ -39,21 +39,21 @@ methods!(
         let base_tracklib_schema = ruby_schema.inner();
         let trimmed_tracklib_schema = trim_schema(base_tracklib_schema, &ruby_data);
         let mut tracklib_section =
-            tracklib2::write::section::encrypted::Section::new(rust_key_material, trimmed_tracklib_schema)
+            tracklib::write::section::encrypted::Section::new(rust_key_material, trimmed_tracklib_schema)
                 .map_err(|e| VM::raise(Class::from_existing("Exception"), &format!("{:?}", e)))
                 .unwrap();
         write_ruby_array_into_section(&mut tracklib_section, ruby_data);
 
-        Module::from_existing("TracklibNext").get_nested_class("Section").wrap_data(
+        Module::from_existing("Tracklib").get_nested_class("Section").wrap_data(
             WrappableSection {
-                section: tracklib2::write::section::Section::Encrypted(tracklib_section),
+                section: tracklib::write::section::Section::Encrypted(tracklib_section),
             },
             &*SECTION_WRAPPER_INSTANCE,
         )
     },
 );
 
-fn trim_schema(schema: &tracklib2::schema::Schema, data: &Array) -> tracklib2::schema::Schema {
+fn trim_schema(schema: &tracklib::schema::Schema, data: &Array) -> tracklib::schema::Schema {
     // Find all the fields used in all rows of the data
     let mut keys = HashSet::new();
     for i in 0..data.length() {
@@ -83,7 +83,7 @@ fn trim_schema(schema: &tracklib2::schema::Schema, data: &Array) -> tracklib2::s
         VM::raise(Class::from_existing("Exception"), "Schema is missing field(s)");
     }
 
-    tracklib2::schema::Schema::with_fields(fields)
+    tracklib::schema::Schema::with_fields(fields)
 }
 
 fn write_ruby_array_into_section<SW: SectionWrite>(section: &mut SW, data: Array) {
@@ -94,7 +94,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(section: &mut SW, data: Array
 
         while let Some(column_writer) = rowbuilder.next_column_writer() {
             match column_writer {
-                tracklib2::write::section::writer::ColumnWriter::I64ColumnWriter(cwi) => {
+                tracklib::write::section::writer::ColumnWriter::I64ColumnWriter(cwi) => {
                     let ruby_field_name = RString::from(String::from(cwi.field_definition().name()));
                     let ruby_field = ruby_row.at(&ruby_field_name);
 
@@ -116,7 +116,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(section: &mut SW, data: Array
                         VM::raise(Class::from_existing("Exception"), &format!("{:?}", e));
                     }
                 }
-                tracklib2::write::section::writer::ColumnWriter::F64ColumnWriter(cwi) => {
+                tracklib::write::section::writer::ColumnWriter::F64ColumnWriter(cwi) => {
                     let ruby_field_name = RString::from(String::from(cwi.field_definition().name()));
                     let ruby_field = ruby_row.at(&ruby_field_name);
 
@@ -132,7 +132,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(section: &mut SW, data: Array
                         VM::raise(Class::from_existing("Exception"), &format!("{:?}", e));
                     }
                 }
-                tracklib2::write::section::writer::ColumnWriter::U64ColumnWriter(cwi) => {
+                tracklib::write::section::writer::ColumnWriter::U64ColumnWriter(cwi) => {
                     let ruby_field_name = RString::from(String::from(cwi.field_definition().name()));
                     let ruby_field = ruby_row.at(&ruby_field_name);
 
@@ -154,7 +154,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(section: &mut SW, data: Array
                         VM::raise(Class::from_existing("Exception"), &format!("{:?}", e));
                     }
                 }
-                tracklib2::write::section::writer::ColumnWriter::BoolColumnWriter(cwi) => {
+                tracklib::write::section::writer::ColumnWriter::BoolColumnWriter(cwi) => {
                     let ruby_field_name = RString::from(String::from(cwi.field_definition().name()));
                     let ruby_field = ruby_row.at(&ruby_field_name);
 
@@ -174,7 +174,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(section: &mut SW, data: Array
                         VM::raise(Class::from_existing("Exception"), &format!("{:?}", e));
                     }
                 }
-                tracklib2::write::section::writer::ColumnWriter::StringColumnWriter(cwi) => {
+                tracklib::write::section::writer::ColumnWriter::StringColumnWriter(cwi) => {
                     let ruby_field_name = RString::from(String::from(cwi.field_definition().name()));
                     let ruby_field = ruby_row.at(&ruby_field_name);
 
@@ -194,7 +194,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(section: &mut SW, data: Array
                         VM::raise(Class::from_existing("Exception"), &format!("{:?}", e));
                     }
                 }
-                tracklib2::write::section::writer::ColumnWriter::BoolArrayColumnWriter(cwi) => {
+                tracklib::write::section::writer::ColumnWriter::BoolArrayColumnWriter(cwi) => {
                     let ruby_field_name = RString::from(String::from(cwi.field_definition().name()));
                     let ruby_field = ruby_row.at(&ruby_field_name);
 
@@ -215,7 +215,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(section: &mut SW, data: Array
                         VM::raise(Class::from_existing("Exception"), &format!("{:?}", e));
                     }
                 }
-                tracklib2::write::section::writer::ColumnWriter::U64ArrayColumnWriter(cwi) => {
+                tracklib::write::section::writer::ColumnWriter::U64ArrayColumnWriter(cwi) => {
                     let ruby_field_name = RString::from(String::from(cwi.field_definition().name()));
                     let ruby_field = ruby_row.at(&ruby_field_name);
 
@@ -244,7 +244,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(section: &mut SW, data: Array
                         VM::raise(Class::from_existing("Exception"), &format!("{:?}", e));
                     }
                 }
-                tracklib2::write::section::writer::ColumnWriter::ByteArrayColumnWriter(cwi) => {
+                tracklib::write::section::writer::ColumnWriter::ByteArrayColumnWriter(cwi) => {
                     let ruby_field_name = RString::from(String::from(cwi.field_definition().name()));
                     let ruby_field = ruby_row.at(&ruby_field_name);
 
@@ -271,7 +271,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(section: &mut SW, data: Array
 
 impl VerifiedObject for Section {
     fn is_correct_type<T: Object>(object: &T) -> bool {
-        object.class() == Module::from_existing("TracklibNext").get_nested_class("Section")
+        object.class() == Module::from_existing("Tracklib").get_nested_class("Section")
     }
 
     fn error_message() -> &'static str {
@@ -290,10 +290,10 @@ impl VerifiedObject for Time {
     }
 }
 
-module!(TracklibNext);
+module!(Tracklib);
 
 methods!(
-    TracklibNext,
+    Tracklib,
     rtself,
     fn write_track(metadata: Array, sections: Array) -> RString {
         let metadata_array = metadata.map_err(VM::raise_ex).unwrap();
@@ -324,9 +324,9 @@ methods!(
                                     .to_u64();
 
                                 let track_type = match track_type_symbol.to_str() {
-                                    "route" => tracklib2::types::TrackType::Route(track_id),
-                                    "trip" => tracklib2::types::TrackType::Trip(track_id),
-                                    "segment" => tracklib2::types::TrackType::Segment(track_id),
+                                    "route" => tracklib::types::TrackType::Route(track_id),
+                                    "trip" => tracklib::types::TrackType::Trip(track_id),
+                                    "segment" => tracklib::types::TrackType::Segment(track_id),
                                     val => {
                                         VM::raise(
                                             Class::from_existing("Exception"),
@@ -336,7 +336,7 @@ methods!(
                                     }
                                 };
 
-                                tracklib2::types::MetadataEntry::TrackType(track_type)
+                                tracklib::types::MetadataEntry::TrackType(track_type)
                             } else {
                                 VM::raise(
                                     Class::from_existing("Exception"),
@@ -363,7 +363,7 @@ methods!(
                                     .map_err(VM::raise_ex)
                                     .unwrap()
                                     .to_u64();
-                                tracklib2::types::MetadataEntry::CreatedAt(created_at_val)
+                                tracklib::types::MetadataEntry::CreatedAt(created_at_val)
                             } else {
                                 VM::raise(
                                     Class::from_existing("Exception"),
@@ -400,7 +400,7 @@ methods!(
             .collect::<Vec<_>>();
 
         let mut buf = vec![];
-        tracklib2::write::track::write_track(&mut buf, &metadata_entries, &tracklib_sections)
+        tracklib::write::track::write_track(&mut buf, &metadata_entries, &tracklib_sections)
             .map_err(|e| VM::raise(Class::from_existing("Exception"), &format!("{:?}", e)))
             .unwrap();
 

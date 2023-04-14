@@ -1,23 +1,23 @@
 use criterion::{criterion_group, criterion_main, Criterion};
-use tracklib2::read::section::SectionRead;
+use tracklib::read::section::SectionRead;
 
 fn sum_x_y(input: &[u8]) {
-    let track_reader = tracklib2::read::track::TrackReader::new(input).unwrap();
+    let track_reader = tracklib::read::track::TrackReader::new(input).unwrap();
     for section in track_reader.sections() {
         let mut x_accumulator: f64 = 0.0;
         let mut y_accumulator: f64 = 0.0;
         match section {
-            tracklib2::read::section::Section::Standard(section) => {
-                let schema = tracklib2::schema::Schema::with_fields(vec![
-                    tracklib2::schema::FieldDefinition::new("x", tracklib2::schema::DataType::F64 { scale: 7 }),
-                    tracklib2::schema::FieldDefinition::new("y", tracklib2::schema::DataType::F64 { scale: 7 }),
+            tracklib::read::section::Section::Standard(section) => {
+                let schema = tracklib::schema::Schema::with_fields(vec![
+                    tracklib::schema::FieldDefinition::new("x", tracklib::schema::DataType::F64 { scale: 7 }),
+                    tracklib::schema::FieldDefinition::new("y", tracklib::schema::DataType::F64 { scale: 7 }),
                 ]);
                 let mut section_reader = section.reader_for_schema(&schema).unwrap();
                 while let Some(column_iter) = section_reader.open_column_iter() {
                     for field_result in column_iter {
                         let (field_def, maybe_val) = field_result.unwrap();
                         match maybe_val {
-                            Some(tracklib2::types::FieldValue::F64(v)) => {
+                            Some(tracklib::types::FieldValue::F64(v)) => {
                                 if field_def.name() == "x" {
                                     x_accumulator += v;
                                 } else {
@@ -30,7 +30,7 @@ fn sum_x_y(input: &[u8]) {
                     }
                 }
             }
-            tracklib2::read::section::Section::Encrypted(section) => {
+            tracklib::read::section::Section::Encrypted(section) => {
                 panic!("Encrypted section during benchmark");
             }
         }
@@ -39,13 +39,13 @@ fn sum_x_y(input: &[u8]) {
 }
 
 fn collect_x_y(input: &[u8]) {
-    let track_reader = tracklib2::read::track::TrackReader::new(input).unwrap();
+    let track_reader = tracklib::read::track::TrackReader::new(input).unwrap();
     for section in track_reader.sections() {
         match section {
-            tracklib2::read::section::Section::Standard(section) => {
-                let schema = tracklib2::schema::Schema::with_fields(vec![
-                    tracklib2::schema::FieldDefinition::new("x", tracklib2::schema::DataType::F64 { scale: 7 }),
-                    tracklib2::schema::FieldDefinition::new("y", tracklib2::schema::DataType::F64 { scale: 7 }),
+            tracklib::read::section::Section::Standard(section) => {
+                let schema = tracklib::schema::Schema::with_fields(vec![
+                    tracklib::schema::FieldDefinition::new("x", tracklib::schema::DataType::F64 { scale: 7 }),
+                    tracklib::schema::FieldDefinition::new("y", tracklib::schema::DataType::F64 { scale: 7 }),
                 ]);
                 let mut points: Vec<(f64, f64)> = Vec::with_capacity(section.rows());
                 let mut section_reader = section.reader_for_schema(&schema).unwrap();
@@ -54,7 +54,7 @@ fn collect_x_y(input: &[u8]) {
                         .map(|field_result| {
                             let (_field_def, maybe_val) = field_result.unwrap();
                             match maybe_val {
-                                Some(tracklib2::types::FieldValue::F64(v)) => v,
+                                Some(tracklib::types::FieldValue::F64(v)) => v,
                                 None => 0.0,
                                 _ => panic!("Unexpected field type"),
                             }
@@ -65,7 +65,7 @@ fn collect_x_y(input: &[u8]) {
 
                 //dbg!(&points);
             }
-            tracklib2::read::section::Section::Encrypted(section) => {
+            tracklib::read::section::Section::Encrypted(section) => {
                 panic!("Encrypted section during benchmark");
             }
         }

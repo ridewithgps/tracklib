@@ -2,12 +2,12 @@
 #[cfg(not(debug_assertions))]
 mod tests {
     use std::collections::HashMap;
-    use tracklib2::read::track::TrackReader;
-    use tracklib2::schema::*;
-    use tracklib2::types::{FieldValue, MetadataEntry, TrackType};
-    use tracklib2::write::section::writer::ColumnWriter;
-    use tracklib2::write::section::{encrypted, standard, Section, SectionWrite};
-    use tracklib2::write::track::write_track;
+    use tracklib::read::track::TrackReader;
+    use tracklib::schema::*;
+    use tracklib::types::{FieldValue, MetadataEntry, TrackType};
+    use tracklib::write::section::writer::ColumnWriter;
+    use tracklib::write::section::{encrypted, standard, Section, SectionWrite};
+    use tracklib::write::track::write_track;
 
     #[test]
     fn roundtrip_i64() {
@@ -43,7 +43,7 @@ mod tests {
         let track_reader = TrackReader::new(&buf).unwrap();
         let mut read_values: Vec<i64> = vec![];
         for section in track_reader.sections() {
-            if let tracklib2::read::section::Section::Standard(section) = section {
+            if let tracklib::read::section::Section::Standard(section) = section {
                 let mut section_reader = section.reader().unwrap();
                 while let Some(columniter) = section_reader.open_column_iter() {
                     let vals = columniter.collect::<Vec<_>>();
@@ -95,7 +95,7 @@ mod tests {
         let track_reader = TrackReader::new(&buf).unwrap();
         let mut read_values: Vec<u64> = vec![];
         for section in track_reader.sections() {
-            if let tracklib2::read::section::Section::Standard(section) = section {
+            if let tracklib::read::section::Section::Standard(section) = section {
                 let mut section_reader = section.reader().unwrap();
                 while let Some(columniter) = section_reader.open_column_iter() {
                     let vals = columniter.collect::<Vec<_>>();
@@ -142,7 +142,7 @@ mod tests {
         let track_reader = TrackReader::new(&buf).unwrap();
         let mut read_values: Vec<f64> = vec![];
         for section in track_reader.sections() {
-            if let tracklib2::read::section::Section::Standard(section) = section {
+            if let tracklib::read::section::Section::Standard(section) = section {
                 let mut section_reader = section.reader().unwrap();
                 while let Some(columniter) = section_reader.open_column_iter() {
                     let vals = columniter.collect::<Vec<_>>();
@@ -190,7 +190,7 @@ mod tests {
         let track_reader = TrackReader::new(&buf).unwrap();
         let mut read_values: Vec<bool> = vec![];
         for section in track_reader.sections() {
-            if let tracklib2::read::section::Section::Standard(section) = section {
+            if let tracklib::read::section::Section::Standard(section) = section {
                 let mut section_reader = section.reader().unwrap();
                 while let Some(columniter) = section_reader.open_column_iter() {
                     let vals = columniter.collect::<Vec<_>>();
@@ -237,7 +237,7 @@ mod tests {
         let track_reader = TrackReader::new(&buf).unwrap();
         let mut read_values: Vec<String> = vec![];
         for section in track_reader.sections() {
-            if let tracklib2::read::section::Section::Standard(section) = section {
+            if let tracklib::read::section::Section::Standard(section) = section {
                 let mut section_reader = section.reader().unwrap();
                 while let Some(columniter) = section_reader.open_column_iter() {
                     let vals = columniter.collect::<Vec<_>>();
@@ -287,7 +287,7 @@ mod tests {
         let track_reader = TrackReader::new(&buf).unwrap();
         let mut read_values: Vec<Vec<bool>> = vec![];
         for section in track_reader.sections() {
-            if let tracklib2::read::section::Section::Standard(section) = section {
+            if let tracklib::read::section::Section::Standard(section) = section {
                 let mut section_reader = section.reader().unwrap();
                 while let Some(columniter) = section_reader.open_column_iter() {
                     let vals = columniter.collect::<Vec<_>>();
@@ -332,7 +332,7 @@ mod tests {
         let track_reader = TrackReader::new(&buf).unwrap();
         let mut read_values: Vec<Vec<u64>> = vec![];
         for section in track_reader.sections() {
-            if let tracklib2::read::section::Section::Standard(section) = section {
+            if let tracklib::read::section::Section::Standard(section) = section {
                 let mut section_reader = section.reader().unwrap();
                 while let Some(columniter) = section_reader.open_column_iter() {
                     let vals = columniter.collect::<Vec<_>>();
@@ -380,7 +380,7 @@ mod tests {
         let track_reader = TrackReader::new(&buf).unwrap();
         let mut read_values: Vec<Vec<u8>> = vec![];
         for section in track_reader.sections() {
-            if let tracklib2::read::section::Section::Standard(section) = section {
+            if let tracklib::read::section::Section::Standard(section) = section {
                 let mut section_reader = section.reader().unwrap();
                 while let Some(columniter) = section_reader.open_column_iter() {
                     let vals = columniter.collect::<Vec<_>>();
@@ -592,7 +592,7 @@ mod tests {
         let track_reader = TrackReader::new(&buf).unwrap();
         let mut read_values: Vec<HashMap<String, FieldValue>> = vec![];
         for section in track_reader.sections() {
-            if let tracklib2::read::section::Section::Standard(section) = section {
+            if let tracklib::read::section::Section::Standard(section) = section {
                 let mut section_reader = section.reader().unwrap();
                 while let Some(columniter) = section_reader.open_column_iter() {
                     let row = columniter
@@ -795,7 +795,7 @@ mod tests {
         let track_reader = TrackReader::new(&buf).unwrap();
         let mut read_values: Vec<HashMap<String, FieldValue>> = vec![];
         for section in track_reader.sections() {
-            if let tracklib2::read::section::Section::Encrypted(mut section) = section {
+            if let tracklib::read::section::Section::Encrypted(mut section) = section {
                 let mut section_reader = section.reader(&key_material).unwrap();
                 while let Some(columniter) = section_reader.open_column_iter() {
                     let row = columniter

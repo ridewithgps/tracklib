@@ -1,16 +1,18 @@
-# coding: utf-8
-require "rbconfig"
-require "bundler/gem_tasks"
-require "rake/testtask"
-require "thermite/tasks"
 require 'rspec/core/rake_task'
 
-thermite = Thermite::Tasks.new
-RSpec::Core::RakeTask.new(:spec)
-
-desc 'Run Rust & Ruby testsuites'
-task test: ['thermite:build', 'thermite:test', 'spec'] do
-
+desc 'Build Rust extension'
+task :build_lib do
+  sh 'cargo build --release'
 end
 
-task :default => :test
+desc 'bundle install'
+task :bundle_install do
+  sh 'bundle install'
+end
+
+RSpec::Core::RakeTask.new(spec: [:bundle_install, :build_lib]) do |t|
+  t.pattern = "spec/**/*_spec.rb"
+end
+
+task :default => :build_lib
+task :test => :spec

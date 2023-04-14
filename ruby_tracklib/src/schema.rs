@@ -4,7 +4,7 @@ use rutie::{
 };
 
 pub struct WrappableSchema {
-    schema: tracklib2::schema::Schema,
+    schema: tracklib::schema::Schema,
 }
 
 wrappable_struct!(WrappableSchema, SchemaWrapper, SCHEMA_WRAPPER_INSTANCE);
@@ -34,7 +34,7 @@ methods!(
                     .unwrap();
 
                 let data_type = match ruby_data_type.to_str() {
-                    "i64" => tracklib2::schema::DataType::I64,
+                    "i64" => tracklib::schema::DataType::I64,
                     "f64" => {
                         let ruby_scale = ruby_schema_entry
                             .at(2)
@@ -44,14 +44,14 @@ methods!(
                         let scale = u8::try_from(ruby_scale.to_u64())
                             .map_err(|e| VM::raise(Class::from_existing("Exception"), &format!("{}", e)))
                             .unwrap();
-                        tracklib2::schema::DataType::F64 { scale }
+                        tracklib::schema::DataType::F64 { scale }
                     }
-                    "u64" => tracklib2::schema::DataType::U64,
-                    "bool" => tracklib2::schema::DataType::Bool,
-                    "string" => tracklib2::schema::DataType::String,
-                    "bool_array" => tracklib2::schema::DataType::BoolArray,
-                    "u64_array" => tracklib2::schema::DataType::U64Array,
-                    "byte_array" => tracklib2::schema::DataType::ByteArray,
+                    "u64" => tracklib::schema::DataType::U64,
+                    "bool" => tracklib::schema::DataType::Bool,
+                    "string" => tracklib::schema::DataType::String,
+                    "bool_array" => tracklib::schema::DataType::BoolArray,
+                    "u64_array" => tracklib::schema::DataType::U64Array,
+                    "byte_array" => tracklib::schema::DataType::ByteArray,
                     val => {
                         VM::raise(
                             Class::from_existing("Exception"),
@@ -61,13 +61,13 @@ methods!(
                     }
                 };
 
-                tracklib2::schema::FieldDefinition::new(ruby_field_name.to_string(), data_type)
+                tracklib::schema::FieldDefinition::new(ruby_field_name.to_string(), data_type)
             })
             .collect::<Vec<_>>();
 
-        Module::from_existing("TracklibNext").get_nested_class("Schema").wrap_data(
+        Module::from_existing("Tracklib").get_nested_class("Schema").wrap_data(
             WrappableSchema {
-                schema: tracklib2::schema::Schema::with_fields(fields),
+                schema: tracklib::schema::Schema::with_fields(fields),
             },
             &*SCHEMA_WRAPPER_INSTANCE,
         )
@@ -75,14 +75,14 @@ methods!(
 );
 
 impl Schema {
-    pub(crate) fn inner(&self) -> &tracklib2::schema::Schema {
+    pub(crate) fn inner(&self) -> &tracklib::schema::Schema {
         &self.get_data(&*SCHEMA_WRAPPER_INSTANCE).schema
     }
 }
 
 impl VerifiedObject for Schema {
     fn is_correct_type<T: Object>(object: &T) -> bool {
-        object.class() == Module::from_existing("TracklibNext").get_nested_class("Schema")
+        object.class() == Module::from_existing("Tracklib").get_nested_class("Schema")
     }
 
     fn error_message() -> &'static str {

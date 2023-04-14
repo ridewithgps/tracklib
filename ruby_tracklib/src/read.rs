@@ -3,14 +3,14 @@ use rutie::{
     class, methods, wrappable_struct, AnyObject, Array, Boolean, Class, Encoding, Float, Hash, Integer, Module,
     NilClass, Object, RString, Symbol, VerifiedObject, VM,
 };
-use tracklib2::read::section::SectionRead;
+use tracklib::read::section::SectionRead;
 
 #[self_referencing]
 pub struct WrappableTrackReader {
     data: Vec<u8>,
     #[borrows(data)]
     #[not_covariant]
-    track_reader: tracklib2::read::track::TrackReader<'this>,
+    track_reader: tracklib::read::track::TrackReader<'this>,
 }
 
 wrappable_struct!(WrappableTrackReader, TrackReaderWrapper, TRACK_READER_WRAPPER_INSTANCE);
@@ -24,12 +24,12 @@ methods!(
         let source = bytes.map_err(VM::raise_ex).unwrap();
         let data = source.to_bytes_unchecked().to_vec();
         let wrapper = WrappableTrackReader::new(data, |d| {
-            tracklib2::read::track::TrackReader::new(d)
+            tracklib::read::track::TrackReader::new(d)
                 .map_err(|e| VM::raise(Class::from_existing("Exception"), &format!("{}", e)))
                 .unwrap()
         });
 
-        Module::from_existing("TracklibNext")
+        Module::from_existing("Tracklib")
             .get_nested_class("TrackReader")
             .wrap_data(wrapper, &*TRACK_READER_WRAPPER_INSTANCE)
     },
@@ -42,13 +42,13 @@ methods!(
 
         for metadata_entry in metadata_entries {
             let metadata_entry_array = match metadata_entry {
-                tracklib2::types::MetadataEntry::TrackType(track_type) => {
+                tracklib::types::MetadataEntry::TrackType(track_type) => {
                     let mut metadata_entry_array = Array::new();
 
                     let (type_name, id) = match track_type {
-                        tracklib2::types::TrackType::Trip(id) => (Symbol::new("trip"), Integer::from(*id)),
-                        tracklib2::types::TrackType::Route(id) => (Symbol::new("route"), Integer::from(*id)),
-                        tracklib2::types::TrackType::Segment(id) => (Symbol::new("segment"), Integer::from(*id)),
+                        tracklib::types::TrackType::Trip(id) => (Symbol::new("trip"), Integer::from(*id)),
+                        tracklib::types::TrackType::Route(id) => (Symbol::new("route"), Integer::from(*id)),
+                        tracklib::types::TrackType::Segment(id) => (Symbol::new("segment"), Integer::from(*id)),
                     };
 
                     metadata_entry_array.push(Symbol::new("track_type"));
@@ -57,7 +57,7 @@ methods!(
 
                     metadata_entry_array
                 }
-                tracklib2::types::MetadataEntry::CreatedAt(created_at) => {
+                tracklib::types::MetadataEntry::CreatedAt(created_at) => {
                     let mut metadata_entry_array = Array::new();
 
                     metadata_entry_array.push(Symbol::new("created_at"));
@@ -115,16 +115,16 @@ methods!(
             .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
             .with_track_reader(|track_reader| {
                 track_reader.section(rust_index).map(|section| match section {
-                    tracklib2::read::section::Section::Standard(section) => section.encoding(),
-                    tracklib2::read::section::Section::Encrypted(section) => section.encoding(),
+                    tracklib::read::section::Section::Standard(section) => section.encoding(),
+                    tracklib::read::section::Section::Encrypted(section) => section.encoding(),
                 })
             })
             .ok_or_else(|| VM::raise(Class::from_existing("Exception"), "Section does not exist"))
             .unwrap();
 
         Symbol::new(match encoding {
-            tracklib2::types::SectionEncoding::Standard => "standard",
-            tracklib2::types::SectionEncoding::Encrypted => "encrypted",
+            tracklib::types::SectionEncoding::Standard => "standard",
+            tracklib::types::SectionEncoding::Encrypted => "encrypted",
         })
     },
     fn trackreader_section_schema(index: Integer) -> Array {
@@ -136,8 +136,8 @@ methods!(
             .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
             .with_track_reader(|track_reader| {
                 track_reader.section(rust_index).map(|section| match section {
-                    tracklib2::read::section::Section::Standard(section) => section.schema(),
-                    tracklib2::read::section::Section::Encrypted(section) => section.schema(),
+                    tracklib::read::section::Section::Standard(section) => section.schema(),
+                    tracklib::read::section::Section::Encrypted(section) => section.schema(),
                 })
             })
             .ok_or_else(|| VM::raise(Class::from_existing("Exception"), "Section does not exist"))
@@ -149,29 +149,29 @@ methods!(
             let mut field_array = Array::new();
             field_array.push(RString::from(String::from(field_def.name())));
             match field_def.data_type() {
-                tracklib2::schema::DataType::I64 => {
+                tracklib::schema::DataType::I64 => {
                     field_array.push(Symbol::new("i64"));
                 }
-                tracklib2::schema::DataType::F64 { scale } => {
+                tracklib::schema::DataType::F64 { scale } => {
                     field_array.push(Symbol::new("f64"));
                     field_array.push(Integer::from(u32::from(*scale)));
                 }
-                tracklib2::schema::DataType::U64 => {
+                tracklib::schema::DataType::U64 => {
                     field_array.push(Symbol::new("u64"));
                 }
-                tracklib2::schema::DataType::Bool => {
+                tracklib::schema::DataType::Bool => {
                     field_array.push(Symbol::new("bool"));
                 }
-                tracklib2::schema::DataType::String => {
+                tracklib::schema::DataType::String => {
                     field_array.push(Symbol::new("string"));
                 }
-                tracklib2::schema::DataType::BoolArray => {
+                tracklib::schema::DataType::BoolArray => {
                     field_array.push(Symbol::new("bool_array"));
                 }
-                tracklib2::schema::DataType::U64Array => {
+                tracklib::schema::DataType::U64Array => {
                     field_array.push(Symbol::new("u64_array"));
                 }
-                tracklib2::schema::DataType::ByteArray => {
+                tracklib::schema::DataType::ByteArray => {
                     field_array.push(Symbol::new("byte_array"));
                 }
             };
@@ -189,8 +189,8 @@ methods!(
             .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
             .with_track_reader(|track_reader| {
                 track_reader.section(rust_index).map(|section| match section {
-                    tracklib2::read::section::Section::Standard(section) => section.rows(),
-                    tracklib2::read::section::Section::Encrypted(section) => section.rows(),
+                    tracklib::read::section::Section::Standard(section) => section.rows(),
+                    tracklib::read::section::Section::Encrypted(section) => section.rows(),
                 })
             })
             .ok_or_else(|| VM::raise(Class::from_existing("Exception"), "Section does not exist"))
@@ -211,13 +211,13 @@ methods!(
             .get_data(&*TRACK_READER_WRAPPER_INSTANCE)
             .with_track_reader(|track_reader| {
                 track_reader.section(rust_index).map(|section| match section {
-                    tracklib2::read::section::Section::Standard(section) => reader_to_array_of_hashes(
+                    tracklib::read::section::Section::Standard(section) => reader_to_array_of_hashes(
                         section
                             .reader()
                             .map_err(|e| VM::raise(Class::from_existing("Exception"), &format!("{}", e)))
                             .unwrap(),
                     ),
-                    tracklib2::read::section::Section::Encrypted(mut section) => {
+                    tracklib::read::section::Section::Encrypted(mut section) => {
                         let ruby_key_material = key_material.map_err(VM::raise_ex).unwrap();
                         let rust_key_material = ruby_key_material.to_bytes_unchecked();
                         reader_to_array_of_hashes(
@@ -247,22 +247,22 @@ methods!(
                     let field_name = ruby_field_name.to_str();
 
                     let schema = match section {
-                        tracklib2::read::section::Section::Standard(ref section) => section.schema(),
-                        tracklib2::read::section::Section::Encrypted(ref section) => section.schema(),
+                        tracklib::read::section::Section::Standard(ref section) => section.schema(),
+                        tracklib::read::section::Section::Encrypted(ref section) => section.schema(),
                     };
                     let maybe_field_def = schema.fields().iter().find(|field_def| field_def.name() == field_name);
 
                     if let Some(field_def) = maybe_field_def {
-                        let schema = tracklib2::schema::Schema::with_fields(vec![field_def.clone()]);
+                        let schema = tracklib::schema::Schema::with_fields(vec![field_def.clone()]);
                         match section {
-                            tracklib2::read::section::Section::Standard(section) => reader_to_single_column_array(
+                            tracklib::read::section::Section::Standard(section) => reader_to_single_column_array(
                                 section
                                     .reader_for_schema(&schema)
                                     .map_err(|e| VM::raise(Class::from_existing("Exception"), &format!("{}", e)))
                                     .unwrap(),
                             )
                             .to_any_object(),
-                            tracklib2::read::section::Section::Encrypted(mut section) => {
+                            tracklib::read::section::Section::Encrypted(mut section) => {
                                 let ruby_key_material = key_material.map_err(VM::raise_ex).unwrap();
                                 let rust_key_material = ruby_key_material.to_bytes_unchecked();
                                 reader_to_single_column_array(
@@ -289,7 +289,7 @@ methods!(
 impl TrackReader {
     pub fn with_track_reader<'outer_borrow, ReturnType>(
         &'outer_borrow self,
-        user: impl for<'this> ::core::ops::FnOnce(&'outer_borrow tracklib2::read::track::TrackReader<'this>) -> ReturnType,
+        user: impl for<'this> ::core::ops::FnOnce(&'outer_borrow tracklib::read::track::TrackReader<'this>) -> ReturnType,
     ) -> ReturnType {
         self.get_data(&*TRACK_READER_WRAPPER_INSTANCE).with_track_reader(user)
     }
@@ -297,7 +297,7 @@ impl TrackReader {
 
 impl VerifiedObject for TrackReader {
     fn is_correct_type<T: Object>(object: &T) -> bool {
-        object.class() == Module::from_existing("TracklibNext").get_nested_class("TrackReader")
+        object.class() == Module::from_existing("Tracklib").get_nested_class("TrackReader")
     }
 
     fn error_message() -> &'static str {
@@ -305,28 +305,28 @@ impl VerifiedObject for TrackReader {
     }
 }
 
-pub fn fieldvalue_to_ruby(value: tracklib2::types::FieldValue) -> AnyObject {
+pub fn fieldvalue_to_ruby(value: tracklib::types::FieldValue) -> AnyObject {
     match value {
-        tracklib2::types::FieldValue::I64(v) => Integer::new(v).to_any_object(),
-        tracklib2::types::FieldValue::F64(v) => Float::new(v).to_any_object(),
-        tracklib2::types::FieldValue::U64(v) => Integer::from(v).to_any_object(),
-        tracklib2::types::FieldValue::Bool(v) => Boolean::new(v).to_any_object(),
-        tracklib2::types::FieldValue::String(v) => RString::from(v).to_any_object(),
-        tracklib2::types::FieldValue::BoolArray(v) => {
+        tracklib::types::FieldValue::I64(v) => Integer::new(v).to_any_object(),
+        tracklib::types::FieldValue::F64(v) => Float::new(v).to_any_object(),
+        tracklib::types::FieldValue::U64(v) => Integer::from(v).to_any_object(),
+        tracklib::types::FieldValue::Bool(v) => Boolean::new(v).to_any_object(),
+        tracklib::types::FieldValue::String(v) => RString::from(v).to_any_object(),
+        tracklib::types::FieldValue::BoolArray(v) => {
             let mut a = Array::new();
             for b in v {
                 a.push(Boolean::new(b).to_any_object());
             }
             a.to_any_object()
         }
-        tracklib2::types::FieldValue::U64Array(v) => {
+        tracklib::types::FieldValue::U64Array(v) => {
             let mut a = Array::new();
             for u in v {
                 a.push(Integer::from(u).to_any_object());
             }
             a.to_any_object()
         }
-        tracklib2::types::FieldValue::ByteArray(v) => {
+        tracklib::types::FieldValue::ByteArray(v) => {
             let encoding = Encoding::find("ASCII-8BIT").map_err(VM::raise_ex).unwrap();
 
             RString::from_bytes(&v, &encoding).to_any_object()
@@ -334,7 +334,7 @@ pub fn fieldvalue_to_ruby(value: tracklib2::types::FieldValue) -> AnyObject {
     }
 }
 
-fn reader_to_array_of_hashes(mut reader: tracklib2::read::section::reader::SectionReader) -> Array {
+fn reader_to_array_of_hashes(mut reader: tracklib::read::section::reader::SectionReader) -> Array {
     let mut data_array = Array::new();
     while let Some(columniter) = reader.open_column_iter() {
         let mut row_hash = Hash::new();
@@ -353,7 +353,7 @@ fn reader_to_array_of_hashes(mut reader: tracklib2::read::section::reader::Secti
     data_array
 }
 
-fn reader_to_single_column_array(mut reader: tracklib2::read::section::reader::SectionReader) -> Array {
+fn reader_to_single_column_array(mut reader: tracklib::read::section::reader::SectionReader) -> Array {
     let mut data_array = Array::new();
     while let Some(mut columniter) = reader.open_column_iter() {
         let (_field_def, maybe_value) = columniter

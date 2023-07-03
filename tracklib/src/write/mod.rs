@@ -6,3 +6,5 @@ mod header;
 pub mod metadata;
 pub mod section;
 pub mod track;
+#[cfg(test)]
+pub(self) mod util;

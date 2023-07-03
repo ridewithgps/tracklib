@@ -1,25 +1,34 @@
 use crate::error::Result;
 use std::io::Write;
 
-pub fn write_i64(value: Option<&i64>, buf: &mut Vec<u8>, prev: &mut i64) -> Result<()> {
+pub fn write_i64<W>(value: Option<&i64>, buf: &mut W, prev: &mut i64) -> Result<()>
+where
+    W: ?Sized + Write,
+{
     if let Some(val) = value {
         let v = *val;
         let delta = v - *prev;
-        *prev = v;
         leb128::write::signed(buf, delta)?;
+        *prev = v;
     }
 
     Ok(())
 }
 
-pub fn write_byte(value: Option<&u8>, buf: &mut Vec<u8>) -> Result<()> {
+pub fn write_byte<W>(value: Option<&u8>, buf: &mut W) -> Result<()>
+where
+    W: ?Sized + Write,
+{
     if let Some(val) = value {
         buf.write_all(std::slice::from_ref(val))?;
     }
     Ok(())
 }
 
-pub fn write_bytes(value: Option<&[u8]>, buf: &mut Vec<u8>) -> Result<()> {
+pub fn write_bytes<W>(value: Option<&[u8]>, buf: &mut W) -> Result<()>
+where
+    W: ?Sized + Write,
+{
     if let Some(val) = value {
         // Write len
         leb128::write::unsigned(buf, u64::try_from(val.len()).expect("usize != u64"))?;

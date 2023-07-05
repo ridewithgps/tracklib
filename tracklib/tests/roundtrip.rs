@@ -1,5 +1,3 @@
-// Only run these tests in a release build because they rely on unchecked math
-#[cfg(not(debug_assertions))]
 mod tests {
     use std::collections::HashMap;
     use tracklib::read::track::TrackReader;

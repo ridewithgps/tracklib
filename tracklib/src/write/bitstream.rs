@@ -7,7 +7,7 @@ where
 {
     if let Some(val) = value {
         let v = *val;
-        let delta = v - *prev;
+        let delta = v.wrapping_sub(*prev);
         leb128::write::signed(buf, delta)?;
         *prev = v;
     }

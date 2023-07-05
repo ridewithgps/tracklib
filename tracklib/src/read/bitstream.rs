@@ -4,7 +4,7 @@ use nom_leb128::{leb128_i64, leb128_u64};
 
 pub fn read_i64<'a>(data: &'a [u8], prev: &mut i64) -> Result<(&'a [u8], i64)> {
     let (rest, value) = leb128_i64(data)?;
-    let new = *prev + value;
+    let new = prev.wrapping_add(value);
     *prev = new;
     Ok((rest, new))
 }

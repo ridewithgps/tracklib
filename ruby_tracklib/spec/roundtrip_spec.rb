@@ -16,12 +16,19 @@ describe Tracklib do
   end
 
   it "can roundtrip an F64 column" do
+    scale = 7
+    i64_max = 2 ** 63
+    schema_max = i64_max / 10 ** scale
+
     data = [{"a" => 0},
             {},
             {"a" => 11.2},
-            {"a" => -400.000003}]
+            {"a" => -400.000003},
+            {"a" => -schema_max},
+            {"a" => schema_max},
+            {"a" => 50.1234567}]
 
-    schema = Tracklib::Schema.new([["a", :f64, 7]])
+    schema = Tracklib::Schema.new([["a", :f64, scale]])
     section = Tracklib::Section::standard(schema, data)
     buf = Tracklib::write_track([], [section])
     reader = Tracklib::TrackReader::new(buf)

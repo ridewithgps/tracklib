@@ -558,6 +558,65 @@ describe Tracklib do
     expect { Tracklib::Schema.new([["a", :f64, 500]]) }.to raise_error
   end
 
+  it "raises errors for floats too big to fit in the configured F64" do
+    scale = 7
+    schema = Tracklib::Schema.new([["f", :f64, scale]])
+    i64_max = 2 ** 63
+    schema_max = i64_max / 10 ** scale
+    expect { Tracklib::Section::standard(schema, [{"f" => schema_max + 1}]) }.to raise_error
+    expect { Tracklib::Section::standard(schema, [{"f" => -schema_max - 1}]) }.to raise_error
+    section = Tracklib::Section::standard(schema, [{"f" => schema_max }])
+
+    expect(Tracklib::write_track([], [section])
+             .unpack("C*")[27..])
+      .to eq([# Data Table
+
+               0x01, # one data section
+
+               # Data Table Section 1
+               0x00, # data encoding = standard
+               0x01, # point count
+               0x13, # leb128 data size
+
+               # Schema for Section 1
+               0x00, # schema version
+               0x01, # field count
+               0x01, # first field type = F64
+               0x07, # scale
+               0x01, # field name length
+               0x66, # field name = "f"
+               0x0E, # leb128 data size
+
+               # Data Table CRC
+               0x77,
+               0xAF,
+
+               # Data Section 1
+
+               # Presence Column
+               0b00000001,
+               0xFC, # crc
+               0x5D,
+               0x36,
+               0xB5,
+
+               # Data Column 1 = "f"
+               0x80, # schema max
+               0xC0,
+               0xDC,
+               0xFD,
+               0xFF,
+               0xFF,
+               0xFF,
+               0xFF,
+               0xFF,
+               0x00,
+               0x67, # crc
+               0x62,
+               0x37,
+               0x83])
+  end
+
   it "raises errors for invalid array type elements" do
     expect {
       Tracklib::Section::standard(Tracklib::Schema.new([["a", :bool_array]]),

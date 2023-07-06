@@ -25,16 +25,14 @@ where
     Ok(())
 }
 
-pub fn write_bytes<W>(value: Option<&[u8]>, buf: &mut W) -> Result<()>
+pub fn write_bytes<W>(value: &[u8], buf: &mut W) -> Result<()>
 where
     W: ?Sized + Write,
 {
-    if let Some(val) = value {
-        // Write len
-        leb128::write::unsigned(buf, u64::try_from(val.len()).expect("usize != u64"))?;
-        // Write bytes
-        buf.write_all(val)?;
-    }
+    // Write len
+    leb128::write::unsigned(buf, u64::try_from(value.len()).expect("usize != u64"))?;
+    // Write bytes
+    buf.write_all(value)?;
 
     Ok(())
 }
@@ -72,9 +70,8 @@ mod tests {
     #[test]
     fn test_write_bytes() {
         let mut buf = vec![];
-        assert_matches!(write_bytes(Some(&[b'R', b'W']), &mut buf), Ok(()));
-        assert_matches!(write_bytes(None, &mut buf), Ok(()));
-        assert_matches!(write_bytes(Some(&[b'G', b'P', b'S']), &mut buf), Ok(()));
+        assert_matches!(write_bytes(&[b'R', b'W'], &mut buf), Ok(()));
+        assert_matches!(write_bytes(&[b'G', b'P', b'S'], &mut buf), Ok(()));
         #[rustfmt::skip]
         assert_eq!(buf, &[0x02,
                           b'R',

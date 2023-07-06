@@ -96,7 +96,10 @@ impl Encoder for StringEncoder {
     where
         W: ?Sized + std::io::Write,
     {
-        bitstream::write_bytes(value.map(|v| v.as_bytes()), buf).map(|_| presence.push(value.is_some()))
+        value
+            .map(|val| bitstream::write_bytes(val.as_bytes(), buf))
+            .transpose()
+            .map(|v| presence.push(v.is_some()))
     }
 }
 

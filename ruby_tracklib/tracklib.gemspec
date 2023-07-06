@@ -24,6 +24,7 @@ Gem::Specification.new do |spec|
   spec.extensions = ["Rakefile"]
 
   spec.add_development_dependency "rspec"
+  spec.add_development_dependency "rake"
 
   spec.add_dependency 'rutie', '~> 0.0.4'
 end

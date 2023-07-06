@@ -1,16 +1,13 @@
 use crate::error::Result;
 use std::io::Write;
 
-pub fn write_i64<W>(value: Option<&i64>, buf: &mut W, prev: &mut i64) -> Result<()>
+pub fn write_i64<W>(value: i64, buf: &mut W, prev: &mut i64) -> Result<()>
 where
     W: ?Sized + Write,
 {
-    if let Some(val) = value {
-        let v = *val;
-        let delta = v.wrapping_sub(*prev);
-        leb128::write::signed(buf, delta)?;
-        *prev = v;
-    }
+    let delta = value.wrapping_sub(*prev);
+    leb128::write::signed(buf, delta)?;
+    *prev = value;
 
     Ok(())
 }
@@ -44,9 +41,8 @@ mod tests {
     fn test_write_i64() {
         let mut buf = vec![];
         let mut prev = 0;
-        assert_matches!(write_i64(Some(&0), &mut buf, &mut prev), Ok(()));
-        assert_matches!(write_i64(None, &mut buf, &mut prev), Ok(()));
-        assert_matches!(write_i64(Some(&42), &mut buf, &mut prev), Ok(()));
+        assert_matches!(write_i64(0, &mut buf, &mut prev), Ok(()));
+        assert_matches!(write_i64(42, &mut buf, &mut prev), Ok(()));
         #[rustfmt::skip]
         assert_eq!(buf, &[0x00,
                           0x2A]);

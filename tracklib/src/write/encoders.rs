@@ -20,7 +20,10 @@ impl Encoder for I64Encoder {
     where
         W: ?Sized + std::io::Write,
     {
-        bitstream::write_i64(value, buf, &mut self.prev).map(|_| presence.push(value.is_some()))
+        value
+            .map(|val| bitstream::write_i64(*val, buf, &mut self.prev))
+            .transpose()
+            .map(|v| presence.push(v.is_some()))
     }
 }
 
@@ -36,8 +39,10 @@ impl Encoder for U64Encoder {
     where
         W: ?Sized + std::io::Write,
     {
-        bitstream::write_i64(value.map(|val| *val as i64).as_ref(), buf, &mut self.prev)
-            .map(|_| presence.push(value.is_some()))
+        value
+            .map(|val| bitstream::write_i64(*val as i64, buf, &mut self.prev))
+            .transpose()
+            .map(|v| presence.push(v.is_some()))
     }
 }
 
@@ -142,7 +147,7 @@ impl Encoder for U64ArrayEncoder {
 
             let mut prev = 0;
             for val in array {
-                bitstream::write_i64(Some(*val as i64).as_ref(), buf, &mut prev)?;
+                bitstream::write_i64(*val as i64, buf, &mut prev)?;
             }
         }
         presence.push(value.is_some());

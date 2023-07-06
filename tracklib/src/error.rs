@@ -14,6 +14,9 @@ pub enum TracklibError {
     #[error("CRC Error")]
     CRC32Error { expected: u32, computed: u32 },
 
+    #[error("Encoding Bounds Error")]
+    EncodingBoundsError,
+
     #[error("Numeric Bounds Error")]
     BoundsError {
         #[from]

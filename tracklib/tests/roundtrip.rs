@@ -111,19 +111,82 @@ mod tests {
     }
 
     #[test]
-    fn roundtrip_f64() {
+    fn roundtrip_f64_scale6() {
+        let scale: u8 = 6;
         let mut buf = vec![];
+        let max = (i64::MAX / 10i64.pow(u32::from(scale))) as f64;
         #[rustfmt::skip]
         let write_values = &[
             -200.101,
+            12345678.901234,
             0.0,
             0.1,
+            max,
+            -max,
+            47.00012,
+            0.0,
+            -12345678.901234,
         ];
 
         // Write
         let mut section = standard::Section::new(Schema::with_fields(vec![FieldDefinition::new(
             "v",
-            DataType::F64 { scale: 7 },
+            DataType::F64 { scale },
+        )]));
+        for v in write_values.iter() {
+            let mut rowbuilder = section.open_row_builder();
+
+            while let Some(cw) = rowbuilder.next_column_writer() {
+                if let ColumnWriter::F64ColumnWriter(cwi) = cw {
+                    assert!(cwi.write(Some(v)).is_ok());
+                }
+            }
+        }
+        assert!(write_track(&mut buf, &[], &[&Section::Standard(section)]).is_ok());
+
+        // Read
+        let track_reader = TrackReader::new(&buf).unwrap();
+        let mut read_values: Vec<f64> = vec![];
+        for section in track_reader.sections() {
+            if let tracklib::read::section::Section::Standard(section) = section {
+                let mut section_reader = section.reader().unwrap();
+                while let Some(columniter) = section_reader.open_column_iter() {
+                    let vals = columniter.collect::<Vec<_>>();
+                    assert_eq!(vals.len(), 1);
+                    let (_field_desc, field_value) = vals[0].as_ref().unwrap();
+                    if let Some(FieldValue::F64(v)) = field_value {
+                        read_values.push(*v);
+                    }
+                }
+            }
+        }
+
+        // Compare
+        assert_eq!(write_values, read_values.as_slice());
+    }
+
+    #[test]
+    fn roundtrip_f64_scale2() {
+        let scale: u8 = 2;
+        let mut buf = vec![];
+        let max = (i64::MAX / 10i64.pow(u32::from(scale))) as f64;
+        #[rustfmt::skip]
+        let write_values = &[
+            -200.11,
+            123456789.01,
+            0.0,
+            0.1,
+            max,
+            -max,
+            47.12,
+            0.0,
+            -123456789.01,
+        ];
+
+        // Write
+        let mut section = standard::Section::new(Schema::with_fields(vec![FieldDefinition::new(
+            "v",
+            DataType::F64 { scale },
         )]));
         for v in write_values.iter() {
             let mut rowbuilder = section.open_row_builder();

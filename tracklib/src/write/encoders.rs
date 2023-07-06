@@ -1,5 +1,5 @@
 use super::bitstream;
-use crate::error::Result;
+use crate::error::{Result, TracklibError};
 
 pub trait Encoder {
     type T: ?Sized;
@@ -50,14 +50,14 @@ impl Encoder for U64Encoder {
 pub struct F64Encoder {
     prev: i64,
     factor: f64,
+    max: f64,
 }
 
 impl F64Encoder {
     pub fn new(scale: u8) -> Self {
-        Self {
-            prev: 0,
-            factor: 10_f64.powi(i32::from(scale)),
-        }
+        let factor = 10_f64.powi(i32::from(scale));
+        let max = (i64::MAX / factor as i64) as f64;
+        Self { prev: 0, factor, max }
     }
 }
 
@@ -68,12 +68,18 @@ impl Encoder for F64Encoder {
     where
         W: ?Sized + std::io::Write,
     {
-        bitstream::write_i64(
-            value.map(|val| (*val * self.factor) as i64).as_ref(),
-            buf,
-            &mut self.prev,
-        )
-        .map(|_| presence.push(value.is_some()))
+        if let Some(val) = value {
+            if *val <= self.max && *val >= -self.max {
+                bitstream::write_i64((*val * self.factor) as i64, buf, &mut self.prev)?;
+                presence.push(true);
+                Ok(())
+            } else {
+                Err(TracklibError::EncodingBoundsError)
+            }
+        } else {
+            presence.push(false);
+            Ok(())
+        }
     }
 }
 
@@ -264,7 +270,9 @@ mod tests {
     fn test_f64_encoder_scale_7() {
         let mut data_buf = LimitedWriteWrapper::new(vec![], 5);
         let mut presence_buf = vec![];
-        let mut encoder = F64Encoder::new(7);
+        let scale: u8 = 7;
+        let mut encoder = F64Encoder::new(scale);
+        let max = (i64::MAX / (10_f64.powi(i32::from(scale))) as i64) as f64;
 
         assert!(encoder.encode(Some(&0.0), &mut data_buf, &mut presence_buf).is_ok());
         assert!(encoder.encode(Some(&1.0), &mut data_buf, &mut presence_buf).is_ok());
@@ -275,38 +283,58 @@ mod tests {
         assert!(encoder.encode(Some(&3.00001), &mut data_buf, &mut presence_buf).is_ok());
         assert!(encoder.encode(Some(&-100.26), &mut data_buf, &mut presence_buf).is_ok());
 
+        assert!(encoder
+            .encode(Some(&(max + 0.1)), &mut data_buf, &mut presence_buf)
+            .is_err());
+        assert!(encoder
+            .encode(Some(&(-max - 0.1)), &mut data_buf, &mut presence_buf)
+            .is_err());
+        assert!(encoder.encode(Some(&max), &mut data_buf, &mut presence_buf).is_ok());
+
         #[rustfmt::skip]
         assert_eq!(data_buf.into_inner(),
                    &[0x00, // first storing a 0
 
-                     0x80, // leb128-encoded difference between prev (0.0) and 1.0 * 10e6
+                     0x80, // leb128-encoded difference between prev (0.0) and 1.0 * 1e7
                      0xAD,
                      0xE2,
                      0x04,
 
                      // None
 
-                     0xC0, // leb128-encoded delta between prev and 2.5 * 10e6
+                     0xC0, // leb128-encoded delta between prev and 2.5 * 1e7
                      0xC3,
                      0x93,
                      0x07,
 
-                     0xA4, // leb128-encoded delta between prev and 3.00001 * 10e6
+                     0xA4, // leb128-encoded delta between prev and 3.00001 * 1e7
                      0x97,
                      0xB1,
                      0x02,
 
-                     0xDC, // leb128-encoded delta between prev and -100.26 * 10e6
+                     0xDC, // leb128-encoded delta between prev and -100.26 * 1e7
                      0x8B,
                      0xCF,
                      0x93,
-                     0x7C]);
+                     0x7C,
+
+                     0xC0, // leb128-encoded delta between prev and the largest number
+                     0xAC, // that we can store for this f64 scale
+                     0xE6,
+                     0xDB,
+                     0x83,
+                     0x80,
+                     0x80,
+                     0x80,
+                     0x80,
+                     0x7F]);
 
         #[rustfmt::skip]
         assert_eq!(presence_buf,
                    &[true,
                      true,
                      false,
+                     true,
                      true,
                      true,
                      true]);
@@ -316,7 +344,9 @@ mod tests {
     fn test_f64_encoder_scale_2() {
         let mut data_buf = LimitedWriteWrapper::new(vec![], 3);
         let mut presence_buf = vec![];
-        let mut encoder = F64Encoder::new(2);
+        let scale: u8 = 2;
+        let mut encoder = F64Encoder::new(scale);
+        let max = (i64::MAX / (10_f64.powi(i32::from(scale))) as i64) as f64;
 
         assert!(encoder.encode(Some(&0.0), &mut data_buf, &mut presence_buf).is_ok());
         assert!(encoder.encode(Some(&1.0), &mut data_buf, &mut presence_buf).is_ok());
@@ -327,18 +357,42 @@ mod tests {
             .encode(Some(&-20.1234567), &mut data_buf, &mut presence_buf)
             .is_ok());
 
+        assert!(encoder
+            .encode(Some(&(max + 8.0)), &mut data_buf, &mut presence_buf)
+            .is_err());
+        assert!(encoder
+            .encode(Some(&(-max - 8.0)), &mut data_buf, &mut presence_buf)
+            .is_err());
+        assert!(encoder.encode(Some(&max), &mut data_buf, &mut presence_buf).is_ok());
+
         #[rustfmt::skip]
         assert_eq!(data_buf.into_inner(),
-                   &[0x00,
-                     0xE4,
+                   &[0x00, // 0.0
+
+                     0xE4, // delta to 1.0
                      0x00,
-                     0xCC,
+
+                     0xCC, // delta to -20
                      0x6F,
-                     0x74]);
+
+                     0x74, // delta to -20.12
+                     // (even though we passed in more precision, we only get two digits of course)
+
+                     0xDB, // delta to the largest number we can store at this scale
+                     0x8F,
+                     0x80,
+                     0x80,
+                     0x80,
+                     0x80,
+                     0x80,
+                     0x80,
+                     0x80,
+                     0x7F]);
 
         #[rustfmt::skip]
         assert_eq!(presence_buf,
                    &[true,
+                     true,
                      true,
                      true,
                      true]);

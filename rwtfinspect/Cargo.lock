@@ -252,7 +252,7 @@ version = "0.1.0"
 dependencies = [
  "base64",
  "flate2",
- "tracklib2",
+ "tracklib",
 ]
 
 [[package]]
@@ -315,8 +315,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "tracklib2"
-version = "0.1.0"
+name = "tracklib"
+version = "2.0.0"
 dependencies = [
  "chrono",
  "crc",

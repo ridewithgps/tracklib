@@ -82,7 +82,10 @@ impl Encoder for BoolEncoder {
     where
         W: ?Sized + std::io::Write,
     {
-        bitstream::write_byte(value.map(|v| u8::from(*v)).as_ref(), buf).map(|_| presence.push(value.is_some()))
+        value
+            .map(|val| bitstream::write_byte(u8::from(*val), buf))
+            .transpose()
+            .map(|v| presence.push(v.is_some()))
     }
 }
 
@@ -116,7 +119,7 @@ impl Encoder for BoolArrayEncoder {
         if let Some(array) = value {
             leb128::write::unsigned(buf, u64::try_from(array.len()).expect("usize != u64"))?;
             for b in array {
-                bitstream::write_byte(Some(u8::from(*b)).as_ref(), buf)?;
+                bitstream::write_byte(u8::from(*b), buf)?;
             }
         }
         presence.push(value.is_some());
@@ -160,7 +163,7 @@ impl Encoder for ByteArrayEncoder {
         if let Some(array) = value {
             leb128::write::unsigned(buf, u64::try_from(array.len()).expect("usize != u64"))?;
             for b in array {
-                bitstream::write_byte(Some(b), buf)?;
+                bitstream::write_byte(*b, buf)?;
             }
         }
         presence.push(value.is_some());

@@ -15,13 +15,11 @@ where
     Ok(())
 }
 
-pub fn write_byte<W>(value: Option<&u8>, buf: &mut W) -> Result<()>
+pub fn write_byte<W>(value: u8, buf: &mut W) -> Result<()>
 where
     W: ?Sized + Write,
 {
-    if let Some(val) = value {
-        buf.write_all(std::slice::from_ref(val))?;
-    }
+    buf.write_all(std::slice::from_ref(&value))?;
     Ok(())
 }
 
@@ -57,10 +55,9 @@ mod tests {
     #[test]
     fn test_write_byte() {
         let mut buf = vec![];
-        assert_matches!(write_byte(Some(&0), &mut buf), Ok(()));
-        assert_matches!(write_byte(None, &mut buf), Ok(()));
-        assert_matches!(write_byte(Some(&1), &mut buf), Ok(()));
-        assert_matches!(write_byte(Some(&255), &mut buf), Ok(()));
+        assert_matches!(write_byte(0, &mut buf), Ok(()));
+        assert_matches!(write_byte(1, &mut buf), Ok(()));
+        assert_matches!(write_byte(255, &mut buf), Ok(()));
         #[rustfmt::skip]
         assert_eq!(buf, &[0x00,
                           0x01,

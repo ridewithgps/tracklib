@@ -9,4 +9,4 @@ edition = "2021"
 [dependencies]
 base64 = "0.13"
 flate2 = "1.0"
-tracklib2 = {path = "../tracklib2", features=["inspect"]}
+tracklib = {path = "../tracklib", features=["inspect"]}

@@ -1,5 +1,5 @@
 use std::io::Read;
-use tracklib2::read::inspect::inspect;
+use tracklib::read::inspect::inspect;
 
 const USAGE: &'static str = "usage: rwtfinspect <filename> <base64 password>";
 

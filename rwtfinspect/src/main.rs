@@ -1,25 +1,39 @@
-use std::io::Read;
+use std::io::{self, BufRead, IsTerminal, Read};
 use tracklib::read::inspect::inspect;
 
-const USAGE: &'static str = "usage: rwtfinspect <filename> <base64 password>";
+const USAGE: &'static str = r#"rwtfinspect
+usage: rwtfinspect <filename>
+send a password to stdin
+"#;
 
 fn main() -> Result<(), String> {
-    let filename = std::env::args().nth(1).ok_or(USAGE)?;
-    let key_material: Vec<u8> = std::env::args()
-        .nth(2)
-        .map(base64::decode)
-        .map(|decode_result| decode_result.unwrap_or_default())
-        .unwrap_or_default();
+    let filename = if let Some(filename) = std::env::args().nth(1) {
+        filename
+    } else {
+        println!("{}", USAGE);
+        return Err(String::from("usage"));
+    };
+
+    let mut stdin = io::stdin().lock();
+    let key_material = if stdin.is_terminal() {
+        vec![]
+    } else {
+        let mut password = String::new();
+        stdin
+            .read_line(&mut password)
+            .map_err(|e| format!("Failed to read from stdin: {e:?}"))?;
+        hex::decode(password.trim_end()).map_err(|e| format!("Failed to decode hex: {e:?}"))?
+    };
 
     let data = {
         let raw =
-            std::fs::read(&filename).map_err(|e| format!("Error opening {filename}: {e:?}"))?;
+            std::fs::read(&filename).map_err(|e| format!("Failed to open {filename}: {e:?}"))?;
         let mut decoder = flate2::read::GzDecoder::new(raw.as_slice());
         if decoder.header().is_some() {
             let mut buf = Vec::new();
             decoder
                 .read_to_end(&mut buf)
-                .map_err(|e| format!("{e:?}"))?;
+                .map_err(|e| format!("Failed to decode gzip {filename}: {e:?}"))?;
             buf
         } else {
             raw
@@ -27,5 +41,6 @@ fn main() -> Result<(), String> {
     };
     let table = inspect(&data, &key_material)?;
     println!("{table}");
+
     Ok(())
 }

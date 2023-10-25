@@ -265,7 +265,7 @@ fn format_val(value: Option<FieldValue>) -> String {
 fn try_format_standard_section(data_start: &[u8], entry_num: usize, entry: &DataTableEntry) -> String {
     let mut table = Table::new();
 
-    let data = &data_start[entry.offset()..];
+    let data = &data_start[entry.offset()..(entry.offset() + entry.size())];
     let section = standard::Section::new(data, entry);
 
     table.add_row(Row::new(vec![TableCell::new_with_alignment(
@@ -320,7 +320,7 @@ fn try_format_encrypted_section(
 ) -> String {
     let mut table = Table::new();
 
-    let data = &data_start[entry.offset()..];
+    let data = &data_start[entry.offset()..(entry.offset() + entry.size())];
     let mut section = encrypted::Section::new(data, entry);
 
     table.add_row(Row::new(vec![TableCell::new_with_alignment(
@@ -357,7 +357,7 @@ fn try_format_encrypted_section(
         }
         Err(e) => {
             table.add_row(Row::new(vec![TableCell::new_with_alignment(
-                format!("{e:?}"),
+                format!("{e:?} "),
                 entry.schema_entries().len() + 1,
                 Alignment::Left,
             )]));

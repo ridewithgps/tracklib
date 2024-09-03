@@ -1,5 +1,5 @@
-use super::data_table::write_data_table;
-use super::metadata::write_metadata;
+use super::data_table::DataTableWriter;
+use super::metadata::MetadataWriter;
 use super::section::{Section, SectionInternal};
 use crate::consts::RWTF_HEADER_SIZE;
 use crate::error::Result;
@@ -7,32 +7,63 @@ use crate::types::MetadataEntry;
 use std::io::{self, Write};
 
 pub fn write_track<W: Write>(out: &mut W, metadata_entries: &[MetadataEntry], sections: &[&Section]) -> Result<()> {
-    // write metadata to a buffer so we can measure its size to use in the file header
-    let mut metadata_buf = Vec::new();
-    write_metadata(&mut metadata_buf, metadata_entries)?;
-
-    // write header
-    super::header::write_header(
-        out,
-        RWTF_HEADER_SIZE,
-        RWTF_HEADER_SIZE + u16::try_from(metadata_buf.len())?,
-    )?;
-
-    // copy metadata buffer to out
-    io::copy(&mut io::Cursor::new(metadata_buf), out)?;
-
-    // write the data table
-    write_data_table(out, sections)?;
-
-    // now write out all the data sections
+    let mut writer = TrackWriter::new();
+    for entry in metadata_entries {
+        writer.write_metadata(entry)?;
+    }
     for section in sections {
+        writer.write_section(section)?;
+    }
+    writer.finish(out)
+}
+
+#[derive(Default)]
+pub struct TrackWriter {
+    metadata_writer: MetadataWriter,
+    data_table_writer: DataTableWriter,
+    buf: Vec<u8>,
+}
+
+impl TrackWriter {
+    pub fn new() -> Self {
+        Default::default()
+    }
+
+    pub fn write_metadata(&mut self, entry: &MetadataEntry) -> Result<()> {
+        self.metadata_writer.write_entry(entry)
+    }
+
+    pub fn write_section(&mut self, section: &Section) -> Result<()> {
+        self.data_table_writer.write_section(section)?;
         match section {
-            Section::Standard(section) => section.write(out)?,
-            Section::Encrypted(section) => section.write(out)?,
+            Section::Standard(section) => section.write(&mut self.buf),
+            Section::Encrypted(section) => section.write(&mut self.buf),
         }
     }
 
-    Ok(())
+    pub fn finish<W: Write>(self, out: &mut W) -> Result<()> {
+        // write metadata to a buffer so we can measure its size to use in the file header
+        let mut metadata_buf = Vec::new();
+        self.metadata_writer.finish(&mut metadata_buf)?;
+
+        // write header
+        super::header::write_header(
+            out,
+            RWTF_HEADER_SIZE,
+            RWTF_HEADER_SIZE + u16::try_from(metadata_buf.len())?,
+        )?;
+
+        // copy metadata buffer to out
+        io::copy(&mut io::Cursor::new(metadata_buf), out)?;
+
+        // write the data table
+        self.data_table_writer.finish(out)?;
+
+        // now copy over the data sections
+        io::copy(&mut io::Cursor::new(self.buf), out)?;
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -173,34 +204,34 @@ mod tests {
                         ColumnWriter::I64ColumnWriter(cwi) => {
                             assert!(cwi.write(
                                 entry
-                                    .get(field_def.name())
-                                    .map(|v| match v {
-                                        FieldValue::I64(v) => Some(v),
-                                        _ => None,
-                                    })
-                                    .flatten(),
+                                .get(field_def.name())
+                                .map(|v| match v {
+                                    FieldValue::I64(v) => Some(v),
+                                    _ => None,
+                                })
+                                .flatten(),
                             ).is_ok());
                         }
                         ColumnWriter::BoolColumnWriter(cwi) => {
                             assert!(cwi.write(
                                 entry
-                                    .get(field_def.name())
-                                    .map(|v| match v {
-                                        FieldValue::Bool(v) => Some(v),
-                                        _ => None,
-                                    })
-                                    .flatten(),
+                                .get(field_def.name())
+                                .map(|v| match v {
+                                    FieldValue::Bool(v) => Some(v),
+                                    _ => None,
+                                })
+                                .flatten(),
                             ).is_ok());
                         }
                         ColumnWriter::StringColumnWriter(cwi) => {
                             assert!(cwi.write(
                                 entry
-                                    .get(field_def.name())
-                                    .map(|v| match v {
-                                        FieldValue::String(v) => Some(v.as_str()),
-                                        _ => None,
-                                    })
-                                    .flatten(),
+                                .get(field_def.name())
+                                .map(|v| match v {
+                                    FieldValue::String(v) => Some(v.as_str()),
+                                    _ => None,
+                                })
+                                .flatten(),
                             ).is_ok());
                         }
                         ColumnWriter::U64ColumnWriter(_) => {}
@@ -215,9 +246,9 @@ mod tests {
 
         let mut buf = Vec::new();
         assert_matches!(write_track(&mut buf,
-                                    &[MetadataEntry::TrackType(TrackType::Segment(5)),
-                                      MetadataEntry::CreatedAt(25)],
-                                    &[&Section::Standard(section1), &Section::Encrypted(section2)]), Ok(()) => {
+        &[MetadataEntry::TrackType(TrackType::Segment(5)),
+            MetadataEntry::CreatedAt(25)],
+        &[&Section::Standard(section1), &Section::Encrypted(section2)]), Ok(()) => {
             // std::fs::write("example.rwtf", &buf).unwrap();
 
             #[rustfmt::skip]

@@ -17,6 +17,9 @@ pub enum TracklibError {
     #[error("Encoding Bounds Error")]
     EncodingBoundsError,
 
+    #[error("Too Many Entries")]
+    TooManyEntriesError,
+
     #[error("Numeric Bounds Error")]
     BoundsError {
         #[from]

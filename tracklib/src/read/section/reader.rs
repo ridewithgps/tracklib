@@ -161,8 +161,7 @@ impl<'a, 'b> Iterator for ColumnIter<'a, 'b> {
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::I64)))
-                        .map_err(|e| e),
+                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::I64))),
                 ),
                 ColumnDecoder::U64 {
                     field_definition,
@@ -170,8 +169,7 @@ impl<'a, 'b> Iterator for ColumnIter<'a, 'b> {
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::U64)))
-                        .map_err(|e| e),
+                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::U64))),
                 ),
                 ColumnDecoder::F64 {
                     field_definition,
@@ -179,8 +177,7 @@ impl<'a, 'b> Iterator for ColumnIter<'a, 'b> {
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::F64)))
-                        .map_err(|e| e),
+                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::F64))),
                 ),
                 ColumnDecoder::Bool {
                     field_definition,
@@ -188,8 +185,7 @@ impl<'a, 'b> Iterator for ColumnIter<'a, 'b> {
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::Bool)))
-                        .map_err(|e| e),
+                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::Bool))),
                 ),
                 ColumnDecoder::String {
                     field_definition,
@@ -197,8 +193,7 @@ impl<'a, 'b> Iterator for ColumnIter<'a, 'b> {
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::String)))
-                        .map_err(|e| e),
+                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::String))),
                 ),
                 ColumnDecoder::BoolArray {
                     field_definition,
@@ -206,8 +201,7 @@ impl<'a, 'b> Iterator for ColumnIter<'a, 'b> {
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::BoolArray)))
-                        .map_err(|e| e),
+                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::BoolArray))),
                 ),
                 ColumnDecoder::U64Array {
                     field_definition,
@@ -215,8 +209,7 @@ impl<'a, 'b> Iterator for ColumnIter<'a, 'b> {
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::U64Array)))
-                        .map_err(|e| e),
+                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::U64Array))),
                 ),
                 ColumnDecoder::ByteArray {
                     field_definition,
@@ -224,8 +217,7 @@ impl<'a, 'b> Iterator for ColumnIter<'a, 'b> {
                 } => Some(
                     decoder
                         .decode()
-                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::ByteArray)))
-                        .map_err(|e| e),
+                        .map(|maybe_v| (*field_definition, maybe_v.map(FieldValue::ByteArray))),
                 ),
             }
         } else {

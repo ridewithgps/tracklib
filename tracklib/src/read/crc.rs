@@ -30,6 +30,7 @@ impl CRCImpl for u32 {
 }
 
 #[derive(Debug, PartialEq)]
+#[allow(clippy::upper_case_acronyms)]
 pub(crate) enum CRC<T> {
     Valid(T),
     Invalid { expected: T, computed: T },

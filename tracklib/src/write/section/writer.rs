@@ -50,12 +50,12 @@ impl Buffer {
         match data_type {
             DataType::I64 => Buffer::I64(BufferImpl::new(I64Encoder::default())),
             DataType::U64 => Buffer::U64(BufferImpl::new(U64Encoder::default())),
-            DataType::Bool => Buffer::Bool(BufferImpl::new(BoolEncoder::default())),
-            DataType::String => Buffer::String(BufferImpl::new(StringEncoder::default())),
+            DataType::Bool => Buffer::Bool(BufferImpl::new(BoolEncoder)),
+            DataType::String => Buffer::String(BufferImpl::new(StringEncoder)),
             DataType::F64 { scale } => Buffer::F64(BufferImpl::new(F64Encoder::new(*scale))),
-            DataType::BoolArray => Buffer::BoolArray(BufferImpl::new(BoolArrayEncoder::default())),
-            DataType::U64Array => Buffer::U64Array(BufferImpl::new(U64ArrayEncoder::default())),
-            DataType::ByteArray => Buffer::ByteArray(BufferImpl::new(ByteArrayEncoder::default())),
+            DataType::BoolArray => Buffer::BoolArray(BufferImpl::new(BoolArrayEncoder)),
+            DataType::U64Array => Buffer::U64Array(BufferImpl::new(U64ArrayEncoder)),
+            DataType::ByteArray => Buffer::ByteArray(BufferImpl::new(ByteArrayEncoder)),
         }
     }
 

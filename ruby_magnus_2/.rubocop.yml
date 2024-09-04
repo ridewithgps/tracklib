@@ -1,0 +1,19 @@
+AllCops:
+  TargetRubyVersion: 3.0
+  NewCops: enable
+  SuggestExtensions: false
+
+Style/StringLiterals:
+  EnforcedStyle: double_quotes
+
+Style/StringLiteralsInInterpolation:
+  EnforcedStyle: double_quotes
+
+Layout/LineLength:
+  Max: 256
+
+Metrics/BlockLength:
+  Enabled: false
+
+Metrics/CollectionLiteralLength:
+  Enabled: false

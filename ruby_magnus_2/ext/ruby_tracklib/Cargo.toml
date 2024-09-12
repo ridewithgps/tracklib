@@ -9,6 +9,7 @@ publish = false
 crate-type = ["cdylib"]
 
 [dependencies]
+itertools = "0.13"
 magnus = "0.7"
 ouroboros = "0.18"
 tracklib = {path="../../../tracklib"}

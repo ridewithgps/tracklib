@@ -1,3 +1,8 @@
+use crate::geometry::{reader_to_points, IrrelevantPointsBehavior};
+use crate::polyline::{ruby::PolylineOptions, rust::polyline_encode};
+use crate::simplify::simplify_points;
+use crate::surface::ruby::SurfaceMapping;
+use itertools::Itertools;
 use magnus::{
     data_type_builder,
     typed_data::{DataType, DataTypeFunctions, Obj},
@@ -5,6 +10,7 @@ use magnus::{
     Class, Error, IntoValue, Module, RArray, RClass, RString, Ruby, TryConvert, Value,
 };
 use ouroboros::self_referencing;
+use std::collections::HashSet;
 use tracklib::read::section::SectionRead;
 
 #[self_referencing]
@@ -247,6 +253,317 @@ impl TrackReader {
             }
         })
     }
+
+    pub fn section_polyline(handle: &Ruby, rb_self: Obj<Self>, arguments: &[Value]) -> Result<RString, Error> {
+        let args = magnus::scan_args::scan_args::<_, _, (), (), (), ()>(arguments)?;
+
+        let (index, polyline_opts): (usize, &PolylineOptions) = args.required;
+        let (key_material,): (Option<Value>,) = args.optional;
+
+        rb_self.with_reader(|reader| {
+            let section = reader.section(index).ok_or_else(|| {
+                Error::new(
+                    handle.exception_index_error(),
+                    format!("Section {index} does not exist"),
+                )
+            })?;
+
+            let schema = tracklib::schema::Schema::with_fields(vec![
+                tracklib::schema::FieldDefinition::new("x", tracklib::schema::DataType::F64 { scale: 6 }),
+                tracklib::schema::FieldDefinition::new("y", tracklib::schema::DataType::F64 { scale: 6 }),
+                tracklib::schema::FieldDefinition::new("e", tracklib::schema::DataType::F64 { scale: 1 }),
+                tracklib::schema::FieldDefinition::new("S", tracklib::schema::DataType::U64),
+                tracklib::schema::FieldDefinition::new("R", tracklib::schema::DataType::U64),
+            ]);
+
+            match section {
+                tracklib::read::section::Section::Standard(section) => {
+                    let reader = section.reader_for_schema(&schema).map_err(|e| {
+                        Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                    })?;
+
+                    let points = reader_to_points(reader, IrrelevantPointsBehavior::Ignore).map_err(|e| {
+                        Error::new(
+                            handle.exception_exception(),
+                            format!("Error reading tracklib data: {e:?}"),
+                        )
+                    })?;
+
+                    Ok(handle.str_new(&polyline_encode(&points, polyline_opts.inner())))
+                }
+                tracklib::read::section::Section::Encrypted(mut section) => {
+                    let key_material = key_material
+                        .ok_or_else(|| Error::new(handle.exception_arg_error(), "Missing 'key_material' argument"))?;
+                    let key_material = RString::try_convert(key_material)?;
+                    let key_bytes = unsafe { key_material.as_slice().to_vec() };
+                    let reader = section.reader_for_schema(&key_bytes, &schema).map_err(|e| {
+                        Error::new(
+                            handle.exception_exception(),
+                            format!("Error reading tracklib data: {e:?}"),
+                        )
+                    })?;
+
+                    let points = reader_to_points(reader, IrrelevantPointsBehavior::Ignore).map_err(|e| {
+                        Error::new(
+                            handle.exception_exception(),
+                            format!("Error reading tracklib data: {e:?}"),
+                        )
+                    })?;
+
+                    Ok(handle.str_new(&polyline_encode(&points, polyline_opts.inner())))
+                }
+            }
+        })
+    }
+
+    pub fn section_data_simplified(handle: &Ruby, rb_self: Obj<Self>, arguments: &[Value]) -> Result<RArray, Error> {
+        let args = magnus::scan_args::scan_args::<_, _, (), (), (), ()>(arguments)?;
+
+        let (index, surface_mapping, tolerance): (usize, &SurfaceMapping, f64) = args.required;
+        let (key_material,): (Option<Value>,) = args.optional;
+
+        rb_self.with_reader(|reader| {
+            let section = reader.section(index).ok_or_else(|| {
+                Error::new(
+                    handle.exception_index_error(),
+                    format!("Section {index} does not exist"),
+                )
+            })?;
+
+            let schema = tracklib::schema::Schema::with_fields(vec![
+                tracklib::schema::FieldDefinition::new("x", tracklib::schema::DataType::F64 { scale: 6 }),
+                tracklib::schema::FieldDefinition::new("y", tracklib::schema::DataType::F64 { scale: 6 }),
+                tracklib::schema::FieldDefinition::new("e", tracklib::schema::DataType::F64 { scale: 1 }),
+                tracklib::schema::FieldDefinition::new("S", tracklib::schema::DataType::U64),
+                tracklib::schema::FieldDefinition::new("R", tracklib::schema::DataType::U64),
+            ]);
+
+            match section {
+                tracklib::read::section::Section::Standard(section) => {
+                    let reader_for_simplification = section.reader_for_schema(&schema).map_err(|e| {
+                        Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                    })?;
+                    let points =
+                        reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count).map_err(|e| {
+                            Error::new(
+                                handle.exception_exception(),
+                                format!("Error reading tracklib data: {e:?}"),
+                            )
+                        })?;
+                    let simplified_indexes = simplify_points(&points, surface_mapping.inner(), tolerance);
+
+                    let reader_for_serialization = section.reader().map_err(|e| {
+                        Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                    })?;
+
+                    reader_with_indexes_to_array_of_hashes(handle, reader_for_serialization, &simplified_indexes)
+                }
+                tracklib::read::section::Section::Encrypted(mut section) => {
+                    let key_material = key_material
+                        .ok_or_else(|| Error::new(handle.exception_arg_error(), "Missing 'key_material' argument"))?;
+                    let key_material = RString::try_convert(key_material)?;
+                    let key_bytes = unsafe { key_material.as_slice().to_vec() };
+
+                    let reader_for_simplification = section.reader_for_schema(&key_bytes, &schema).map_err(|e| {
+                        Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                    })?;
+                    let points =
+                        reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count).map_err(|e| {
+                            Error::new(
+                                handle.exception_exception(),
+                                format!("Error reading tracklib data: {e:?}"),
+                            )
+                        })?;
+                    let simplified_indexes = simplify_points(&points, surface_mapping.inner(), tolerance);
+
+                    let reader_for_serialization = section.reader(&key_bytes).map_err(|e| {
+                        Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                    })?;
+
+                    reader_with_indexes_to_array_of_hashes(handle, reader_for_serialization, &simplified_indexes)
+                }
+            }
+        })
+    }
+
+    pub fn section_column_simplified(handle: &Ruby, rb_self: Obj<Self>, arguments: &[Value]) -> Result<RArray, Error> {
+        let args = magnus::scan_args::scan_args::<_, _, (), (), (), ()>(arguments)?;
+
+        let (index, column_name, surface_mapping, tolerance): (usize, String, &SurfaceMapping, f64) = args.required;
+        let (key_material,): (Option<Value>,) = args.optional;
+
+        rb_self.with_reader(|reader| {
+            let section = reader.section(index).ok_or_else(|| {
+                Error::new(
+                    handle.exception_index_error(),
+                    format!("Section {index} does not exist"),
+                )
+            })?;
+
+            let track_schema = match section {
+                tracklib::read::section::Section::Standard(ref section) => section.schema(),
+                tracklib::read::section::Section::Encrypted(ref section) => section.schema(),
+            };
+            let maybe_field_def = track_schema
+                .fields()
+                .iter()
+                .find(|field_def| field_def.name() == column_name);
+
+            if let Some(field_def) = maybe_field_def {
+                let schema_for_serialization = tracklib::schema::Schema::with_fields(vec![field_def.clone()]);
+
+                let schema_for_simplification = tracklib::schema::Schema::with_fields(vec![
+                    tracklib::schema::FieldDefinition::new("x", tracklib::schema::DataType::F64 { scale: 6 }),
+                    tracklib::schema::FieldDefinition::new("y", tracklib::schema::DataType::F64 { scale: 6 }),
+                    tracklib::schema::FieldDefinition::new("e", tracklib::schema::DataType::F64 { scale: 1 }),
+                    tracklib::schema::FieldDefinition::new("S", tracklib::schema::DataType::U64),
+                    tracklib::schema::FieldDefinition::new("R", tracklib::schema::DataType::U64),
+                ]);
+
+                match section {
+                    tracklib::read::section::Section::Standard(section) => {
+                        let reader_for_simplification =
+                            section.reader_for_schema(&schema_for_simplification).map_err(|e| {
+                                Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                            })?;
+                        let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count)
+                            .map_err(|e| {
+                                Error::new(
+                                    handle.exception_exception(),
+                                    format!("Error reading tracklib data: {e:?}"),
+                                )
+                            })?;
+                        let simplified_indexes = simplify_points(&points, surface_mapping.inner(), tolerance);
+
+                        let reader_for_serialization =
+                            section.reader_for_schema(&schema_for_serialization).map_err(|e| {
+                                Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                            })?;
+
+                        reader_with_indexes_to_single_column_array(
+                            handle,
+                            reader_for_serialization,
+                            &simplified_indexes,
+                        )
+                    }
+                    tracklib::read::section::Section::Encrypted(mut section) => {
+                        let key_material = key_material.ok_or_else(|| {
+                            Error::new(handle.exception_arg_error(), "Missing 'key_material' argument")
+                        })?;
+                        let key_material = RString::try_convert(key_material)?;
+                        let key_bytes = unsafe { key_material.as_slice().to_vec() };
+
+                        let reader_for_simplification = section
+                            .reader_for_schema(&key_bytes, &schema_for_simplification)
+                            .map_err(|e| {
+                                Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                            })?;
+                        let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count)
+                            .map_err(|e| {
+                                Error::new(
+                                    handle.exception_exception(),
+                                    format!("Error reading tracklib data: {e:?}"),
+                                )
+                            })?;
+                        let simplified_indexes = simplify_points(&points, surface_mapping.inner(), tolerance);
+
+                        let reader_for_serialization = section
+                            .reader_for_schema(&key_bytes, &schema_for_serialization)
+                            .map_err(|e| {
+                                Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                            })?;
+
+                        reader_with_indexes_to_single_column_array(
+                            handle,
+                            reader_for_serialization,
+                            &simplified_indexes,
+                        )
+                    }
+                }
+            } else {
+                Ok(handle.ary_new())
+            }
+        })
+    }
+
+    pub fn section_simplified_polyline(
+        handle: &Ruby,
+        rb_self: Obj<Self>,
+        arguments: &[Value],
+    ) -> Result<RString, Error> {
+        let args = magnus::scan_args::scan_args::<_, _, (), (), (), ()>(arguments)?;
+
+        let (index, surface_mapping, tolerance, polyline_opts): (usize, &SurfaceMapping, f64, &PolylineOptions) =
+            args.required;
+        let (key_material,): (Option<Value>,) = args.optional;
+
+        rb_self.with_reader(|reader| {
+            let section = reader.section(index).ok_or_else(|| {
+                Error::new(
+                    handle.exception_index_error(),
+                    format!("Section {index} does not exist"),
+                )
+            })?;
+
+            let schema = tracklib::schema::Schema::with_fields(vec![
+                tracklib::schema::FieldDefinition::new("x", tracklib::schema::DataType::F64 { scale: 6 }),
+                tracklib::schema::FieldDefinition::new("y", tracklib::schema::DataType::F64 { scale: 6 }),
+                tracklib::schema::FieldDefinition::new("e", tracklib::schema::DataType::F64 { scale: 1 }),
+                tracklib::schema::FieldDefinition::new("S", tracklib::schema::DataType::U64),
+                tracklib::schema::FieldDefinition::new("R", tracklib::schema::DataType::U64),
+            ]);
+
+            match section {
+                tracklib::read::section::Section::Standard(section) => {
+                    let reader_for_simplification = section.reader_for_schema(&schema).map_err(|e| {
+                        Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                    })?;
+                    let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Ignore)
+                        .map_err(|e| {
+                            Error::new(
+                                handle.exception_exception(),
+                                format!("Error reading tracklib data: {e:?}"),
+                            )
+                        })?;
+                    let simplified_indexes = simplify_points(&points, surface_mapping.inner(), tolerance);
+
+                    let simplified_points = simplified_indexes
+                        .into_iter()
+                        .sorted()
+                        .map(|index| points[index].clone())
+                        .collect::<Vec<_>>();
+
+                    Ok(handle.str_new(&polyline_encode(&simplified_points, polyline_opts.inner())))
+                }
+                tracklib::read::section::Section::Encrypted(mut section) => {
+                    let key_material = key_material
+                        .ok_or_else(|| Error::new(handle.exception_arg_error(), "Missing 'key_material' argument"))?;
+                    let key_material = RString::try_convert(key_material)?;
+                    let key_bytes = unsafe { key_material.as_slice().to_vec() };
+
+                    let reader_for_simplification = section.reader_for_schema(&key_bytes, &schema).map_err(|e| {
+                        Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                    })?;
+                    let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Ignore)
+                        .map_err(|e| {
+                            Error::new(
+                                handle.exception_exception(),
+                                format!("Error reading tracklib data: {e:?}"),
+                            )
+                        })?;
+                    let simplified_indexes = simplify_points(&points, surface_mapping.inner(), tolerance);
+
+                    let simplified_points = simplified_indexes
+                        .into_iter()
+                        .sorted()
+                        .map(|index| points[index].clone())
+                        .collect::<Vec<_>>();
+
+                    Ok(handle.str_new(&polyline_encode(&simplified_points, polyline_opts.inner())))
+                }
+            }
+        })
+    }
 }
 
 fn fieldvalue_to_ruby(handle: &Ruby, value: tracklib::types::FieldValue) -> Value {
@@ -317,6 +634,54 @@ fn reader_to_array_of_hashes(
     }))
 }
 
+fn reader_with_indexes_to_array_of_hashes(
+    handle: &Ruby,
+    mut reader: tracklib::read::section::reader::SectionReader,
+    indexes: &HashSet<usize>,
+) -> Result<RArray, Error> {
+    let mut i = 0;
+
+    handle.ary_try_from_iter(
+        std::iter::from_fn(|| {
+            let columniter = reader.open_column_iter()?;
+
+            if indexes.contains(&i) {
+                i += 1;
+                Some(Some(
+                    handle.hash_try_from_iter(
+                        columniter
+                            .map(|row| {
+                                row.map_err(|e| {
+                                    Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                                })
+                            })
+                            .map(|row| {
+                                row.map(|(field_def, maybe_value)| {
+                                    maybe_value.map(|value| (field_def.name(), fieldvalue_to_ruby(handle, value)))
+                                })
+                            })
+                            .filter(|row| match row {
+                                Ok(Some(_)) => true,
+                                Ok(None) => false,
+                                Err(_) => true,
+                            })
+                            .map(|row| match row {
+                                Ok(Some(v)) => Ok(v),
+                                Ok(None) => unreachable!("the filter should remove Ok(None)"),
+                                Err(e) => Err(e),
+                            }),
+                    ),
+                ))
+            } else {
+                i += 1;
+                columniter.for_each(drop); // fully consume (and ignore) this row
+                Some(None)
+            }
+        })
+        .filter_map(|e| e),
+    )
+}
+
 fn reader_to_single_column_array(
     handle: &Ruby,
     mut reader: tracklib::read::section::reader::SectionReader,
@@ -331,6 +696,38 @@ fn reader_to_single_column_array(
             )),
         })
     }))
+}
+
+fn reader_with_indexes_to_single_column_array(
+    handle: &Ruby,
+    mut reader: tracklib::read::section::reader::SectionReader,
+    indexes: &HashSet<usize>,
+) -> Result<RArray, Error> {
+    let mut i = 0;
+
+    handle.ary_try_from_iter(
+        std::iter::from_fn(|| {
+            let mut columniter = reader.open_column_iter()?;
+
+            if indexes.contains(&i) {
+                i += 1;
+
+                Some(columniter.next().map(|field| match field {
+                    Ok((_field_def, Some(field_value))) => Ok(fieldvalue_to_ruby(handle, field_value)),
+                    Ok((_field_def, None)) => Ok(handle.qnil().into_value_with(handle)),
+                    Err(e) => Err(Error::new(
+                        handle.exception_exception(),
+                        format!("Error reading tracklib data: {e:?}"),
+                    )),
+                }))
+            } else {
+                i += 1;
+                columniter.for_each(drop); // fully consume (and ignore) this row
+                Some(None)
+            }
+        })
+        .filter_map(|e| e),
+    )
 }
 
 impl DataTypeFunctions for TrackReader {}

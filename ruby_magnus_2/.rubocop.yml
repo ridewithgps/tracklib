@@ -20,3 +20,6 @@ Metrics/BlockLength:
 
 Metrics/CollectionLiteralLength:
   Enabled: false
+
+Gemspec/RequiredRubyVersion:
+  Enabled: false

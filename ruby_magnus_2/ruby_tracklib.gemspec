@@ -23,6 +23,6 @@ Gem::Specification.new do |spec|
   spec.extensions      = ["ext/ruby_tracklib/Cargo.toml"]
 
   spec.metadata["rubygems_mfa_required"] = "true"
-  spec.required_ruby_version             = ">= 2.7.8"
+  spec.required_ruby_version             = ">= 2.7.4"
   spec.required_rubygems_version         = ">= 3.3.11"
 end

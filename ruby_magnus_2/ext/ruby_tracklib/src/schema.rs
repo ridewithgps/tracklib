@@ -71,7 +71,7 @@ impl Schema {
             .collect::<Vec<_>>();
 
         if fields.len() != keys.len() {
-            Err(Error::new(handle.exception_exception(), "Schema is missing field(s)"))
+            Err(Error::new(handle.exception_arg_error(), "Schema is missing field(s)"))
         } else {
             Ok(tracklib::schema::Schema::with_fields(fields))
         }

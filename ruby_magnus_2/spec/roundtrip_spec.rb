@@ -181,9 +181,9 @@ RSpec.describe Tracklib do
 
     # only the right password works when it's encrypted
     expect { reader.section_data(1, nil) }.to raise_error(TypeError, "no implicit conversion of nil into String")
-    expect { reader.section_data(1, "Invalid Password") }.to raise_error(Exception, /Could not parse section: CryptoError/)
-    expect { reader.section_data(1, "00004567890123456789012345678901") }.to raise_error(Exception, /Could not parse section: CryptoError/)
-    expect { reader.section_column(1, "i64", "00004567890123456789012345678901") }.to raise_error(Exception, /Could not parse section: CryptoError/)
+    expect { reader.section_data(1, "Invalid Password") }.to raise_error(IOError, /Could not parse section: CryptoError/)
+    expect { reader.section_data(1, "00004567890123456789012345678901") }.to raise_error(IOError, /Could not parse section: CryptoError/)
+    expect { reader.section_column(1, "i64", "00004567890123456789012345678901") }.to raise_error(IOError, /Could not parse section: CryptoError/)
   end
 
   it "will trim schema fields" do

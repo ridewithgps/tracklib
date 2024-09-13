@@ -27,7 +27,7 @@ impl Section {
         let trimmed_schema = base_schema.trim(handle, data)?;
         let key_bytes = unsafe { key_material.as_slice().to_vec() };
         let mut section = tracklib::write::section::encrypted::Section::new(&key_bytes, trimmed_schema)
-            .map_err(|e| Error::new(handle.exception_exception(), format!("Error creating section: {e:?}")))?;
+            .map_err(|e| Error::new(handle.exception_io_error(), format!("Error creating section: {e:?}")))?;
         write_ruby_array_into_section(handle, &mut section, data)?;
 
         Ok(Self {
@@ -53,14 +53,14 @@ fn write_ruby_array_into_section<SW: SectionWrite>(handle: &Ruby, section: &mut 
                                 Ok(f64::try_convert(value)?.round() as i64)
                             } else {
                                 Err(Error::new(
-                                    handle.exception_exception(),
+                                    handle.exception_type_error(),
                                     "Unable to convert unknown ruby type into i64",
                                 ))
                             }
                         })
                         .transpose()?;
                     cwi.write(v.as_ref())
-                        .map_err(|e| Error::new(handle.exception_exception(), format!("Error writing field: {e:?}")))?;
+                        .map_err(|e| Error::new(handle.exception_io_error(), format!("Error writing field: {e:?}")))?;
                 }
 
                 tracklib::write::section::writer::ColumnWriter::F64ColumnWriter(cwi) => {
@@ -69,7 +69,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(handle: &Ruby, section: &mut 
                         .map(|value| f64::try_convert(value))
                         .transpose()?;
                     cwi.write(v.as_ref())
-                        .map_err(|e| Error::new(handle.exception_exception(), format!("Error writing field: {e:?}")))?;
+                        .map_err(|e| Error::new(handle.exception_io_error(), format!("Error writing field: {e:?}")))?;
                 }
 
                 tracklib::write::section::writer::ColumnWriter::U64ColumnWriter(cwi) => {
@@ -82,14 +82,14 @@ fn write_ruby_array_into_section<SW: SectionWrite>(handle: &Ruby, section: &mut 
                                 Ok(f64::try_convert(value)?.round() as u64)
                             } else {
                                 Err(Error::new(
-                                    handle.exception_exception(),
+                                    handle.exception_type_error(),
                                     "Unable to convert unknown ruby type into u64",
                                 ))
                             }
                         })
                         .transpose()?;
                     cwi.write(v.as_ref())
-                        .map_err(|e| Error::new(handle.exception_exception(), format!("Error writing field: {e:?}")))?;
+                        .map_err(|e| Error::new(handle.exception_io_error(), format!("Error writing field: {e:?}")))?;
                 }
 
                 tracklib::write::section::writer::ColumnWriter::BoolColumnWriter(cwi) => {
@@ -98,7 +98,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(handle: &Ruby, section: &mut 
                         .map(|value| bool::try_convert(value))
                         .transpose()?;
                     cwi.write(v.as_ref())
-                        .map_err(|e| Error::new(handle.exception_exception(), format!("Error writing field: {e:?}")))?;
+                        .map_err(|e| Error::new(handle.exception_io_error(), format!("Error writing field: {e:?}")))?;
                 }
 
                 tracklib::write::section::writer::ColumnWriter::StringColumnWriter(cwi) => {
@@ -107,7 +107,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(handle: &Ruby, section: &mut 
                         .map(|value| String::try_convert(value))
                         .transpose()?;
                     cwi.write(v.as_deref())
-                        .map_err(|e| Error::new(handle.exception_exception(), format!("Error writing field: {e:?}")))?;
+                        .map_err(|e| Error::new(handle.exception_io_error(), format!("Error writing field: {e:?}")))?;
                 }
 
                 tracklib::write::section::writer::ColumnWriter::BoolArrayColumnWriter(cwi) => {
@@ -116,7 +116,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(handle: &Ruby, section: &mut 
                         .map(|value| Vec::<bool>::try_convert(value))
                         .transpose()?;
                     cwi.write(v.as_deref())
-                        .map_err(|e| Error::new(handle.exception_exception(), format!("Error writing field: {e:?}")))?;
+                        .map_err(|e| Error::new(handle.exception_io_error(), format!("Error writing field: {e:?}")))?;
                 }
 
                 tracklib::write::section::writer::ColumnWriter::U64ArrayColumnWriter(cwi) => {
@@ -132,7 +132,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(handle: &Ruby, section: &mut 
                                         Ok(f64::try_convert(value)?.round() as u64)
                                     } else {
                                         Err(Error::new(
-                                            handle.exception_exception(),
+                                            handle.exception_type_error(),
                                             "Unable to convert unknown ruby type into u64",
                                         ))
                                     }
@@ -141,7 +141,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(handle: &Ruby, section: &mut 
                         })
                         .transpose()?;
                     cwi.write(v.as_deref())
-                        .map_err(|e| Error::new(handle.exception_exception(), format!("Error writing field: {e:?}")))?;
+                        .map_err(|e| Error::new(handle.exception_io_error(), format!("Error writing field: {e:?}")))?;
                 }
 
                 tracklib::write::section::writer::ColumnWriter::ByteArrayColumnWriter(cwi) => {
@@ -153,7 +153,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(handle: &Ruby, section: &mut 
                         })
                         .transpose()?;
                     cwi.write(v.as_deref())
-                        .map_err(|e| Error::new(handle.exception_exception(), format!("Error writing field: {e:?}")))?;
+                        .map_err(|e| Error::new(handle.exception_io_error(), format!("Error writing field: {e:?}")))?;
                 }
             }
         }
@@ -212,17 +212,17 @@ pub fn write_track(handle: &Ruby, metadata: RArray, sections: RArray) -> Result<
     for entry in metadata_entries {
         writer
             .write_metadata(&entry)
-            .map_err(|e| Error::new(handle.exception_exception(), format!("Error writing metadata: {e:?}")))?;
+            .map_err(|e| Error::new(handle.exception_io_error(), format!("Error writing metadata: {e:?}")))?;
     }
     for section in typed_sections {
         writer
             .write_section(&section.section)
-            .map_err(|e| Error::new(handle.exception_exception(), format!("Error writing section: {e:?}")))?;
+            .map_err(|e| Error::new(handle.exception_io_error(), format!("Error writing section: {e:?}")))?;
     }
     let mut buf = vec![];
     writer
         .finish(&mut buf)
-        .map_err(|e| Error::new(handle.exception_exception(), format!("Error writing: {e:?}")))?;
+        .map_err(|e| Error::new(handle.exception_io_error(), format!("Error writing: {e:?}")))?;
 
     Ok(handle.enc_str_new(&buf, handle.ascii8bit_encoding()))
 }

@@ -574,8 +574,8 @@ RSpec.describe Tracklib do
     schema = Tracklib::Schema.new([["f", :f64, scale]])
     i64_max = 2**63
     schema_max = i64_max / (10**scale)
-    expect { Tracklib::Section.standard(schema, [{ "f" => schema_max + 1 }]) }.to raise_error(Exception, "Error writing field: EncodingBoundsError")
-    expect { Tracklib::Section.standard(schema, [{ "f" => -schema_max - 1 }]) }.to raise_error(Exception, "Error writing field: EncodingBoundsError")
+    expect { Tracklib::Section.standard(schema, [{ "f" => schema_max + 1 }]) }.to raise_error(IOError, "Error writing field: EncodingBoundsError")
+    expect { Tracklib::Section.standard(schema, [{ "f" => -schema_max - 1 }]) }.to raise_error(IOError, "Error writing field: EncodingBoundsError")
     section = Tracklib::Section.standard(schema, [{ "f" => schema_max }])
 
     expect(Tracklib.write_track([], [section])
@@ -630,7 +630,7 @@ RSpec.describe Tracklib do
   end
 
   it "raises errors for invalid array type elements" do
-    expect { Tracklib::Section.standard(Tracklib::Schema.new([["a", :u64_array]]), [{ "a" => [0, 1, 2, "3"] }]) }.to raise_error(Exception, "Unable to convert unknown ruby type into u64")
+    expect { Tracklib::Section.standard(Tracklib::Schema.new([["a", :u64_array]]), [{ "a" => [0, 1, 2, "3"] }]) }.to raise_error(TypeError, "Unable to convert unknown ruby type into u64")
   end
 
   it "can write metadata" do
@@ -695,7 +695,7 @@ RSpec.describe Tracklib do
               0xBF])
 
     # unknown type
-    expect { Tracklib.write_track([[:foo, 25]], []) }.to raise_error(Exception, "Metadata Type 'foo' unknown")
+    expect { Tracklib.write_track([[:foo, 25]], []) }.to raise_error(ArgumentError, "Metadata Type 'foo' unknown")
 
     # invalid args
     expect { Tracklib.write_track([[]], []) }.to raise_error(TypeError, "no implicit conversion of NilClass into Symbol")
@@ -712,19 +712,19 @@ RSpec.describe Tracklib do
                                                        ["c", :u64]]),
                                  [{ "a" => "RWGPS",
                                     "d" => "RWGPS" }])
-    end.to raise_error(Exception, "Schema is missing field(s)")
+    end.to raise_error(ArgumentError, "Schema is missing field(s)")
     expect do
       Tracklib::Section.standard(Tracklib::Schema.new([["a", :string],
                                                        ["b", :bool],
                                                        ["c", :u64]]),
                                  [{ "d" => "RWGPS" }])
-    end.to raise_error(Exception, "Schema is missing field(s)")
+    end.to raise_error(ArgumentError, "Schema is missing field(s)")
     expect do
       Tracklib::Section.standard(Tracklib::Schema.new([["a", :string],
                                                        ["b", :bool],
                                                        ["c", :u64]]),
                                  [{ "a" => "RWGPS", "b" => false, "c" => 0, "d" => "RWGPS" }])
-    end.to raise_error(Exception, "Schema is missing field(s)")
+    end.to raise_error(ArgumentError, "Schema is missing field(s)")
   end
 
   it "trims schema to only store fields in use" do

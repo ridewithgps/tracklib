@@ -434,7 +434,7 @@ RSpec.describe Tracklib do
 
   it "raises an exception for an invalid section index" do
     track_reader = Tracklib::TrackReader.new(data)
-    expect { track_reader.section_encoding(2) }.to raise_error(Exception, "Section 2 does not exist")
+    expect { track_reader.section_encoding(2) }.to raise_error(IndexError, "Section 2 does not exist")
   end
 
   it "can select a subset of fields" do
@@ -452,6 +452,6 @@ RSpec.describe Tracklib do
     expect { track_reader.section_column(0, :foo) }.to raise_error(TypeError, "no implicit conversion of Symbol into String")
 
     # section doesn't exist
-    expect { track_reader.section_column(2, "a") }.to raise_error(Exception, "Section 2 does not exist")
+    expect { track_reader.section_column(2, "a") }.to raise_error(IndexError, "Section 2 does not exist")
   end
 end

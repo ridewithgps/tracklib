@@ -183,7 +183,7 @@ impl TrackReader {
             match section {
                 tracklib::read::section::Section::Standard(section) => {
                     let reader = section.reader().map_err(|e| {
-                        Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                        Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
 
                     reader_to_array_of_hashes(handle, reader)
@@ -194,7 +194,7 @@ impl TrackReader {
                     let key_material = RString::try_convert(key_material)?;
                     let key_bytes = unsafe { key_material.as_slice().to_vec() };
                     let reader = section.reader(&key_bytes).map_err(|e| {
-                        Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                        Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
 
                     reader_to_array_of_hashes(handle, reader)
@@ -229,7 +229,7 @@ impl TrackReader {
                 match section {
                     tracklib::read::section::Section::Standard(section) => {
                         let reader = section.reader_for_schema(&schema).map_err(|e| {
-                            Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                            Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                         })?;
 
                         reader_to_single_column_array(handle, reader)
@@ -242,7 +242,7 @@ impl TrackReader {
                         let key_bytes = unsafe { key_material.as_slice().to_vec() };
 
                         let reader = section.reader_for_schema(&key_bytes, &schema).map_err(|e| {
-                            Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                            Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                         })?;
 
                         reader_to_single_column_array(handle, reader)
@@ -279,12 +279,12 @@ impl TrackReader {
             match section {
                 tracklib::read::section::Section::Standard(section) => {
                     let reader = section.reader_for_schema(&schema).map_err(|e| {
-                        Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                        Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
 
                     let points = reader_to_points(reader, IrrelevantPointsBehavior::Ignore).map_err(|e| {
                         Error::new(
-                            handle.exception_exception(),
+                            handle.exception_io_error(),
                             format!("Error reading tracklib data: {e:?}"),
                         )
                     })?;
@@ -298,14 +298,14 @@ impl TrackReader {
                     let key_bytes = unsafe { key_material.as_slice().to_vec() };
                     let reader = section.reader_for_schema(&key_bytes, &schema).map_err(|e| {
                         Error::new(
-                            handle.exception_exception(),
+                            handle.exception_io_error(),
                             format!("Error reading tracklib data: {e:?}"),
                         )
                     })?;
 
                     let points = reader_to_points(reader, IrrelevantPointsBehavior::Ignore).map_err(|e| {
                         Error::new(
-                            handle.exception_exception(),
+                            handle.exception_io_error(),
                             format!("Error reading tracklib data: {e:?}"),
                         )
                     })?;
@@ -341,19 +341,19 @@ impl TrackReader {
             match section {
                 tracklib::read::section::Section::Standard(section) => {
                     let reader_for_simplification = section.reader_for_schema(&schema).map_err(|e| {
-                        Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                        Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
                     let points =
                         reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count).map_err(|e| {
                             Error::new(
-                                handle.exception_exception(),
+                                handle.exception_io_error(),
                                 format!("Error reading tracklib data: {e:?}"),
                             )
                         })?;
                     let simplified_indexes = simplify_points(&points, surface_mapping.inner(), tolerance);
 
                     let reader_for_serialization = section.reader().map_err(|e| {
-                        Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                        Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
 
                     reader_with_indexes_to_array_of_hashes(handle, reader_for_serialization, &simplified_indexes)
@@ -365,19 +365,19 @@ impl TrackReader {
                     let key_bytes = unsafe { key_material.as_slice().to_vec() };
 
                     let reader_for_simplification = section.reader_for_schema(&key_bytes, &schema).map_err(|e| {
-                        Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                        Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
                     let points =
                         reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count).map_err(|e| {
                             Error::new(
-                                handle.exception_exception(),
+                                handle.exception_io_error(),
                                 format!("Error reading tracklib data: {e:?}"),
                             )
                         })?;
                     let simplified_indexes = simplify_points(&points, surface_mapping.inner(), tolerance);
 
                     let reader_for_serialization = section.reader(&key_bytes).map_err(|e| {
-                        Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                        Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
 
                     reader_with_indexes_to_array_of_hashes(handle, reader_for_serialization, &simplified_indexes)
@@ -424,12 +424,12 @@ impl TrackReader {
                     tracklib::read::section::Section::Standard(section) => {
                         let reader_for_simplification =
                             section.reader_for_schema(&schema_for_simplification).map_err(|e| {
-                                Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                                Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                             })?;
                         let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count)
                             .map_err(|e| {
                                 Error::new(
-                                    handle.exception_exception(),
+                                    handle.exception_io_error(),
                                     format!("Error reading tracklib data: {e:?}"),
                                 )
                             })?;
@@ -437,7 +437,7 @@ impl TrackReader {
 
                         let reader_for_serialization =
                             section.reader_for_schema(&schema_for_serialization).map_err(|e| {
-                                Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                                Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                             })?;
 
                         reader_with_indexes_to_single_column_array(
@@ -456,12 +456,12 @@ impl TrackReader {
                         let reader_for_simplification = section
                             .reader_for_schema(&key_bytes, &schema_for_simplification)
                             .map_err(|e| {
-                                Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                                Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                             })?;
                         let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count)
                             .map_err(|e| {
                                 Error::new(
-                                    handle.exception_exception(),
+                                    handle.exception_io_error(),
                                     format!("Error reading tracklib data: {e:?}"),
                                 )
                             })?;
@@ -470,7 +470,7 @@ impl TrackReader {
                         let reader_for_serialization = section
                             .reader_for_schema(&key_bytes, &schema_for_serialization)
                             .map_err(|e| {
-                                Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                                Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                             })?;
 
                         reader_with_indexes_to_single_column_array(
@@ -516,12 +516,12 @@ impl TrackReader {
             match section {
                 tracklib::read::section::Section::Standard(section) => {
                     let reader_for_simplification = section.reader_for_schema(&schema).map_err(|e| {
-                        Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                        Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
                     let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Ignore)
                         .map_err(|e| {
                             Error::new(
-                                handle.exception_exception(),
+                                handle.exception_io_error(),
                                 format!("Error reading tracklib data: {e:?}"),
                             )
                         })?;
@@ -542,12 +542,12 @@ impl TrackReader {
                     let key_bytes = unsafe { key_material.as_slice().to_vec() };
 
                     let reader_for_simplification = section.reader_for_schema(&key_bytes, &schema).map_err(|e| {
-                        Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                        Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
                     let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Ignore)
                         .map_err(|e| {
                             Error::new(
-                                handle.exception_exception(),
+                                handle.exception_io_error(),
                                 format!("Error reading tracklib data: {e:?}"),
                             )
                         })?;
@@ -611,7 +611,7 @@ fn reader_to_array_of_hashes(
                 columniter
                     .map(|row| {
                         row.map_err(|e| {
-                            Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                            Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                         })
                     })
                     .map(|row| {
@@ -652,7 +652,7 @@ fn reader_with_indexes_to_array_of_hashes(
                         columniter
                             .map(|row| {
                                 row.map_err(|e| {
-                                    Error::new(handle.exception_exception(), format!("Could not parse section: {e:?}"))
+                                    Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                                 })
                             })
                             .map(|row| {
@@ -691,7 +691,7 @@ fn reader_to_single_column_array(
             Ok((_field_def, Some(field_value))) => Ok(fieldvalue_to_ruby(handle, field_value)),
             Ok((_field_def, None)) => Ok(handle.qnil().into_value_with(handle)),
             Err(e) => Err(Error::new(
-                handle.exception_exception(),
+                handle.exception_io_error(),
                 format!("Error reading tracklib data: {e:?}"),
             )),
         })
@@ -716,7 +716,7 @@ fn reader_with_indexes_to_single_column_array(
                     Ok((_field_def, Some(field_value))) => Ok(fieldvalue_to_ruby(handle, field_value)),
                     Ok((_field_def, None)) => Ok(handle.qnil().into_value_with(handle)),
                     Err(e) => Err(Error::new(
-                        handle.exception_exception(),
+                        handle.exception_io_error(),
                         format!("Error reading tracklib data: {e:?}"),
                     )),
                 }))

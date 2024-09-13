@@ -71,8 +71,7 @@ pub(crate) fn simplify_points(
 
     let tolerance_sq = tolerance * tolerance;
     SurfaceGroupIter::new(points, mapping)
-        .map(|points| stack_rdp(points, tolerance_sq))
-        .flatten()
+        .flat_map(|points| stack_rdp(points, tolerance_sq))
         .collect()
 }
 

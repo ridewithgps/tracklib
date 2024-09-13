@@ -578,9 +578,7 @@ fn fieldvalue_to_ruby(handle: &Ruby, value: tracklib::types::FieldValue) -> Valu
                 handle.qfalse().into_value_with(handle)
             }
         }
-        tracklib::types::FieldValue::String(v) => {
-            handle.enc_str_new(&v, handle.utf8_encoding()).into_value_with(handle)
-        }
+        tracklib::types::FieldValue::String(v) => handle.enc_str_new(v, handle.utf8_encoding()).into_value_with(handle),
         tracklib::types::FieldValue::BoolArray(v) => handle
             .ary_from_iter(v.iter().map(|b| {
                 if *b {
@@ -594,7 +592,7 @@ fn fieldvalue_to_ruby(handle: &Ruby, value: tracklib::types::FieldValue) -> Valu
             .ary_from_iter(v.iter().map(|u| handle.integer_from_u64(*u).into_value_with(handle)))
             .into_value_with(handle),
         tracklib::types::FieldValue::ByteArray(v) => handle
-            .enc_str_new(&v, handle.ascii8bit_encoding())
+            .enc_str_new(v, handle.ascii8bit_encoding())
             .into_value_with(handle),
     }
 }
@@ -678,7 +676,7 @@ fn reader_with_indexes_to_array_of_hashes(
                 Some(None)
             }
         })
-        .filter_map(|e| e),
+        .flatten(),
     )
 }
 
@@ -726,7 +724,7 @@ fn reader_with_indexes_to_single_column_array(
                 Some(None)
             }
         })
-        .filter_map(|e| e),
+        .flatten(),
     )
 }
 

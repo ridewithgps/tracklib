@@ -89,7 +89,7 @@ impl FarthestPoint for &[Point] {
             .enumerate()
             .take(self.len() - 1) // Don't include the last index
             .skip(1) // Don't include the first index
-            .map(|(index, point)| (index, line.distance_2d(&point)))
+            .map(|(index, point)| (index, line.distance_2d(point)))
             .fold(
                 (0, 0.0),
                 |(farthest_index, farthest_dist), (index, distance)| {
@@ -135,7 +135,7 @@ impl<'a> Line<'a> {
         dx = point.x - x;
         dy = point.y - y;
 
-        return dx * dx + dy * dy;
+        dx * dx + dy * dy
     }
 }
 
@@ -219,10 +219,8 @@ pub(crate) fn reader_to_points(
         if let Some(point) = new_point(index, points.last(), columniter)? {
             points.push(point);
             index += 1;
-        } else {
-            if irrelevant_points_behavior == IrrelevantPointsBehavior::Count {
-                index += 1;
-            }
+        } else if irrelevant_points_behavior == IrrelevantPointsBehavior::Count {
+            index += 1;
         }
     }
 

@@ -69,7 +69,7 @@ impl SurfaceMapping {
             if point_surface == self.unknown_surface_id {
                 self.road_class_mappings
                     .iter()
-                    .find_map(|road_class_mapping| road_class_mapping.lookup(&point))
+                    .find_map(|road_class_mapping| road_class_mapping.lookup(point))
                     .and_then(|surface_id| self.groups.get(surface_id))
             } else {
                 self.groups.get(&point_surface)

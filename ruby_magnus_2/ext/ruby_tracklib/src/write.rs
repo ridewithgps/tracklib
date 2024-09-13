@@ -66,7 +66,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(handle: &Ruby, section: &mut 
                 tracklib::write::section::writer::ColumnWriter::F64ColumnWriter(cwi) => {
                     let v = row
                         .get(cwi.field_definition().name())
-                        .map(|value| f64::try_convert(value))
+                        .map(f64::try_convert)
                         .transpose()?;
                     cwi.write(v.as_ref())
                         .map_err(|e| Error::new(handle.exception_io_error(), format!("Error writing field: {e:?}")))?;
@@ -95,7 +95,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(handle: &Ruby, section: &mut 
                 tracklib::write::section::writer::ColumnWriter::BoolColumnWriter(cwi) => {
                     let v = row
                         .get(cwi.field_definition().name())
-                        .map(|value| bool::try_convert(value))
+                        .map(bool::try_convert)
                         .transpose()?;
                     cwi.write(v.as_ref())
                         .map_err(|e| Error::new(handle.exception_io_error(), format!("Error writing field: {e:?}")))?;
@@ -104,7 +104,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(handle: &Ruby, section: &mut 
                 tracklib::write::section::writer::ColumnWriter::StringColumnWriter(cwi) => {
                     let v = row
                         .get(cwi.field_definition().name())
-                        .map(|value| String::try_convert(value))
+                        .map(String::try_convert)
                         .transpose()?;
                     cwi.write(v.as_deref())
                         .map_err(|e| Error::new(handle.exception_io_error(), format!("Error writing field: {e:?}")))?;
@@ -113,7 +113,7 @@ fn write_ruby_array_into_section<SW: SectionWrite>(handle: &Ruby, section: &mut 
                 tracklib::write::section::writer::ColumnWriter::BoolArrayColumnWriter(cwi) => {
                     let v = row
                         .get(cwi.field_definition().name())
-                        .map(|value| Vec::<bool>::try_convert(value))
+                        .map(Vec::<bool>::try_convert)
                         .transpose()?;
                     cwi.write(v.as_deref())
                         .map_err(|e| Error::new(handle.exception_io_error(), format!("Error writing field: {e:?}")))?;

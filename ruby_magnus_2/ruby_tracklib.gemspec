@@ -20,7 +20,9 @@ Gem::Specification.new do |spec|
   spec.files          += Dir["lib/**/*.rb"]
   spec.files          += Dir["ext/**/*"]
   spec.require_paths   = ["lib"]
-  spec.extensions      = ["ext/ruby_tracklib/Cargo.toml"]
+  spec.extensions      = ["ext/ruby_tracklib/extconf.rb"]
+
+  spec.add_dependency "rb_sys", "~> 0.9.39"
 
   spec.metadata["rubygems_mfa_required"] = "true"
   spec.required_ruby_version             = ">= 2.7.4"

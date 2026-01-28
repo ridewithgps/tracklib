@@ -42,7 +42,7 @@ impl SurfaceMapping {
             .add_road_class_mapping(road_class_mapping.inner.borrow().clone());
     }
 
-    pub(crate) fn inner(&self) -> std::cell::Ref<rust::SurfaceMapping> {
+    pub(crate) fn inner(&self) -> std::cell::Ref<'_, rust::SurfaceMapping> {
         self.inner.borrow()
     }
 }

@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use tracklib::error::TracklibError;
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct Point {
+pub struct Point {
     index: usize,
     x: f64,
     y: f64,
@@ -14,15 +14,7 @@ pub(crate) struct Point {
 }
 
 impl Point {
-    pub(crate) fn new(
-        index: usize,
-        x: f64,
-        y: f64,
-        d: f64,
-        e: f64,
-        s: Option<SurfaceTypeId>,
-        r: Option<RoadClassId>,
-    ) -> Self {
+    pub fn new(index: usize, x: f64, y: f64, d: f64, e: f64, s: Option<SurfaceTypeId>, r: Option<RoadClassId>) -> Self {
         Self {
             index,
             x,
@@ -34,31 +26,31 @@ impl Point {
         }
     }
 
-    pub(crate) fn index(&self) -> usize {
+    pub fn index(&self) -> usize {
         self.index
     }
 
-    pub(crate) fn x(&self) -> f64 {
+    pub fn x(&self) -> f64 {
         self.x
     }
 
-    pub(crate) fn y(&self) -> f64 {
+    pub fn y(&self) -> f64 {
         self.y
     }
 
-    pub(crate) fn d(&self) -> f64 {
+    pub fn d(&self) -> f64 {
         self.d
     }
 
-    pub(crate) fn e(&self) -> f64 {
+    pub fn e(&self) -> f64 {
         self.e
     }
 
-    pub(crate) fn s(&self) -> Option<SurfaceTypeId> {
+    pub fn s(&self) -> Option<SurfaceTypeId> {
         self.s
     }
 
-    pub(crate) fn r(&self) -> Option<RoadClassId> {
+    pub fn r(&self) -> Option<RoadClassId> {
         self.r
     }
 }

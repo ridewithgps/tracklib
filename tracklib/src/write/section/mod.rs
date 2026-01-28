@@ -18,7 +18,7 @@ pub trait SectionWrite {
     fn schema(&self) -> &Schema;
     fn encoding(&self) -> SectionEncoding;
     fn rows_written(&self) -> usize;
-    fn open_row_builder(&mut self) -> writer::RowBuilder;
+    fn open_row_builder(&mut self) -> writer::RowBuilder<'_>;
 }
 
 pub(crate) trait SectionInternal: SectionWrite {

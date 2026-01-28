@@ -39,14 +39,14 @@ impl<'a> TrackReader<'a> {
         &self.metadata_entries
     }
 
-    pub fn section(&self, index: usize) -> Option<Section> {
+    pub fn section(&self, index: usize) -> Option<Section<'_>> {
         let section_data_table_entry = self.data_table.get(index)?;
         let data = &self.data_start
             [section_data_table_entry.offset()..section_data_table_entry.offset() + section_data_table_entry.size()];
         Some(crate::read::section::Section::new(data, section_data_table_entry))
     }
 
-    pub fn sections(&self) -> SectionIter {
+    pub fn sections(&self) -> SectionIter<'_> {
         SectionIter {
             data: self.data_start,
             entries: &self.data_table,

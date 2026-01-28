@@ -71,7 +71,7 @@ mod tests {
             .map(|(i, tp)| {
                 let x: f64 = tp.x.parse().expect("Failed to parse x coordinate");
                 let y: f64 = tp.y.parse().expect("Failed to parse y coordinate");
-                Point::new(i, x, y, 0.0, 0.0, None, None)
+                Point::new(i, x, y, 0.0, Some(0.0), None, None)
             })
             .collect();
 

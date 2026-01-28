@@ -211,7 +211,7 @@ mod tests {
 
     fn make_point(lng: f64, lat: f64) -> Point {
         // Point::new(index, x, y, d, e, s, r)
-        Point::new(0, lng, lat, 0.0, 0.0, None, None)
+        Point::new(0, lng, lat, 0.0, Some(0.0), None, None)
     }
 
     #[test]

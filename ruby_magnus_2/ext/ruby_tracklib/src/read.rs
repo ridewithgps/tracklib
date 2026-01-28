@@ -1,4 +1,4 @@
-use crate::geometry::{reader_to_points, IrrelevantPointsBehavior};
+use crate::geometry::{reader_to_points, ElevationRequirement, IrrelevantPointsBehavior};
 use crate::hex::{self, DirectionMode, MAX_DIRECTION_RESOLUTION};
 use crate::polyline::{ruby::PolylineOptions, rust::polyline_encode};
 use crate::simplify::simplify_points;
@@ -283,7 +283,7 @@ impl TrackReader {
                         Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
 
-                    let points = reader_to_points(reader, IrrelevantPointsBehavior::Ignore).map_err(|e| {
+                    let points = reader_to_points(reader, IrrelevantPointsBehavior::Ignore, ElevationRequirement::Required).map_err(|e| {
                         Error::new(
                             handle.exception_io_error(),
                             format!("Error reading tracklib data: {e:?}"),
@@ -304,7 +304,7 @@ impl TrackReader {
                         )
                     })?;
 
-                    let points = reader_to_points(reader, IrrelevantPointsBehavior::Ignore).map_err(|e| {
+                    let points = reader_to_points(reader, IrrelevantPointsBehavior::Ignore, ElevationRequirement::Required).map_err(|e| {
                         Error::new(
                             handle.exception_io_error(),
                             format!("Error reading tracklib data: {e:?}"),
@@ -345,7 +345,7 @@ impl TrackReader {
                         Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
                     let points =
-                        reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count).map_err(|e| {
+                        reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count, ElevationRequirement::Required).map_err(|e| {
                             Error::new(
                                 handle.exception_io_error(),
                                 format!("Error reading tracklib data: {e:?}"),
@@ -369,7 +369,7 @@ impl TrackReader {
                         Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
                     let points =
-                        reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count).map_err(|e| {
+                        reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count, ElevationRequirement::Required).map_err(|e| {
                             Error::new(
                                 handle.exception_io_error(),
                                 format!("Error reading tracklib data: {e:?}"),
@@ -427,7 +427,7 @@ impl TrackReader {
                             section.reader_for_schema(&schema_for_simplification).map_err(|e| {
                                 Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                             })?;
-                        let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count)
+                        let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count, ElevationRequirement::Required)
                             .map_err(|e| {
                                 Error::new(
                                     handle.exception_io_error(),
@@ -459,7 +459,7 @@ impl TrackReader {
                             .map_err(|e| {
                                 Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                             })?;
-                        let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count)
+                        let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count, ElevationRequirement::Required)
                             .map_err(|e| {
                                 Error::new(
                                     handle.exception_io_error(),
@@ -519,7 +519,7 @@ impl TrackReader {
                     let reader_for_simplification = section.reader_for_schema(&schema).map_err(|e| {
                         Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
-                    let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Ignore)
+                    let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Ignore, ElevationRequirement::Required)
                         .map_err(|e| {
                             Error::new(
                                 handle.exception_io_error(),
@@ -545,7 +545,7 @@ impl TrackReader {
                     let reader_for_simplification = section.reader_for_schema(&key_bytes, &schema).map_err(|e| {
                         Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
-                    let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Ignore)
+                    let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Ignore, ElevationRequirement::Required)
                         .map_err(|e| {
                             Error::new(
                                 handle.exception_io_error(),
@@ -603,10 +603,10 @@ impl TrackReader {
             })?;
 
             // Schema for extracting x, y coordinates (minimal for hex building)
+            // Note: elevation is not required for hex building
             let schema = tracklib::schema::Schema::with_fields(vec![
                 tracklib::schema::FieldDefinition::new("x", tracklib::schema::DataType::F64 { scale: 6 }),
                 tracklib::schema::FieldDefinition::new("y", tracklib::schema::DataType::F64 { scale: 6 }),
-                tracklib::schema::FieldDefinition::new("e", tracklib::schema::DataType::F64 { scale: 1 }),
             ]);
 
             match section {
@@ -615,7 +615,7 @@ impl TrackReader {
                         Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
 
-                    let points = reader_to_points(section_reader, IrrelevantPointsBehavior::Ignore).map_err(|e| {
+                    let points = reader_to_points(section_reader, IrrelevantPointsBehavior::Ignore, ElevationRequirement::Optional).map_err(|e| {
                         Error::new(
                             handle.exception_io_error(),
                             format!("Error reading tracklib data: {e:?}"),
@@ -637,7 +637,7 @@ impl TrackReader {
                         Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
 
-                    let points = reader_to_points(section_reader, IrrelevantPointsBehavior::Ignore).map_err(|e| {
+                    let points = reader_to_points(section_reader, IrrelevantPointsBehavior::Ignore, ElevationRequirement::Optional).map_err(|e| {
                         Error::new(
                             handle.exception_io_error(),
                             format!("Error reading tracklib data: {e:?}"),

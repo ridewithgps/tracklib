@@ -1,0 +1,61 @@
+{
+  "meta": {
+    "test_id": "E3_near_south_pole",
+    "description": "Near south pole (89.9°S)",
+    "ruby_version": "3.3.5",
+    "h3_gem_version": "3.7.2",
+    "timestamp": "2026-01-28T14:11:21Z",
+    "input_hash": "f549fd1cb7cc4ccbb88897cfb4d1817fcc3edbad5c969e6dfdfec05a90a60e4f"
+  },
+  "input": {
+    "track_points": [
+      {
+        "x": "0.0",
+        "y": "-89.9"
+      },
+      {
+        "x": "5.146946514724674",
+        "y": "-89.9"
+      },
+      {
+        "x": "10.293893029449348",
+        "y": "-89.9"
+      },
+      {
+        "x": "15.440839544174024",
+        "y": "-89.9"
+      },
+      {
+        "x": "20.587786058898697",
+        "y": "-89.9"
+      }
+    ],
+    "resolution": 5,
+    "direction_mode": "none"
+  },
+  "output": {
+    "cells": [
+      {
+        "packed": 603246199880810495,
+        "canonical": 603246199880810495,
+        "canonical_hex": "85f2938ffffffff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "weccded",
+        "lat": -89.87778489,
+        "lng": -14.56896118
+      }
+    ],
+    "count": 1
+  },
+  "statistics": {
+    "min_lat": -89.877785,
+    "max_lat": -89.877785,
+    "min_lng": -14.568961,
+    "max_lng": -14.568961,
+    "unique_cells": 1,
+    "direction_masks": {
+      "4095": 1
+    }
+  }
+}

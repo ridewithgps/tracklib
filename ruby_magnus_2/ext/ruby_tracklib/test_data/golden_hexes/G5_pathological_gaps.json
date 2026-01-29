@@ -1,0 +1,97 @@
+{
+  "meta": {
+    "test_id": "G5_pathological_gaps",
+    "description": "Pathological gap pattern (alternating segments and gaps)",
+    "ruby_version": "3.3.5",
+    "h3_gem_version": "3.7.2",
+    "timestamp": "2026-01-28T14:11:22Z",
+    "input_hash": "cc2f590bc4f24adcd263032ee885ac536bebc22bf354e897ba852b90e7701cd2"
+  },
+  "input": {
+    "track_points": [
+      {
+        "x": "-122.5",
+        "y": "45.5"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.5000898311175"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.500179662235"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.52712899748473"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.52721882860223"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.52730865971973"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.554257994969454"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.55434782608695"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.55443765720445"
+      }
+    ],
+    "resolution": 11,
+    "direction_mode": "none"
+  },
+  "output": {
+    "cells": [
+      {
+        "packed": 626720531084947455,
+        "canonical": 626720531084947455,
+        "canonical_hex": "8b28f00a4c32fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaaceegagc",
+        "lat": 45.55427084,
+        "lng": -122.4998836
+      },
+      {
+        "packed": 626720534780530687,
+        "canonical": 626720534780530687,
+        "canonical_hex": "8b28f0181094fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabacce",
+        "lat": 45.50003822,
+        "lng": -122.49987695
+      },
+      {
+        "packed": 626720535004975103,
+        "canonical": 626720535004975103,
+        "canonical_hex": "8b28f018e6a0fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagbgdcea",
+        "lat": 45.52724035,
+        "lng": -122.5001582
+      }
+    ],
+    "count": 3
+  },
+  "statistics": {
+    "min_lat": 45.500038,
+    "max_lat": 45.554271,
+    "min_lng": -122.500158,
+    "max_lng": -122.499877,
+    "unique_cells": 3,
+    "direction_masks": {
+      "4095": 3
+    }
+  }
+}

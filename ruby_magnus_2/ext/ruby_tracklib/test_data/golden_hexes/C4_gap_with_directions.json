@@ -1,0 +1,92 @@
+{
+  "meta": {
+    "test_id": "C4_gap_with_directions",
+    "description": "Gap with direction encoding",
+    "ruby_version": "3.3.5",
+    "h3_gem_version": "3.7.2",
+    "timestamp": "2026-01-28T14:11:21Z",
+    "input_hash": "fb815e5f9df63837103c39ad881f9ae81059230cacd50bd9c4e014a0d47704f5"
+  },
+  "input": {
+    "track_points": [
+      {
+        "x": "-122.5",
+        "y": "45.5"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.5000898311175"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.500179662235"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.5002694933525"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.50035932447"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.52730865971973"
+      },
+      {
+        "x": "-122.4998717741038",
+        "y": "45.52730865971973"
+      },
+      {
+        "x": "-122.49974354820758",
+        "y": "45.52730865971973"
+      },
+      {
+        "x": "-122.49961532231137",
+        "y": "45.52730865971973"
+      },
+      {
+        "x": "-122.49948709641515",
+        "y": "45.52730865971973"
+      }
+    ],
+    "resolution": 10,
+    "direction_mode": "forward"
+  },
+  "output": {
+    "cells": [
+      {
+        "packed": 622216935153172479,
+        "canonical": 622216935153172479,
+        "canonical_hex": "8a28f0181097fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabacc",
+        "lat": 45.50045781,
+        "lng": -122.49990647
+      },
+      {
+        "packed": 622216935377629184,
+        "canonical": 622216935377633279,
+        "canonical_hex": "8a28f018e6a7fff",
+        "direction_mask": 0,
+        "direction_mask_bin": "000000000000",
+        "alpha": "ohdgaagbgdce",
+        "lat": 45.52724035,
+        "lng": -122.5001582
+      }
+    ],
+    "count": 2
+  },
+  "statistics": {
+    "min_lat": 45.500458,
+    "max_lat": 45.52724,
+    "min_lng": -122.500158,
+    "max_lng": -122.499906,
+    "unique_cells": 2,
+    "direction_masks": {
+      "4095": 1,
+      "0": 1
+    }
+  }
+}

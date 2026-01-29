@@ -1,0 +1,32 @@
+{
+  "meta": {
+    "test_id": "E1_null_island",
+    "description": "Null Island (0.0, 0.0) - should be rejected",
+    "ruby_version": "3.3.5",
+    "h3_gem_version": "3.7.2",
+    "timestamp": "2026-01-28T14:11:21Z",
+    "input_hash": "a71a4f75fadedd1afc7f6c01ef3b869157b400097186933636291aa959e10e0f"
+  },
+  "input": {
+    "track_points": [
+      {
+        "x": "0.0",
+        "y": "0.0"
+      }
+    ],
+    "resolution": 11,
+    "direction_mode": "none"
+  },
+  "output": {
+    "cells": [],
+    "count": 0
+  },
+  "statistics": {
+    "min_lat": null,
+    "max_lat": null,
+    "min_lng": null,
+    "max_lng": null,
+    "unique_cells": 0,
+    "direction_masks": {}
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "meta": {
+    "test_id": "A1_empty_array",
+    "description": "Empty track array",
+    "ruby_version": "3.3.5",
+    "h3_gem_version": "3.7.2",
+    "timestamp": "2026-01-28T14:11:21Z",
+    "input_hash": "c107bf4724d88c29ca58c39981d626e0d56ec50004b775d37b606014982ed9d8"
+  },
+  "input": {
+    "track_points": [],
+    "resolution": 11,
+    "direction_mode": "none"
+  },
+  "output": {
+    "cells": [],
+    "count": 0
+  },
+  "statistics": {
+    "min_lat": null,
+    "max_lat": null,
+    "min_lng": null,
+    "max_lng": null,
+    "unique_cells": 0,
+    "direction_masks": {}
+  }
+}

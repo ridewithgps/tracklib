@@ -14,7 +14,15 @@ pub struct Point {
 }
 
 impl Point {
-    pub fn new(index: usize, x: f64, y: f64, d: f64, e: Option<f64>, s: Option<SurfaceTypeId>, r: Option<RoadClassId>) -> Self {
+    pub fn new(
+        index: usize,
+        x: f64,
+        y: f64,
+        d: f64,
+        e: Option<f64>,
+        s: Option<SurfaceTypeId>,
+        r: Option<RoadClassId>,
+    ) -> Self {
         Self {
             index,
             x,
@@ -157,10 +165,7 @@ fn new_point(
 
     // x and y are always required
     let (x, y) = match (fields.get("x"), fields.get("y")) {
-        (
-            Some(Some(tracklib::types::FieldValue::F64(x))),
-            Some(Some(tracklib::types::FieldValue::F64(y))),
-        ) => (*x, *y),
+        (Some(Some(tracklib::types::FieldValue::F64(x))), Some(Some(tracklib::types::FieldValue::F64(y)))) => (*x, *y),
         // Skip this row if x or y is missing or wrong type
         _ => return Ok(None),
     };

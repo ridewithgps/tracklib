@@ -19,11 +19,11 @@ require "json"
 def generate_spiral_points(count, center_lat: 45.0, center_lon: -122.0, radius_deg: 0.01)
   points = []
   count.times do |i|
-    angle = i * 0.1  # radians
+    angle = i * 0.1 # radians
     r = radius_deg * (i.to_f / count)
-    lat = center_lat + r * Math.sin(angle)
-    lon = center_lon + r * Math.cos(angle)
-    elevation = 100.0 + i * 0.1  # gradual elevation gain
+    lat = center_lat + (r * Math.sin(angle))
+    lon = center_lon + (r * Math.cos(angle))
+    elevation = 100.0 + (i * 0.1) # gradual elevation gain
     points << { "x" => lon, "y" => lat, "e" => elevation }
   end
   points
@@ -33,10 +33,10 @@ end
 # NOTE: section_hexes requires x, y, AND e columns (all three must be present)
 def create_tracklib_buffer(points)
   schema = Tracklib::Schema.new([
-    ["x", :f64, 6],  # longitude, 6 decimal places (matches section_hexes schema)
-    ["y", :f64, 6],  # latitude, 6 decimal places
-    ["e", :f64, 1]   # elevation, 1 decimal place
-  ])
+                                  ["x", :f64, 6], # longitude, 6 decimal places (matches section_hexes schema)
+                                  ["y", :f64, 6],  # latitude, 6 decimal places
+                                  ["e", :f64, 1]   # elevation, 1 decimal place
+                                ])
   section = Tracklib::Section.standard(schema, points)
   Tracklib.write_track([], [section])
 end
@@ -71,7 +71,7 @@ puts
 Benchmark.ips do |x|
   x.config(time: 5, warmup: 2)
 
-  TRACK_SIZES.each do |name, size|
+  TRACK_SIZES.each_key do |name|
     data = test_data[name]
 
     x.report("track_size/#{name}") do
@@ -106,11 +106,11 @@ TRACK_SIZES.each do |name, size|
   elapsed = Process.clock_gettime(Process::CLOCK_MONOTONIC) - start_time
   points_per_sec = (size * iterations) / elapsed
 
-  puts format("%-20s %10.2f Kelem/s  (%d iterations in %.2fs)",
-              "track_size/#{name}:",
-              points_per_sec / 1000.0,
-              iterations,
-              elapsed)
+  puts format("%<label>-20s %<throughput>10.2f Kelem/s  (%<iter>d iterations in %<time>.2fs)",
+              label: "track_size/#{name}:",
+              throughput: points_per_sec / 1000.0,
+              iter: iterations,
+              time: elapsed)
 end
 
 puts "\n"

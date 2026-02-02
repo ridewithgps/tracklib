@@ -39,7 +39,7 @@ impl super::SectionWrite for Section {
         self.rows_written
     }
 
-    fn open_row_builder(&mut self) -> RowBuilder {
+    fn open_row_builder(&mut self) -> RowBuilder<'_> {
         self.rows_written += 1;
         RowBuilder::new(&self.schema, &mut self.column_data)
     }

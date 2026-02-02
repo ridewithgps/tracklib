@@ -18,7 +18,7 @@ impl<'a> Section<'a> {
         }
     }
 
-    pub fn reader(&self) -> Result<SectionReader> {
+    pub fn reader(&self) -> Result<SectionReader<'_>> {
         SectionReader::new(
             self.input,
             self.data_table_entry.schema_entries().iter().enumerate().collect(),
@@ -27,7 +27,7 @@ impl<'a> Section<'a> {
         )
     }
 
-    pub fn reader_for_schema(&self, schema: &Schema) -> Result<SectionReader> {
+    pub fn reader_for_schema(&self, schema: &Schema) -> Result<SectionReader<'_>> {
         let schema_entries = schema
             .fields()
             .iter()

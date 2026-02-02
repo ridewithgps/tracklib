@@ -104,12 +104,12 @@ mod tests {
         mapping.add_surface(2, "2".to_string());
 
         assert_eq!(
-            mapping.get_surface_group(&Point::new(0, 0.0, 0.0, 0.0, 0.0, Some(1), Some(0))),
+            mapping.get_surface_group(&Point::new(0, 0.0, 0.0, 0.0, Some(0.0), Some(1), Some(0))),
             Some(&"1".to_string())
         );
 
         assert_eq!(
-            mapping.get_surface_group(&Point::new(0, 0.0, 0.0, 0.0, 0.0, Some(50), Some(0))),
+            mapping.get_surface_group(&Point::new(0, 0.0, 0.0, 0.0, Some(0.0), Some(50), Some(0))),
             None
         );
     }
@@ -158,25 +158,25 @@ mod tests {
 
         // Coordinate inside the most specific mapping
         assert_eq!(
-            mapping.get_surface_group(&Point::new(0, 0.0, 0.0, 0.0, 0.0, Some(95), Some(10))),
+            mapping.get_surface_group(&Point::new(0, 0.0, 0.0, 0.0, Some(0.0), Some(95), Some(10))),
             Some(&"0".to_string())
         );
 
         // Coordinate inside the middle mapping
         assert_eq!(
-            mapping.get_surface_group(&Point::new(0, 2.0, 0.0, 0.0, 0.0, Some(95), Some(10))),
+            mapping.get_surface_group(&Point::new(0, 2.0, 0.0, 0.0, Some(0.0), Some(95), Some(10))),
             Some(&"10".to_string())
         );
 
         // Coordinate inside the least specific mapping
         assert_eq!(
-            mapping.get_surface_group(&Point::new(0, 20.0, 0.0, 0.0, 0.0, Some(95), Some(10))),
+            mapping.get_surface_group(&Point::new(0, 20.0, 0.0, 0.0, Some(0.0), Some(95), Some(10))),
             Some(&"20".to_string())
         );
 
         // Coordinate falls into the most specific mapping, but only the least specific one has an entry for this road class
         assert_eq!(
-            mapping.get_surface_group(&Point::new(0, 9.0, 0.0, 0.0, 0.0, Some(95), Some(13))),
+            mapping.get_surface_group(&Point::new(0, 9.0, 0.0, 0.0, Some(0.0), Some(95), Some(13))),
             Some(&"23".to_string())
         );
     }

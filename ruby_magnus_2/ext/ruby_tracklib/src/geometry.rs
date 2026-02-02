@@ -3,23 +3,23 @@ use std::collections::HashMap;
 use tracklib::error::TracklibError;
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct Point {
+pub struct Point {
     index: usize,
     x: f64,
     y: f64,
     d: f64,
-    e: f64,
+    e: Option<f64>,
     s: Option<SurfaceTypeId>,
     r: Option<RoadClassId>,
 }
 
 impl Point {
-    pub(crate) fn new(
+    pub fn new(
         index: usize,
         x: f64,
         y: f64,
         d: f64,
-        e: f64,
+        e: Option<f64>,
         s: Option<SurfaceTypeId>,
         r: Option<RoadClassId>,
     ) -> Self {
@@ -34,31 +34,31 @@ impl Point {
         }
     }
 
-    pub(crate) fn index(&self) -> usize {
+    pub fn index(&self) -> usize {
         self.index
     }
 
-    pub(crate) fn x(&self) -> f64 {
+    pub fn x(&self) -> f64 {
         self.x
     }
 
-    pub(crate) fn y(&self) -> f64 {
+    pub fn y(&self) -> f64 {
         self.y
     }
 
-    pub(crate) fn d(&self) -> f64 {
+    pub fn d(&self) -> f64 {
         self.d
     }
 
-    pub(crate) fn e(&self) -> f64 {
+    pub fn e(&self) -> Option<f64> {
         self.e
     }
 
-    pub(crate) fn s(&self) -> Option<SurfaceTypeId> {
+    pub fn s(&self) -> Option<SurfaceTypeId> {
         self.s
     }
 
-    pub(crate) fn r(&self) -> Option<RoadClassId> {
+    pub fn r(&self) -> Option<RoadClassId> {
         self.r
     }
 }
@@ -70,7 +70,7 @@ impl Default for Point {
             x: 0.0,
             y: 0.0,
             d: 0.0,
-            e: 0.0,
+            e: Some(0.0),
             s: Some(0),
             r: Some(0),
         }
@@ -156,51 +156,59 @@ fn new_point(
     index: usize,
     prev: Option<&Point>,
     columniter: tracklib::read::section::reader::ColumnIter,
+    elevation_req: ElevationRequirement,
 ) -> Result<Option<Point>, TracklibError> {
     let fields = columniter
         .into_iter()
         .map(|field_result| field_result.map(|(field_def, field_value)| (field_def.name(), field_value)))
         .collect::<Result<HashMap<_, _>, TracklibError>>()?;
 
-    if let Some((x, y, e, d)) = match (fields.get("x"), fields.get("y"), fields.get("e")) {
-        (
-            Some(Some(tracklib::types::FieldValue::F64(x))),
-            Some(Some(tracklib::types::FieldValue::F64(y))),
-            Some(Some(tracklib::types::FieldValue::F64(e))),
-        ) => {
-            let d = if let Some(p) = prev {
-                p.d() + haversine_distance(p, *x, *y)
-            } else {
-                0.0
-            };
+    // x and y are always required
+    let (x, y) = match (fields.get("x"), fields.get("y")) {
+        (Some(Some(tracklib::types::FieldValue::F64(x))), Some(Some(tracklib::types::FieldValue::F64(y)))) => (*x, *y),
+        // Skip this row if x or y is missing or wrong type
+        _ => return Ok(None),
+    };
 
-            Some((*x, *y, *e, d))
-        }
-        _ => None,
-    } {
-        let mut s = None;
-        let mut r = None;
-
-        match fields.get("S") {
-            Some(Some(tracklib::types::FieldValue::U64(v))) => s = Some(*v),
-            None | Some(None) => {}
-            _ => {
-                return Ok(None);
+    // Elevation handling depends on requirement
+    let e = match fields.get("e") {
+        Some(Some(tracklib::types::FieldValue::F64(e))) => Some(*e),
+        None | Some(None) => {
+            // e is missing or null
+            if elevation_req == ElevationRequirement::Required {
+                return Ok(None); // Skip this point
             }
+            None // Allow point with no elevation
         }
+        _ => return Ok(None), // Wrong type, always skip
+    };
 
-        match fields.get("R") {
-            Some(Some(tracklib::types::FieldValue::U64(v))) => r = Some(*v),
-            None | Some(None) => {}
-            _ => {
-                return Ok(None);
-            }
-        }
-
-        Ok(Some(Point::new(index, x, y, d, e, s, r)))
+    let d = if let Some(p) = prev {
+        p.d() + haversine_distance(p, x, y)
     } else {
-        Ok(None)
+        0.0
+    };
+
+    let mut s = None;
+    let mut r = None;
+
+    match fields.get("S") {
+        Some(Some(tracklib::types::FieldValue::U64(v))) => s = Some(*v),
+        None | Some(None) => {}
+        _ => {
+            return Ok(None);
+        }
     }
+
+    match fields.get("R") {
+        Some(Some(tracklib::types::FieldValue::U64(v))) => r = Some(*v),
+        None | Some(None) => {}
+        _ => {
+            return Ok(None);
+        }
+    }
+
+    Ok(Some(Point::new(index, x, y, d, e, s, r)))
 }
 
 #[derive(PartialEq)]
@@ -209,14 +217,24 @@ pub(crate) enum IrrelevantPointsBehavior {
     Ignore,
 }
 
+/// Controls whether elevation is required when building Points from track data.
+#[derive(PartialEq, Clone, Copy)]
+pub(crate) enum ElevationRequirement {
+    /// Elevation must be present - skip points without it (for polyline/simplify)
+    Required,
+    /// Elevation is optional - create points with e=None if missing (for hex building)
+    Optional,
+}
+
 pub(crate) fn reader_to_points(
     mut reader: tracklib::read::section::reader::SectionReader,
     irrelevant_points_behavior: IrrelevantPointsBehavior,
+    elevation_req: ElevationRequirement,
 ) -> Result<Vec<Point>, TracklibError> {
     let mut index = 0;
     let mut points = Vec::with_capacity(reader.rows_remaining());
     while let Some(columniter) = reader.open_column_iter() {
-        if let Some(point) = new_point(index, points.last(), columniter)? {
+        if let Some(point) = new_point(index, points.last(), columniter, elevation_req)? {
             points.push(point);
             index += 1;
         } else if irrelevant_points_behavior == IrrelevantPointsBehavior::Count {

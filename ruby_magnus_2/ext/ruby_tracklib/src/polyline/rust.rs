@@ -65,7 +65,11 @@ pub(crate) fn polyline_encode(points: &[Point], fields: &[PolylineOption]) -> St
                 PointField::Y => output.push_str(&encode(point.y(), prev.y(), field.factor())),
                 PointField::X => output.push_str(&encode(point.x(), prev.x(), field.factor())),
                 PointField::D => output.push_str(&encode(point.d(), prev.d(), field.factor())),
-                PointField::E => output.push_str(&encode(point.e(), prev.e(), field.factor())),
+                PointField::E => output.push_str(&encode(
+                    point.e().unwrap_or(0.0),
+                    prev.e().unwrap_or(0.0),
+                    field.factor(),
+                )),
                 PointField::S {
                     default: default_surface_id,
                 } => output.push_str(&encode(

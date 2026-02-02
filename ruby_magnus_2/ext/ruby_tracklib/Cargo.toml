@@ -6,10 +6,20 @@ authors = ["Dan Larkin <dan@danlarkin.org>"]
 publish = false
 
 [lib]
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
+h3o = "0.9"
 itertools = "0.13"
 magnus = "0.7"
 ouroboros = "0.18"
 tracklib = {path="../../../tracklib"}
+
+[dev-dependencies]
+criterion = { version = "0.8", features = ["html_reports"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+
+[[bench]]
+name = "hex_benchmark"
+harness = false

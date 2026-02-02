@@ -1,0 +1,81 @@
+{
+  "meta": {
+    "test_id": "E2_near_north_pole",
+    "description": "Near north pole (89.9°N)",
+    "ruby_version": "3.3.5",
+    "h3_gem_version": "3.7.2",
+    "timestamp": "2026-01-28T14:11:21Z",
+    "input_hash": "f3b04963707077231d233afbda8588b5216e5381c042dfbc0fe3c35fad75a083"
+  },
+  "input": {
+    "track_points": [
+      {
+        "x": "0.0",
+        "y": "89.9"
+      },
+      {
+        "x": "5.146946514724674",
+        "y": "89.9"
+      },
+      {
+        "x": "10.293893029449348",
+        "y": "89.9"
+      },
+      {
+        "x": "15.440839544174024",
+        "y": "89.9"
+      },
+      {
+        "x": "20.587786058898697",
+        "y": "89.9"
+      }
+    ],
+    "resolution": 5,
+    "direction_mode": "none"
+  },
+  "output": {
+    "cells": [
+      {
+        "packed": 599034148002201599,
+        "canonical": 599034148002201599,
+        "canonical_hex": "85032623fffffff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "nbeegba",
+        "lat": 89.95859681,
+        "lng": -50.39694135
+      },
+      {
+        "packed": 599034152297168895,
+        "canonical": 599034152297168895,
+        "canonical_hex": "85032633fffffff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "nbeegbe",
+        "lat": 89.8567037,
+        "lng": 59.98086396
+      },
+      {
+        "packed": 599034153370910719,
+        "canonical": 599034153370910719,
+        "canonical_hex": "85032637fffffff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "nbeegbf",
+        "lat": 89.81855735,
+        "lng": 3.40197467
+      }
+    ],
+    "count": 3
+  },
+  "statistics": {
+    "min_lat": 89.818557,
+    "max_lat": 89.958597,
+    "min_lng": -50.396941,
+    "max_lng": 59.980864,
+    "unique_cells": 3,
+    "direction_masks": {
+      "4095": 3
+    }
+  }
+}

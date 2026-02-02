@@ -2,11 +2,13 @@ PATH
   remote: .
   specs:
     ruby_tracklib (0.1.0)
+      rb_sys (~> 0.9.39)
 
 GEM
   remote: https://rubygems.org/
   specs:
     ast (2.4.2)
+    benchmark-ips (2.14.0)
     diff-lcs (1.5.1)
     json (2.7.2)
     language_server-protocol (3.17.0.3)
@@ -58,6 +60,7 @@ PLATFORMS
   x86_64-linux
 
 DEPENDENCIES
+  benchmark-ips (~> 2.13)
   rake (~> 13.0)
   rake-compiler
   rb_sys (~> 0.9.63)

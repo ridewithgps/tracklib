@@ -20,7 +20,7 @@ impl<'a> Section<'a> {
         }
     }
 
-    pub fn reader(&mut self, key_material: &[u8]) -> Result<SectionReader> {
+    pub fn reader(&mut self, key_material: &[u8]) -> Result<SectionReader<'_>> {
         let key = orion::aead::SecretKey::from_slice(key_material)?;
         let decrypted = orion::aead::open(&key, self.input)?;
         self.decrypted = decrypted;
@@ -33,7 +33,7 @@ impl<'a> Section<'a> {
         )
     }
 
-    pub fn reader_for_schema(&mut self, key_material: &[u8], schema: &Schema) -> Result<SectionReader> {
+    pub fn reader_for_schema(&mut self, key_material: &[u8], schema: &Schema) -> Result<SectionReader<'_>> {
         let key = orion::aead::SecretKey::from_slice(key_material)?;
         let decrypted = orion::aead::open(&key, self.input)?;
         self.decrypted = decrypted;

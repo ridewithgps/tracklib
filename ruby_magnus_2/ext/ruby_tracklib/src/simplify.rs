@@ -88,9 +88,9 @@ mod tests {
         mapping.add_surface(2, "2".to_string());
 
         let points = vec![
-            Point::new(0, 0.0, 0.0, 0.0, 0.0, None, None),
-            Point::new(1, 0.0, 0.0, 0.0, 0.0, None, None),
-            Point::new(2, 0.0, 0.0, 0.0, 0.0, None, None),
+            Point::new(0, 0.0, 0.0, 0.0, Some(0.0), None, None),
+            Point::new(1, 0.0, 0.0, 0.0, Some(0.0), None, None),
+            Point::new(2, 0.0, 0.0, 0.0, Some(0.0), None, None),
         ];
 
         let groups = SurfaceGroupIter::new(&points, RefCell::new(mapping).borrow()).collect::<Vec<_>>();
@@ -106,9 +106,9 @@ mod tests {
         mapping.add_surface(2, "2".to_string());
 
         let points = vec![
-            Point::new(0, 0.0, 0.0, 0.0, 0.0, Some(1), None),
-            Point::new(1, 0.0, 0.0, 0.0, 0.0, Some(2), None),
-            Point::new(2, 0.0, 0.0, 0.0, 0.0, Some(3), None),
+            Point::new(0, 0.0, 0.0, 0.0, Some(0.0), Some(1), None),
+            Point::new(1, 0.0, 0.0, 0.0, Some(0.0), Some(2), None),
+            Point::new(2, 0.0, 0.0, 0.0, Some(0.0), Some(3), None),
         ];
 
         let groups = SurfaceGroupIter::new(&points, RefCell::new(mapping).borrow()).collect::<Vec<_>>();
@@ -131,13 +131,13 @@ mod tests {
         mapping.add_surface(2, "2".to_string());
 
         let points = vec![
-            Point::new(0, 0.0, 0.0, 0.0, 0.0, None, None),
-            Point::new(1, 0.0, 0.0, 0.0, 0.0, Some(1), None),
-            Point::new(2, 0.0, 0.0, 0.0, 0.0, Some(1), None),
-            Point::new(3, 0.0, 0.0, 0.0, 0.0, Some(1), None),
-            Point::new(4, 0.0, 0.0, 0.0, 0.0, Some(2), None),
-            Point::new(5, 0.0, 0.0, 0.0, 0.0, Some(2), None),
-            Point::new(6, 0.0, 0.0, 0.0, 0.0, None, None),
+            Point::new(0, 0.0, 0.0, 0.0, Some(0.0), None, None),
+            Point::new(1, 0.0, 0.0, 0.0, Some(0.0), Some(1), None),
+            Point::new(2, 0.0, 0.0, 0.0, Some(0.0), Some(1), None),
+            Point::new(3, 0.0, 0.0, 0.0, Some(0.0), Some(1), None),
+            Point::new(4, 0.0, 0.0, 0.0, Some(0.0), Some(2), None),
+            Point::new(5, 0.0, 0.0, 0.0, Some(0.0), Some(2), None),
+            Point::new(6, 0.0, 0.0, 0.0, Some(0.0), None, None),
         ];
 
         let groups = SurfaceGroupIter::new(&points, RefCell::new(mapping).borrow()).collect::<Vec<_>>();
@@ -177,8 +177,8 @@ mod tests {
         assert_eq!(
             simplify_points(
                 &[
-                    Point::new(0, 0.0, 0.0, 0.0, 0.0, None, None),
-                    Point::new(1, 1.0, 0.0, 0.0, 0.0, None, None),
+                    Point::new(0, 0.0, 0.0, 0.0, Some(0.0), None, None),
+                    Point::new(1, 1.0, 0.0, 0.0, Some(0.0), None, None),
                 ],
                 RefCell::new(mapping).borrow(),
                 0.0
@@ -193,9 +193,9 @@ mod tests {
         assert_eq!(
             simplify_points(
                 &[
-                    Point::new(0, 0.0, 0.0, 0.0, 0.0, None, None),
-                    Point::new(1, 1.0, 0.0, 0.0, 0.0, None, None),
-                    Point::new(2, 2.0, 2.0, 0.0, 0.0, None, None),
+                    Point::new(0, 0.0, 0.0, 0.0, Some(0.0), None, None),
+                    Point::new(1, 1.0, 0.0, 0.0, Some(0.0), None, None),
+                    Point::new(2, 2.0, 2.0, 0.0, Some(0.0), None, None),
                 ],
                 RefCell::new(mapping).borrow(),
                 0.0

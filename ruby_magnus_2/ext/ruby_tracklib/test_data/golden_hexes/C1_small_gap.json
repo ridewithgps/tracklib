@@ -1,0 +1,313 @@
+{
+  "meta": {
+    "test_id": "C1_small_gap",
+    "description": "Points 500m apart (no gap)",
+    "ruby_version": "3.3.5",
+    "h3_gem_version": "3.7.2",
+    "timestamp": "2026-01-28T14:11:21Z",
+    "input_hash": "05be371eb0e71b645657511e0372a3a3e27e3a59499f8bdb96c6b85ee7cf4833"
+  },
+  "input": {
+    "track_points": [
+      {
+        "x": "-122.5",
+        "y": "45.5"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.50449155587496"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.50898311174991"
+      }
+    ],
+    "resolution": 11,
+    "direction_mode": "none"
+  },
+  "output": {
+    "cells": [
+      {
+        "packed": 626720534780514303,
+        "canonical": 626720534780514303,
+        "canonical_hex": "8b28f0181090fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabacca",
+        "lat": 45.50045781,
+        "lng": -122.49990647
+      },
+      {
+        "packed": 626720534780526591,
+        "canonical": 626720534780526591,
+        "canonical_hex": "8b28f0181093fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabaccd",
+        "lat": 45.50087741,
+        "lng": -122.49993599
+      },
+      {
+        "packed": 626720534780530687,
+        "canonical": 626720534780530687,
+        "canonical_hex": "8b28f0181094fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabacce",
+        "lat": 45.50003822,
+        "lng": -122.49987695
+      },
+      {
+        "packed": 626720534784548863,
+        "canonical": 626720534784548863,
+        "canonical_hex": "8b28f0181469fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabcbfb",
+        "lat": 45.5017166,
+        "lng": -122.49999502
+      },
+      {
+        "packed": 626720534784565247,
+        "canonical": 626720534784565247,
+        "canonical_hex": "8b28f018146dfff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabcbff",
+        "lat": 45.50129701,
+        "lng": -122.49996551
+      },
+      {
+        "packed": 626720534786281471,
+        "canonical": 626720534786281471,
+        "canonical_hex": "8b28f0181610fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdaca",
+        "lat": 45.50633196,
+        "lng": -122.50031975
+      },
+      {
+        "packed": 626720534786289663,
+        "canonical": 626720534786289663,
+        "canonical_hex": "8b28f0181612fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdacc",
+        "lat": 45.50658932,
+        "lng": -122.49979356
+      },
+      {
+        "packed": 626720534786297855,
+        "canonical": 626720534786297855,
+        "canonical_hex": "8b28f0181614fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdace",
+        "lat": 45.50591239,
+        "lng": -122.50029022
+      },
+      {
+        "packed": 626720534786306047,
+        "canonical": 626720534786306047,
+        "canonical_hex": "8b28f0181616fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdacg",
+        "lat": 45.50616975,
+        "lng": -122.49976404
+      },
+      {
+        "packed": 626720534786420735,
+        "canonical": 626720534786420735,
+        "canonical_hex": "8b28f0181632fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdagc",
+        "lat": 45.50549282,
+        "lng": -122.5002607
+      },
+      {
+        "packed": 626720534786437119,
+        "canonical": 626720534786437119,
+        "canonical_hex": "8b28f0181636fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdagg",
+        "lat": 45.50507325,
+        "lng": -122.50023118
+      },
+      {
+        "packed": 626720534786777087,
+        "canonical": 626720534786777087,
+        "canonical_hex": "8b28f0181689fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdcbb",
+        "lat": 45.50868711,
+        "lng": -122.49994116
+      },
+      {
+        "packed": 626720534786793471,
+        "canonical": 626720534786793471,
+        "canonical_hex": "8b28f018168dfff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdcbf",
+        "lat": 45.50826756,
+        "lng": -122.49991164
+      },
+      {
+        "packed": 626720534786904063,
+        "canonical": 626720534786904063,
+        "canonical_hex": "8b28f01816a8fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdcfa",
+        "lat": 45.50742844,
+        "lng": -122.4998526
+      },
+      {
+        "packed": 626720534786916351,
+        "canonical": 626720534786916351,
+        "canonical_hex": "8b28f01816abfff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdcfd",
+        "lat": 45.507848,
+        "lng": -122.49988212
+      },
+      {
+        "packed": 626720534786920447,
+        "canonical": 626720534786920447,
+        "canonical_hex": "8b28f01816acfff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdcfe",
+        "lat": 45.50700888,
+        "lng": -122.49982308
+      },
+      {
+        "packed": 626720534787092479,
+        "canonical": 626720534787092479,
+        "canonical_hex": "8b28f01816d6fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabddcg",
+        "lat": 45.50910666,
+        "lng": -122.49997068
+      },
+      {
+        "packed": 626720534787330047,
+        "canonical": 626720534787330047,
+        "canonical_hex": "8b28f0181710fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdeca",
+        "lat": 45.50339494,
+        "lng": -122.5001131
+      },
+      {
+        "packed": 626720534787342335,
+        "canonical": 626720534787342335,
+        "canonical_hex": "8b28f0181713fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdecd",
+        "lat": 45.50381452,
+        "lng": -122.50014262
+      },
+      {
+        "packed": 626720534787346431,
+        "canonical": 626720534787346431,
+        "canonical_hex": "8b28f0181714fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdece",
+        "lat": 45.50297536,
+        "lng": -122.50008358
+      },
+      {
+        "packed": 626720534787469311,
+        "canonical": 626720534787469311,
+        "canonical_hex": "8b28f0181732fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdegc",
+        "lat": 45.50255578,
+        "lng": -122.50005406
+      },
+      {
+        "packed": 626720534787485695,
+        "canonical": 626720534787485695,
+        "canonical_hex": "8b28f0181736fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdegg",
+        "lat": 45.50213619,
+        "lng": -122.50002454
+      },
+      {
+        "packed": 626720534787825663,
+        "canonical": 626720534787825663,
+        "canonical_hex": "8b28f0181789fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdgbb",
+        "lat": 45.50575018,
+        "lng": -122.49973452
+      },
+      {
+        "packed": 626720534787842047,
+        "canonical": 626720534787842047,
+        "canonical_hex": "8b28f018178dfff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdgbf",
+        "lat": 45.50533061,
+        "lng": -122.499705
+      },
+      {
+        "packed": 626720534787956735,
+        "canonical": 626720534787956735,
+        "canonical_hex": "8b28f01817a9fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdgfb",
+        "lat": 45.50465368,
+        "lng": -122.50020166
+      },
+      {
+        "packed": 626720534787964927,
+        "canonical": 626720534787964927,
+        "canonical_hex": "8b28f01817abfff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdgfd",
+        "lat": 45.50491104,
+        "lng": -122.49967548
+      },
+      {
+        "packed": 626720534787973119,
+        "canonical": 626720534787973119,
+        "canonical_hex": "8b28f01817adfff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabdgff",
+        "lat": 45.5042341,
+        "lng": -122.50017214
+      }
+    ],
+    "count": 27
+  },
+  "statistics": {
+    "min_lat": 45.500038,
+    "max_lat": 45.509107,
+    "min_lng": -122.50032,
+    "max_lng": -122.499675,
+    "unique_cells": 27,
+    "direction_masks": {
+      "4095": 27
+    }
+  }
+}

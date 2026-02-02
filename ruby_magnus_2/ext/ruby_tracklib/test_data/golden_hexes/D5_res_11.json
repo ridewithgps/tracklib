@@ -1,0 +1,101 @@
+{
+  "meta": {
+    "test_id": "D5_res_11",
+    "description": "Resolution 11 (default V5)",
+    "ruby_version": "3.3.5",
+    "h3_gem_version": "3.7.2",
+    "timestamp": "2026-01-28T14:11:21Z",
+    "input_hash": "3a8063d639d68cfdfca641a69fe6e7b4988d72a805c1fe6d555160c196687902"
+  },
+  "input": {
+    "track_points": [
+      {
+        "x": "-122.5",
+        "y": "45.5"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.5000898311175"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.500179662235"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.5002694933525"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.50035932447"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.500449155587496"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.500538986704996"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.500628817822495"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.500718648939994"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.50080848005749"
+      }
+    ],
+    "resolution": 11,
+    "direction_mode": "none"
+  },
+  "output": {
+    "cells": [
+      {
+        "packed": 626720534780514303,
+        "canonical": 626720534780514303,
+        "canonical_hex": "8b28f0181090fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabacca",
+        "lat": 45.50045781,
+        "lng": -122.49990647
+      },
+      {
+        "packed": 626720534780526591,
+        "canonical": 626720534780526591,
+        "canonical_hex": "8b28f0181093fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabaccd",
+        "lat": 45.50087741,
+        "lng": -122.49993599
+      },
+      {
+        "packed": 626720534780530687,
+        "canonical": 626720534780530687,
+        "canonical_hex": "8b28f0181094fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabacce",
+        "lat": 45.50003822,
+        "lng": -122.49987695
+      }
+    ],
+    "count": 3
+  },
+  "statistics": {
+    "min_lat": 45.500038,
+    "max_lat": 45.500877,
+    "min_lng": -122.499936,
+    "max_lng": -122.499877,
+    "unique_cells": 3,
+    "direction_masks": {
+      "4095": 3
+    }
+  }
+}

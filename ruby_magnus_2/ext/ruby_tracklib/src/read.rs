@@ -1,4 +1,5 @@
-use crate::geometry::{reader_to_points, IrrelevantPointsBehavior};
+use crate::geometry::{reader_to_points, ElevationRequirement, IrrelevantPointsBehavior};
+use crate::hex::{self, DirectionMode, MAX_DIRECTION_RESOLUTION};
 use crate::polyline::{ruby::PolylineOptions, rust::polyline_encode};
 use crate::simplify::simplify_points;
 use crate::surface::ruby::SurfaceMapping;
@@ -7,7 +8,7 @@ use magnus::{
     data_type_builder,
     typed_data::{DataType, DataTypeFunctions, Obj},
     value::{Lazy, ReprValue},
-    Class, Error, IntoValue, Module, RArray, RClass, RString, Ruby, TryConvert, Value,
+    Class, Error, IntoValue, Module, RArray, RClass, RString, Ruby, Symbol, TryConvert, Value,
 };
 use ouroboros::self_referencing;
 use std::collections::HashSet;
@@ -282,12 +283,14 @@ impl TrackReader {
                         Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
 
-                    let points = reader_to_points(reader, IrrelevantPointsBehavior::Ignore).map_err(|e| {
-                        Error::new(
-                            handle.exception_io_error(),
-                            format!("Error reading tracklib data: {e:?}"),
-                        )
-                    })?;
+                    let points =
+                        reader_to_points(reader, IrrelevantPointsBehavior::Ignore, ElevationRequirement::Required)
+                            .map_err(|e| {
+                                Error::new(
+                                    handle.exception_io_error(),
+                                    format!("Error reading tracklib data: {e:?}"),
+                                )
+                            })?;
 
                     Ok(handle.str_new(&polyline_encode(&points, polyline_opts.inner())))
                 }
@@ -303,12 +306,14 @@ impl TrackReader {
                         )
                     })?;
 
-                    let points = reader_to_points(reader, IrrelevantPointsBehavior::Ignore).map_err(|e| {
-                        Error::new(
-                            handle.exception_io_error(),
-                            format!("Error reading tracklib data: {e:?}"),
-                        )
-                    })?;
+                    let points =
+                        reader_to_points(reader, IrrelevantPointsBehavior::Ignore, ElevationRequirement::Required)
+                            .map_err(|e| {
+                                Error::new(
+                                    handle.exception_io_error(),
+                                    format!("Error reading tracklib data: {e:?}"),
+                                )
+                            })?;
 
                     Ok(handle.str_new(&polyline_encode(&points, polyline_opts.inner())))
                 }
@@ -343,13 +348,17 @@ impl TrackReader {
                     let reader_for_simplification = section.reader_for_schema(&schema).map_err(|e| {
                         Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
-                    let points =
-                        reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count).map_err(|e| {
-                            Error::new(
-                                handle.exception_io_error(),
-                                format!("Error reading tracklib data: {e:?}"),
-                            )
-                        })?;
+                    let points = reader_to_points(
+                        reader_for_simplification,
+                        IrrelevantPointsBehavior::Count,
+                        ElevationRequirement::Required,
+                    )
+                    .map_err(|e| {
+                        Error::new(
+                            handle.exception_io_error(),
+                            format!("Error reading tracklib data: {e:?}"),
+                        )
+                    })?;
                     let simplified_indexes = simplify_points(&points, surface_mapping.inner(), tolerance);
 
                     let reader_for_serialization = section.reader().map_err(|e| {
@@ -367,13 +376,17 @@ impl TrackReader {
                     let reader_for_simplification = section.reader_for_schema(&key_bytes, &schema).map_err(|e| {
                         Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
-                    let points =
-                        reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count).map_err(|e| {
-                            Error::new(
-                                handle.exception_io_error(),
-                                format!("Error reading tracklib data: {e:?}"),
-                            )
-                        })?;
+                    let points = reader_to_points(
+                        reader_for_simplification,
+                        IrrelevantPointsBehavior::Count,
+                        ElevationRequirement::Required,
+                    )
+                    .map_err(|e| {
+                        Error::new(
+                            handle.exception_io_error(),
+                            format!("Error reading tracklib data: {e:?}"),
+                        )
+                    })?;
                     let simplified_indexes = simplify_points(&points, surface_mapping.inner(), tolerance);
 
                     let reader_for_serialization = section.reader(&key_bytes).map_err(|e| {
@@ -426,13 +439,17 @@ impl TrackReader {
                             section.reader_for_schema(&schema_for_simplification).map_err(|e| {
                                 Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                             })?;
-                        let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count)
-                            .map_err(|e| {
-                                Error::new(
-                                    handle.exception_io_error(),
-                                    format!("Error reading tracklib data: {e:?}"),
-                                )
-                            })?;
+                        let points = reader_to_points(
+                            reader_for_simplification,
+                            IrrelevantPointsBehavior::Count,
+                            ElevationRequirement::Required,
+                        )
+                        .map_err(|e| {
+                            Error::new(
+                                handle.exception_io_error(),
+                                format!("Error reading tracklib data: {e:?}"),
+                            )
+                        })?;
                         let simplified_indexes = simplify_points(&points, surface_mapping.inner(), tolerance);
 
                         let reader_for_serialization =
@@ -458,13 +475,17 @@ impl TrackReader {
                             .map_err(|e| {
                                 Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                             })?;
-                        let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Count)
-                            .map_err(|e| {
-                                Error::new(
-                                    handle.exception_io_error(),
-                                    format!("Error reading tracklib data: {e:?}"),
-                                )
-                            })?;
+                        let points = reader_to_points(
+                            reader_for_simplification,
+                            IrrelevantPointsBehavior::Count,
+                            ElevationRequirement::Required,
+                        )
+                        .map_err(|e| {
+                            Error::new(
+                                handle.exception_io_error(),
+                                format!("Error reading tracklib data: {e:?}"),
+                            )
+                        })?;
                         let simplified_indexes = simplify_points(&points, surface_mapping.inner(), tolerance);
 
                         let reader_for_serialization = section
@@ -518,13 +539,17 @@ impl TrackReader {
                     let reader_for_simplification = section.reader_for_schema(&schema).map_err(|e| {
                         Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
-                    let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Ignore)
-                        .map_err(|e| {
-                            Error::new(
-                                handle.exception_io_error(),
-                                format!("Error reading tracklib data: {e:?}"),
-                            )
-                        })?;
+                    let points = reader_to_points(
+                        reader_for_simplification,
+                        IrrelevantPointsBehavior::Ignore,
+                        ElevationRequirement::Required,
+                    )
+                    .map_err(|e| {
+                        Error::new(
+                            handle.exception_io_error(),
+                            format!("Error reading tracklib data: {e:?}"),
+                        )
+                    })?;
                     let simplified_indexes = simplify_points(&points, surface_mapping.inner(), tolerance);
 
                     let simplified_points = simplified_indexes
@@ -544,13 +569,17 @@ impl TrackReader {
                     let reader_for_simplification = section.reader_for_schema(&key_bytes, &schema).map_err(|e| {
                         Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
                     })?;
-                    let points = reader_to_points(reader_for_simplification, IrrelevantPointsBehavior::Ignore)
-                        .map_err(|e| {
-                            Error::new(
-                                handle.exception_io_error(),
-                                format!("Error reading tracklib data: {e:?}"),
-                            )
-                        })?;
+                    let points = reader_to_points(
+                        reader_for_simplification,
+                        IrrelevantPointsBehavior::Ignore,
+                        ElevationRequirement::Required,
+                    )
+                    .map_err(|e| {
+                        Error::new(
+                            handle.exception_io_error(),
+                            format!("Error reading tracklib data: {e:?}"),
+                        )
+                    })?;
                     let simplified_indexes = simplify_points(&points, surface_mapping.inner(), tolerance);
 
                     let simplified_points = simplified_indexes
@@ -563,6 +592,116 @@ impl TrackReader {
                 }
             }
         })
+    }
+
+    pub fn section_hexes(handle: &Ruby, rb_self: Obj<Self>, arguments: &[Value]) -> Result<RArray, Error> {
+        let args = magnus::scan_args::scan_args::<_, _, (), (), (), ()>(arguments)?;
+
+        let (index, resolution, direction_mode_sym): (usize, u8, Symbol) = args.required;
+        let (key_material,): (Option<Value>,) = args.optional;
+
+        // Validate resolution
+        if resolution > 15 {
+            return Err(Error::new(
+                handle.exception_arg_error(),
+                format!("Resolution must be 0-15, got {}", resolution),
+            ));
+        }
+
+        // Convert symbol to DirectionMode
+        let direction_mode = symbol_to_direction_mode(handle, direction_mode_sym)?;
+
+        // Validate resolution for direction encoding
+        if direction_mode.tracks_directions() && resolution > MAX_DIRECTION_RESOLUTION {
+            return Err(Error::new(
+                handle.exception_arg_error(),
+                format!(
+                    "Resolution must be <= {} when using direction encoding, got {}",
+                    MAX_DIRECTION_RESOLUTION, resolution
+                ),
+            ));
+        }
+
+        rb_self.with_reader(|reader| {
+            let section = reader.section(index).ok_or_else(|| {
+                Error::new(
+                    handle.exception_index_error(),
+                    format!("Section {index} does not exist"),
+                )
+            })?;
+
+            // Schema for extracting x, y coordinates (minimal for hex building)
+            // Note: elevation is not required for hex building
+            let schema = tracklib::schema::Schema::with_fields(vec![
+                tracklib::schema::FieldDefinition::new("x", tracklib::schema::DataType::F64 { scale: 6 }),
+                tracklib::schema::FieldDefinition::new("y", tracklib::schema::DataType::F64 { scale: 6 }),
+            ]);
+
+            match section {
+                tracklib::read::section::Section::Standard(section) => {
+                    let section_reader = section.reader_for_schema(&schema).map_err(|e| {
+                        Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
+                    })?;
+
+                    let points = reader_to_points(
+                        section_reader,
+                        IrrelevantPointsBehavior::Ignore,
+                        ElevationRequirement::Optional,
+                    )
+                    .map_err(|e| {
+                        Error::new(
+                            handle.exception_io_error(),
+                            format!("Error reading tracklib data: {e:?}"),
+                        )
+                    })?;
+
+                    let hexes = hex::build_via_interpolation(&points, resolution, direction_mode)
+                        .map_err(|e| Error::new(handle.exception_arg_error(), e))?;
+
+                    Ok(handle.ary_from_iter(hexes.into_iter().map(|h| handle.integer_from_u64(h))))
+                }
+                tracklib::read::section::Section::Encrypted(mut section) => {
+                    let key_material = key_material
+                        .ok_or_else(|| Error::new(handle.exception_arg_error(), "Missing 'key_material' argument"))?;
+                    let key_material = RString::try_convert(key_material)?;
+                    let key_bytes = unsafe { key_material.as_slice().to_vec() };
+
+                    let section_reader = section.reader_for_schema(&key_bytes, &schema).map_err(|e| {
+                        Error::new(handle.exception_io_error(), format!("Could not parse section: {e:?}"))
+                    })?;
+
+                    let points = reader_to_points(
+                        section_reader,
+                        IrrelevantPointsBehavior::Ignore,
+                        ElevationRequirement::Optional,
+                    )
+                    .map_err(|e| {
+                        Error::new(
+                            handle.exception_io_error(),
+                            format!("Error reading tracklib data: {e:?}"),
+                        )
+                    })?;
+
+                    let hexes = hex::build_via_interpolation(&points, resolution, direction_mode)
+                        .map_err(|e| Error::new(handle.exception_arg_error(), e))?;
+
+                    Ok(handle.ary_from_iter(hexes.into_iter().map(|h| handle.integer_from_u64(h))))
+                }
+            }
+        })
+    }
+}
+
+/// Convert Ruby symbol to DirectionMode
+fn symbol_to_direction_mode(handle: &Ruby, sym: Symbol) -> Result<DirectionMode, Error> {
+    match sym.name()?.as_ref() {
+        "none" => Ok(DirectionMode::None),
+        "forward" => Ok(DirectionMode::Forward),
+        "both" => Ok(DirectionMode::Both),
+        other => Err(Error::new(
+            handle.exception_arg_error(),
+            format!("Invalid direction_mode '{}', expected :none, :forward, or :both", other),
+        )),
     }
 }
 

@@ -115,7 +115,7 @@ impl<'a> RowBuilder<'a> {
     }
 
     /// mut borrow of self so only one column writer can be open at a time
-    pub fn next_column_writer(&mut self) -> Option<ColumnWriter> {
+    pub fn next_column_writer(&mut self) -> Option<ColumnWriter<'_>> {
         let field_index = self.field_index;
         self.field_index += 1;
 

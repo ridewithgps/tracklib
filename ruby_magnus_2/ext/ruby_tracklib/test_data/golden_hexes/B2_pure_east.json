@@ -1,0 +1,92 @@
+{
+  "meta": {
+    "test_id": "B2_pure_east",
+    "description": "Pure east heading (90°)",
+    "ruby_version": "3.3.5",
+    "h3_gem_version": "3.7.2",
+    "timestamp": "2026-01-28T14:11:21Z",
+    "input_hash": "7453206568eec1c25609d20e524b37ecd1ba9d5f94768f644d2a1c7b769767bf"
+  },
+  "input": {
+    "track_points": [
+      {
+        "x": "-122.5",
+        "y": "45.5"
+      },
+      {
+        "x": "-122.49987183631023",
+        "y": "45.5"
+      },
+      {
+        "x": "-122.49974367262048",
+        "y": "45.5"
+      },
+      {
+        "x": "-122.49961550893072",
+        "y": "45.5"
+      },
+      {
+        "x": "-122.49948734524096",
+        "y": "45.5"
+      },
+      {
+        "x": "-122.4993591815512",
+        "y": "45.5"
+      },
+      {
+        "x": "-122.49923101786145",
+        "y": "45.5"
+      },
+      {
+        "x": "-122.49910285417168",
+        "y": "45.5"
+      },
+      {
+        "x": "-122.49897469048193",
+        "y": "45.5"
+      },
+      {
+        "x": "-122.49884652679216",
+        "y": "45.5"
+      }
+    ],
+    "resolution": 10,
+    "direction_mode": "forward"
+  },
+  "output": {
+    "cells": [
+      {
+        "packed": 622216935153168392,
+        "canonical": 622216935153172479,
+        "canonical_hex": "8a28f0181097fff",
+        "direction_mask": 8,
+        "direction_mask_bin": "000000001000",
+        "alpha": "ohdgaagabacc",
+        "lat": 45.50045781,
+        "lng": -122.49990647
+      },
+      {
+        "packed": 622216935158116352,
+        "canonical": 622216935158120447,
+        "canonical_hex": "8a28f018154ffff",
+        "direction_mask": 0,
+        "direction_mask_bin": "000000000000",
+        "alpha": "ohdgaagabcfb",
+        "lat": 45.49971375,
+        "lng": -122.49876562
+      }
+    ],
+    "count": 2
+  },
+  "statistics": {
+    "min_lat": 45.499714,
+    "max_lat": 45.500458,
+    "min_lng": -122.499906,
+    "max_lng": -122.498766,
+    "unique_cells": 2,
+    "direction_masks": {
+      "8": 1,
+      "0": 1
+    }
+  }
+}

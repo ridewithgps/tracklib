@@ -1,0 +1,91 @@
+{
+  "meta": {
+    "test_id": "D4_res_10",
+    "description": "Resolution 10 (default V6)",
+    "ruby_version": "3.3.5",
+    "h3_gem_version": "3.7.2",
+    "timestamp": "2026-01-28T14:11:21Z",
+    "input_hash": "cb85220c590feaf7d8bca0d6478f4cbdb062e4be5d05f5fd146512c158093a3c"
+  },
+  "input": {
+    "track_points": [
+      {
+        "x": "-122.5",
+        "y": "45.5"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.500179662235"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.50035932447"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.500538986704996"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.500718648939994"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.50089831117499"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.50107797340999"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.50125763564499"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.50143729787999"
+      },
+      {
+        "x": "-122.5",
+        "y": "45.50161696011499"
+      }
+    ],
+    "resolution": 10,
+    "direction_mode": "none"
+  },
+  "output": {
+    "cells": [
+      {
+        "packed": 622216935153172479,
+        "canonical": 622216935153172479,
+        "canonical_hex": "8a28f0181097fff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabacc",
+        "lat": 45.50045781,
+        "lng": -122.49990647
+      },
+      {
+        "packed": 622216935157202943,
+        "canonical": 622216935157202943,
+        "canonical_hex": "8a28f018146ffff",
+        "direction_mask": 4095,
+        "direction_mask_bin": "111111111111",
+        "alpha": "ohdgaagabcbf",
+        "lat": 45.50155437,
+        "lng": -122.49943935
+      }
+    ],
+    "count": 2
+  },
+  "statistics": {
+    "min_lat": 45.500458,
+    "max_lat": 45.501554,
+    "min_lng": -122.499906,
+    "max_lng": -122.499439,
+    "unique_cells": 2,
+    "direction_masks": {
+      "4095": 2
+    }
+  }
+}

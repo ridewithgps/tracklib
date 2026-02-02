@@ -1,6 +1,7 @@
 use magnus::{function, method, Error, Module, Object, Ruby};
 
-mod geometry;
+pub mod geometry;
+pub mod hex;
 mod polyline;
 mod read;
 mod schema;
@@ -36,6 +37,7 @@ fn init(handle: &Ruby) -> Result<(), Error> {
         "section_simplified_polyline",
         method!(read::TrackReader::section_simplified_polyline, -1),
     )?;
+    trackreader.define_method("section_hexes", method!(read::TrackReader::section_hexes, -1))?;
 
     let schema = module.define_class("Schema", handle.class_object())?;
     schema.define_singleton_method("new", function!(schema::Schema::create, 1))?;

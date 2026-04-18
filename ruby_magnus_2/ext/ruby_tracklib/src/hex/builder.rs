@@ -11,7 +11,7 @@ use std::collections::HashMap;
 /// # Arguments
 /// * `points` - Slice of Point structs with x (lng) and y (lat)
 /// * `resolution` - H3 resolution 0-15 (max 11 if direction encoding)
-/// * `direction_mode` - None, Forward, or Both
+/// * `direction_mode` - None, Forward, Backward, or Both
 ///
 /// # Returns
 /// * `Ok(Vec<u64>)` - H3 cell indices (packed with direction if enabled)
@@ -142,12 +142,11 @@ pub fn build_via_interpolation(
             if track_dirs {
                 if let Some(prev) = segment_prev_cell {
                     if cell != prev {
-                        let prev_u64 = u64::from(prev);
-                        // Tag exit direction on previous cell
-                        *cell_masks.entry(prev_u64).or_insert(0) |= fwd_mask;
-
-                        // Tag entry direction on current cell (if :both mode)
-                        if direction_mode == DirectionMode::Both {
+                        if direction_mode.writes_forward() {
+                            let prev_u64 = u64::from(prev);
+                            *cell_masks.entry(prev_u64).or_insert(0) |= fwd_mask;
+                        }
+                        if direction_mode.writes_backward() {
                             *cell_masks.entry(cell_u64).or_insert(0) |= back_mask;
                         }
                     }
@@ -168,7 +167,7 @@ pub fn build_via_interpolation(
     }
 
     // Convert to output format
-    let result: Vec<u64> = if track_dirs {
+    let mut result: Vec<u64> = if track_dirs {
         cell_masks
             .into_iter()
             .map(|(cell, mask)| pack_direction(cell, mask))
@@ -176,6 +175,11 @@ pub fn build_via_interpolation(
     } else {
         cell_masks.into_keys().collect()
     };
+
+    // Sort for deterministic output — HashMap iteration order is randomized,
+    // so callers that compare or cache hex arrays would otherwise see churn.
+    // unstable is safe: packed values are unique (one per H3 cell).
+    result.sort_unstable();
 
     Ok(result)
 }
@@ -295,6 +299,23 @@ mod tests {
         // Gap should result in first point with ALL_DIRECTIONS
         // Both points should be in result
         assert!(result.len() >= 1);
+    }
+
+    #[test]
+    fn test_output_sorted() {
+        // Dense zig-zag to produce many cells
+        let mut points = Vec::new();
+        for i in 0..100 {
+            let d = i as f64 * 0.0005;
+            let y_off = if i % 2 == 0 { 0.0 } else { 0.0003 };
+            points.push(make_point(-122.5 + d, 45.5 + y_off));
+        }
+        let result = build_via_interpolation(&points, 10, DirectionMode::Both).unwrap();
+        assert!(result.len() > 2, "need multiple cells to test sort");
+        assert!(
+            result.windows(2).all(|w| w[0] < w[1]),
+            "output must be sorted ascending"
+        );
     }
 
     #[test]

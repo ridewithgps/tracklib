@@ -12,7 +12,7 @@
 //! ### Parameters
 //! - `section_index` - Integer, which section (0-based)
 //! - `resolution` - Integer 0-15 (max 11 with direction encoding)
-//! - `direction_mode` - Symbol `:none`, `:forward`, or `:both`
+//! - `direction_mode` - Symbol `:none`, `:forward`, `:backward`, or `:both`
 //! - `key_material` - String (required for encrypted sections only)
 //!
 //! ### Returns
@@ -72,6 +72,8 @@ pub enum DirectionMode {
     None,
     /// Encode forward direction only (direction of travel)
     Forward,
+    /// Encode backward direction only (reverse of travel)
+    Backward,
     /// Encode both forward and backward directions (bidirectional)
     Both,
 }
@@ -80,5 +82,15 @@ impl DirectionMode {
     /// Returns true if direction tracking is enabled
     pub fn tracks_directions(&self) -> bool {
         *self != DirectionMode::None
+    }
+
+    /// Returns true if forward direction is encoded
+    pub fn writes_forward(&self) -> bool {
+        matches!(self, DirectionMode::Forward | DirectionMode::Both)
+    }
+
+    /// Returns true if backward direction is encoded
+    pub fn writes_backward(&self) -> bool {
+        matches!(self, DirectionMode::Backward | DirectionMode::Both)
     }
 }

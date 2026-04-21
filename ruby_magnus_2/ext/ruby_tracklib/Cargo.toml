@@ -1,6 +1,6 @@
 [package]
 name = "ruby_tracklib"
-version = "0.1.0"
+version = "2.1.0"
 edition = "2021"
 authors = ["Dan Larkin <dan@danlarkin.org>"]
 publish = false
@@ -11,7 +11,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 h3o = "0.9"
 itertools = "0.13"
-magnus = "0.7"
+magnus = "0.8"
 ouroboros = "0.18"
 tracklib = {path="../../../tracklib"}
 

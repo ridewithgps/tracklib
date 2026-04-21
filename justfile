@@ -53,6 +53,29 @@ ruby-install:
     cd ruby_magnus_2 && bundle install
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Ruby Gem Packaging (cross-compiled .gem files via rb-sys-dock / Docker)
+# Most configuration lives in scripts/gem-build.sh and scripts/gem-smoke.sh
+# — see those scripts for env var overrides (RUBY_VERSIONS, RB_SYS_TAG, etc.).
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Build precompiled gem(s): `just gem-build` (all), `just gem-build x86_64-linux`, `just gem-build aarch64-linux`
+gem-build platform="all":
+    scripts/gem-build.sh {{platform}}
+
+# Remove built gems and rake-compiler tmp (uses a container to handle root-owned leftovers)
+gem-clean:
+    docker run --rm -v "{{justfile_directory()}}":/w -w /w alpine:latest \
+      sh -c "rm -rf ruby_magnus_2/pkg ruby_magnus_2/tmp tmp"
+
+# Smoke-test the built x86_64 gem inside a prod-equivalent container (jemalloc + bookworm)
+gem-smoke:
+    scripts/gem-smoke.sh
+
+# Publish gems to Cassette (needs CASSETTE_API_KEY). Modes: full (default) = clean+build+smoke+push, skip = push existing gems only.
+gem-publish mode="full":
+    scripts/gem-publish.sh {{mode}}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # All / CI
 # ─────────────────────────────────────────────────────────────────────────────
 

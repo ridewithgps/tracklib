@@ -52,6 +52,7 @@ mod tests {
         match s {
             "none" => DirectionMode::None,
             "forward" => DirectionMode::Forward,
+            "backward" => DirectionMode::Backward,
             "both" => DirectionMode::Both,
             _ => panic!("Unknown direction mode: {}", s),
         }
@@ -172,4 +173,56 @@ mod tests {
     golden_test!(H2_zigzag_both, "H2_zigzag_both.json");
     golden_test!(H3_bearing_boundaries, "H3_bearing_boundaries.json");
     golden_test!(H4_all_directions_both, "H4_all_directions_both.json");
+
+    // Reversibility: backward(P) must equal forward(P.reverse()).
+    // Driven by curved-geometry fixtures
+    fn assert_reversibility(file: &str) {
+        let path = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("test_data/golden_hexes")
+            .join(file);
+        let test = load_golden_test(&path);
+        let points: Vec<Point> = test
+            .input
+            .track_points
+            .iter()
+            .enumerate()
+            .map(|(i, tp)| {
+                let x: f64 = tp.x.parse().unwrap();
+                let y: f64 = tp.y.parse().unwrap();
+                Point::new(i, x, y, 0.0, Some(0.0), None, None)
+            })
+            .collect();
+        let res = test.input.resolution;
+
+        let backward = build_via_interpolation(&points, res, DirectionMode::Backward).unwrap();
+        let mut reversed = points;
+        reversed.reverse();
+        let forward_reversed = build_via_interpolation(&reversed, res, DirectionMode::Forward).unwrap();
+
+        assert_eq!(backward, forward_reversed, "{}", file);
+    }
+
+    macro_rules! reversibility_test {
+        ($name:ident, $file:expr) => {
+            #[test]
+            fn $name() {
+                assert_reversibility($file);
+            }
+        };
+    }
+
+    reversibility_test!(rev_B6_l_shape, "B6_l_shape.json");
+    reversibility_test!(rev_B7_out_back_forward, "B7_out_back_forward.json");
+    reversibility_test!(rev_B8_out_back_both, "B8_out_back_both.json");
+    reversibility_test!(rev_B9_all_directions, "B9_all_directions.json");
+    reversibility_test!(rev_F1_spiral, "F1_spiral.json");
+    reversibility_test!(rev_F2_tight_spiral, "F2_tight_spiral.json");
+    reversibility_test!(rev_F3_loose_spiral, "F3_loose_spiral.json");
+    reversibility_test!(rev_F4_spiral_both, "F4_spiral_both_directions.json");
+    reversibility_test!(rev_G1_long_track_1k, "G1_long_track_1k.json");
+    reversibility_test!(rev_G2_long_track_5k, "G2_long_track_5k.json");
+    reversibility_test!(rev_G3_long_track_10k, "G3_long_track_10k.json");
+    reversibility_test!(rev_H1_zigzag, "H1_zigzag.json");
+    reversibility_test!(rev_H2_zigzag_both, "H2_zigzag_both.json");
+    reversibility_test!(rev_H4_all_directions_both, "H4_all_directions_both.json");
 }

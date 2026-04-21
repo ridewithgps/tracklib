@@ -697,10 +697,14 @@ fn symbol_to_direction_mode(handle: &Ruby, sym: Symbol) -> Result<DirectionMode,
     match sym.name()?.as_ref() {
         "none" => Ok(DirectionMode::None),
         "forward" => Ok(DirectionMode::Forward),
+        "backward" => Ok(DirectionMode::Backward),
         "both" => Ok(DirectionMode::Both),
         other => Err(Error::new(
             handle.exception_arg_error(),
-            format!("Invalid direction_mode '{}', expected :none, :forward, or :both", other),
+            format!(
+                "Invalid direction_mode '{}', expected :none, :forward, :backward, or :both",
+                other
+            ),
         )),
     }
 }

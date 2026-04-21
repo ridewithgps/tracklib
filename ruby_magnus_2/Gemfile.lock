@@ -1,7 +1,7 @@
 PATH
   remote: .
   specs:
-    ruby_tracklib (0.1.0)
+    ruby_tracklib (2.1.0)
       rb_sys (~> 0.9.39)
 
 GEM

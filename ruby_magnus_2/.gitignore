@@ -2,3 +2,4 @@ target/
 tmp/
 ruby_tracklib.so
 .rspec_status
+pkg

@@ -18,7 +18,9 @@ Gem::Specification.new do |spec|
                           "Cargo.toml",
                           "Cargo.lock"]
   spec.files          += Dir["lib/**/*.rb"]
-  spec.files          += Dir["ext/**/*"]
+  # Only version-subdir .so files (e.g. lib/ruby_tracklib/3.3/ruby_tracklib.so)
+  spec.files          += Dir["lib/ruby_tracklib/*/*.so"]
+  spec.files          += Dir["ext/**/*.{rs,toml,rb}"].reject { |f| f.include?("/benches/") }
   spec.require_paths   = ["lib"]
   spec.extensions      = ["ext/ruby_tracklib/extconf.rb"]
 

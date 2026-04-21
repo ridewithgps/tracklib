@@ -1,0 +1,8 @@
+# Cargo / Rust
+target/
+
+# rb-sys-dock / rake-compiler build cache (large, reusable between builds)
+tmp/
+
+# Ruby / Bundler local state
+.bundle/

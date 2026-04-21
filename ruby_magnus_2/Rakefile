@@ -15,7 +15,7 @@ task build: :compile
 
 GEMSPEC = Gem::Specification.load("ruby_tracklib.gemspec")
 
-CROSS_PLATFORMS = %w[x86_64-linux aarch64-linux].freeze
+CROSS_PLATFORMS = %w[x86_64-linux aarch64-linux arm64-darwin].freeze
 
 RbSys::ExtensionTask.new("ruby_tracklib", GEMSPEC) do |ext|
   ext.lib_dir = "lib/ruby_tracklib"

@@ -32,19 +32,18 @@
 
 set -euo pipefail
 
-ALL_PLATFORMS=("x86_64-linux" "aarch64-linux")
+ALL_PLATFORMS=("x86_64-linux" "aarch64-linux" "arm64-darwin")
 PLATFORM="${1:-all}"
 
-case "$PLATFORM" in
-  all)
-    TARGETS=("${ALL_PLATFORMS[@]}") ;;
-  x86_64-linux|aarch64-linux)
-    TARGETS=("$PLATFORM") ;;
-  *)
-    echo "usage: $0 [platform]" >&2
-    echo "  platform: ${ALL_PLATFORMS[*]} | all (default)" >&2
-    exit 1 ;;
-esac
+if [[ "$PLATFORM" == "all" ]]; then
+  TARGETS=("${ALL_PLATFORMS[@]}")
+elif [[ " ${ALL_PLATFORMS[*]} " == *" $PLATFORM "* ]]; then
+  TARGETS=("$PLATFORM")
+else
+  echo "usage: $0 [platform]" >&2
+  echo "  platform: ${ALL_PLATFORMS[*]} | all (default)" >&2
+  exit 1
+fi
 
 : "${RUBY_VERSIONS:=3.4.8,3.3.10,3.2.9}"
 : "${RB_SYS_TAG:=0.9.124}"

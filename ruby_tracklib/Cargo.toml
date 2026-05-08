@@ -9,6 +9,6 @@ crate-type = ["cdylib", "lib"]
 
 [dependencies]
 lazy_static = "1.4"
-ouroboros = "0.15"
+ouroboros = "0.16"
 rutie = "0.8"
 tracklib = {path="../tracklib"}
